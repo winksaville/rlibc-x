@@ -13,6 +13,10 @@ And main.rs is something like `fn main() { exit(2) }`."
 
 Thanks for the help Claude :)
 
+If you'd like to use claude-code and keep the claude sessions
+locally install [claude-code](https://code.claude.com/docs/en/setup)
+and also install [claude-symlink.sh](https://github.com/winksaville/claude-symlink.sh)
+
 ## License
 
 Licensed under either of
