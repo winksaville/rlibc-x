@@ -1,11 +1,17 @@
-# Title
+# rlibc-x
 
-First prompt for the Bot:
+Rust based libc experiment
 
-I want to create a rust app that simply returns a number, something like `fn main -> i32 { 2 }`. I want to
+I started this with this prompt for the claude-code 4.5:
+
+"I want to create a rust app that simply returns a number, something like `fn main -> i32 { 2 }`. I want to
 supply all code including the "standard libraries". I don't want the complication of code unwinding so panic="abort".
 So the minimum set of functions in lib.rs is _start, panic, exit, free, malloc, realloc, exit and probably a few others.
-And main.rs is something like `fn main() { exit(2) }`.
+And main.rs is something like `fn main() { exit(2) }`."
+
+## Created by working with Claude Code 4.5
+
+Thanks for the help Claude :)
 
 ## License
 
