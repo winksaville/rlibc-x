@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(nm:*)",
+      "Bash(cargo build:*)",
+      "Bash({ ./target/debug/my-libc)",
+      "Bash(echo:*)",
+      "Bash(})",
+      "Bash(readelf:*)",
+      "Bash(objdump:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(./target/release/my-libc:*)"
     ]
   }
 }
