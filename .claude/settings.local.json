@@ -12,7 +12,8 @@
       "WebFetch(domain:github.com)",
       "Bash(./target/release/my-libc:*)",
       "Bash(git -C /home/wink/data/prgs/rust/rlibc-x show:*)",
-      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x log --oneline -5)"
+      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x log --oneline -5)",
+      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff app/build.rs)"
     ]
   }
 }
