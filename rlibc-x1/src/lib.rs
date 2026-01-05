@@ -128,7 +128,15 @@ pub unsafe fn syscall5(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5:
 }
 
 #[inline(always)]
-pub unsafe fn syscall6(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64) -> u64 {
+pub unsafe fn syscall6(
+    n: u64,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+    arg6: u64,
+) -> u64 {
     let ret: u64;
     unsafe {
         asm!(
@@ -252,8 +260,13 @@ unsafe extern "Rust" {
 }
 
 #[unsafe(no_mangle)]
-#[unsafe(naked)]
 pub extern "C" fn _start() -> ! {
+    _start_rlibc_x1();
+}
+
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+pub extern "C" fn _start_rlibc_x1() -> ! {
     // Kernel enters with RSP aligned to 16 bytes, pointing to argc
     // call pushes 8-byte return address, so callee sees RSP % 16 == 8
     core::arch::naked_asm!(
