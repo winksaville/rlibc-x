@@ -182,19 +182,15 @@ fn brk(addr: *mut u8) -> *mut u8 {
 
 fn init_heap() {
     unsafe {
-        if HEAP_START.is_null() {
-            HEAP_START = brk(core::ptr::null_mut());
-            HEAP_END = HEAP_START;
-            HEAP_CURRENT = HEAP_START;
-        }
+        HEAP_START = brk(core::ptr::null_mut());
+        HEAP_END = HEAP_START;
+        HEAP_CURRENT = HEAP_START;
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn malloc(size: usize) -> *mut u8 {
     unsafe {
-        init_heap();
-
         let aligned_size = (size + 15) & !15;
         let new_current = HEAP_CURRENT.add(aligned_size);
 
@@ -259,14 +255,15 @@ unsafe extern "Rust" {
     safe fn main();
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
-    _start_rlibc_x1();
+extern "C" fn _start_rust() -> ! {
+    init_heap();
+    main();
+    exit(0)
 }
 
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
-pub extern "C" fn _start_rlibc_x1() -> ! {
+pub extern "C" fn _start() -> ! {
     // Kernel enters with RSP aligned to 16 bytes, pointing to argc
     // call pushes 8-byte return address, so callee sees RSP % 16 == 8
     core::arch::naked_asm!(
@@ -274,11 +271,8 @@ pub extern "C" fn _start_rlibc_x1() -> ! {
         "mov rdi, [rbx]",             // rdi = argc
         "lea rsi, [rbx + 8]",         // rsi = argv
         "lea rdx, [rsi + rdi*8 + 8]", // rdx = envp
-        "call {main}",
-        "mov edi, eax",
-        "call {exit}",
+        "call {start_rust}",
         "ud2",
-        main = sym main,
-        exit = sym exit,
+        start_rust = sym _start_rust,
     );
 }

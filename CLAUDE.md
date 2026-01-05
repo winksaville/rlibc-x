@@ -9,11 +9,14 @@ rlibc-x is a minimal, educational Rust libc implementation for Linux x86_64. It 
 ## Build Commands
 
 ```bash
-# Build the workspace (both library and app)
+# Build the workspace (both library and app) - uses default target
 cargo build
 
 # Build release
 cargo build --release
+
+# Build with custom target (from app directory, requires nightly)
+cd app && cargo +nightly build --release -Z build-std
 
 # Run the app (returns exit code 47)
 cargo build && ./target/debug/app; echo $?
@@ -32,13 +35,16 @@ cargo clippy
 
 ### Key Design Decisions
 
-- **panic="abort"** - No unwinding support (configured in workspace Cargo.toml for both dev and release profiles)
-- **-nostartfiles** - App uses custom `_start` entry point instead of system startup files (set in `app/build.rs`)
+- **panic="abort"** - No unwinding support
+- **Identical dev/release profiles** - Both use `opt-level='z'`, LTO, `codegen-units=1`, `debug=2`, `debug-assertions=false`, `overflow-checks=false`, `incremental=false`. Only difference: `strip=false` (dev) vs `strip=true` (release)
+- **-nostartfiles -static** - App uses custom `_start` entry point and static linking (set in `app/build.rs`)
+- **Custom target** - `app/.cargo/x86_64-unknown-linux-rlibc-x1.json` for builds with `-Z build-std`
 - **Bump allocator** - Simple linear allocator where `free()` is a no-op; memory grows via `brk()` syscall
+- **Early heap init** - Heap is initialized once in `_start_rust()` before `main()`, not lazily per-malloc
 
 ### rlibc-x1 Library (rlibc-x1/src/lib.rs)
 
-**Syscall Interface** (lines 19-150):
+**Syscall Interface**:
 - `syscall0` through `syscall6` - Inline assembly wrappers for x86_64 Linux syscalls
 - Follows System V ABI: rax=syscall number, rdi/rsi/rdx/r10/r8/r9=args
 
@@ -51,7 +57,9 @@ cargo clippy
 - `malloc(size)` / `realloc(ptr, size)` / `calloc(nmemb, size)` / `free(ptr)` - Memory allocation
 
 **Runtime**:
-- `_start()` - Naked assembly entry point that receives argc/argv from kernel, calls main(), then exit()
+- `_start()` (naked) - Entry point; sets up argc/argv/envp in registers, calls `_start_rust()`
+- `_start_rust()` - Initializes heap, calls `main()`, then `exit(0)`
+- `main()` - User-defined; call `exit()` explicitly for non-zero exit codes
 - `panic_handler` - Routes panics to exit(101)
 - `rust_eh_personality()` - Empty stub required by compiler
 
@@ -59,9 +67,9 @@ cargo clippy
 
 Applications using rlibc-x1 must:
 1. Use `#![no_std]` and `#![no_main]`
-2. Define `#[unsafe(no_mangle)] fn main()` (called by rlibc-x1's `_start`)
-3. Add `-nostartfiles` linker flag via build.rs
-4. Call `rlibc_x1::exit()` to terminate (returning from main goes to exit with return value)
+2. Define `#[unsafe(no_mangle)] fn main()` (called by rlibc-x1's `_start_rust`)
+3. Add `-nostartfiles` and `-static` linker flags via build.rs
+4. Call `rlibc_x1::exit()` to terminate with non-zero exit code
 
 ## Platform Support
 

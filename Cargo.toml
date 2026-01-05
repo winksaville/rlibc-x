@@ -4,6 +4,22 @@ resolver = "3"
 
 [profile.dev]
 panic = "abort"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+debug = 2
+debug-assertions = false
+overflow-checks = false
+incremental = false
+strip = false
 
 [profile.release]
 panic = "abort"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+debug = 2
+debug-assertions = false
+overflow-checks = false
+incremental = false
+strip = true
