@@ -13,12 +13,12 @@ rlibc-x is a minimal, educational Rust libc implementation for Linux x86_64. It 
 cargo build
 cargo build --release
 
-# Build with custom target (from app directory, requires nightly)
-cd app && cargo +nightly build --release -Z build-std
+# Build with custom target (from app-x1 directory, requires nightly)
+cd app-x1 && cargo +nightly build --release -Z build-std
 
-# Run apps (app returns 47, app-std returns 0)
-cargo build && ./target/debug/app; echo $?
-cargo build && ./target/debug/app-std; echo $?
+# Run apps (app-x1 returns 47, app-x2 returns 42)
+cargo build && ./target/debug/app-x1; echo $?
+cargo build && ./target/debug/app-x2; echo $?
 
 # Check/lint
 cargo check
@@ -31,8 +31,8 @@ cargo clippy
 
 - **rlibc-x1/** - `#![no_std]` library for apps that don't use Rust std
 - **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
-- **app/** - Example no_std app using rlibc-x1
-- **app-std/** - Example std app using rlibc-x2
+- **app-x1/** - Example no_std app using rlibc-x1
+- **app-x2/** - Example std app using rlibc-x2
 
 ### Two Approaches
 

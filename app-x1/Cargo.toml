@@ -1,7 +1,7 @@
 [package]
-name = "app-std"
+name = "app-x1"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rlibc-x2 = { path = "../rlibc-x2" }
+rlibc-x1 = { path = "../rlibc-x1" }

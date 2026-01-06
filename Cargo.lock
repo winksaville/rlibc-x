@@ -3,14 +3,14 @@
 version = 4
 
 [[package]]
-name = "app"
+name = "app-x1"
 version = "0.1.0"
 dependencies = [
  "rlibc-x1",
 ]
 
 [[package]]
-name = "app-std"
+name = "app-x2"
 version = "0.1.0"
 dependencies = [
  "rlibc-x2",

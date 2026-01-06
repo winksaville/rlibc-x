@@ -14,6 +14,32 @@ A minimal, educational Rust libc implementation for Linux x86_64.
 One hypothesis: if a CLI or GUI app doesn't parse command line arguments, a minimal runtime could
 skip that machinery entirely, potentially reducing binary size significantly.
 
+## Results
+
+The `app-x1` + `rlibc-x1` combination produces a **1,480 byte** statically-linked executable:
+
+```
+$ cargo build --release
+$ ls -la target/release/app-x1
+-rwxr-xr-x 2 wink users 1480 Jan  6 09:38 target/release/app-x1
+
+$ file target/release/app-x1
+target/release/app-x1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, stripped
+
+$ size target/release/app-x1
+   text    data     bss     dec     hex filename
+    284       0      24     308     134 target/release/app-x1
+```
+
+This is achieved through:
+- **`#![no_std]`** - No Rust standard library overhead
+- **Direct syscalls** - `_start` → `_start_rust()` → `main()` → `exit()` with no glibc
+- **Bump allocator** - Simple `malloc`/`realloc` via `brk()`, `free()` is a no-op
+- **`panic="abort"`** - No unwinding machinery
+- **Aggressive optimization** - `opt-level='z'`, LTO, single codegen unit, stripped symbols
+
+For comparison, `app-x2` using `rlibc-x2` (which supports Rust's std library) is ~41KB.
+
 ## Status
 
 This is an experimental/educational project. For production use, consider mature alternatives:
@@ -34,8 +60,8 @@ I started this with this prompt for Claude Code 4.5:
 
 ## Creation
 
-The initial version of app was created by Claude Code 4.5
-and the initial version of app-std where a custom Target is defined
+The initial version of app-x1 was created by Claude Code 4.5
+and the initial version of app-x2 where a custom Target is defined
 in .cargo/config was suggested by ChatGPT and then Claude Code 4.5
 completed the implementation!
 
