@@ -10,5 +10,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "app-std"
+version = "0.1.0"
+dependencies = [
+ "rlibc-x1",
+]
+
+[[package]]
 name = "rlibc-x1"
 version = "0.1.0"

@@ -2,3 +2,10 @@
 name = "rlibc-x1"
 version = "0.1.0"
 edition = "2024"
+
+[features]
+default = ["runtime"]
+# Include panic handler and _start runtime (for no_std apps)
+runtime = []
+# Only provide libc symbols, no runtime (for std apps)
+libc-only = []

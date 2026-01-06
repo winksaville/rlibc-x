@@ -2,6 +2,8 @@
 
 use core::arch::asm;
 
+pub mod stubs;
+
 #[allow(unused)]
 use core::panic::PanicInfo;
 
@@ -180,7 +182,7 @@ fn brk(addr: *mut u8) -> *mut u8 {
     unsafe { syscall1(SYS_BRK, addr as u64) as *mut u8 }
 }
 
-fn init_heap() {
+pub fn init_heap() {
     unsafe {
         HEAP_START = brk(core::ptr::null_mut());
         HEAP_END = HEAP_START;
@@ -240,27 +242,31 @@ pub extern "C" fn free(_ptr: *mut u8) {
     // Simple bump allocator doesn't free individual allocations
 }
 
-// --- Runtime ---
+// --- Runtime (only for no_std apps using the "runtime" feature) ---
 
-#[cfg(not(test))]
+#[cfg(all(feature = "runtime", not(test)))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     exit(101)
 }
 
+#[cfg(feature = "runtime")]
 #[unsafe(no_mangle)]
 extern "C" fn rust_eh_personality() {}
 
+#[cfg(feature = "runtime")]
 unsafe extern "Rust" {
     safe fn main();
 }
 
+#[cfg(feature = "runtime")]
 extern "C" fn _start_rust() -> ! {
     init_heap();
     main();
     exit(0)
 }
 
+#[cfg(feature = "runtime")]
 #[unsafe(no_mangle)]
 #[unsafe(naked)]
 pub extern "C" fn _start() -> ! {
