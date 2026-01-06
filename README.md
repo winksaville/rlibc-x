@@ -40,6 +40,82 @@ This is achieved through:
 
 For comparison, `app-x2` using `rlibc-x2` (which supports Rust's std library) is ~41KB.
 
+## Verifying No libc Usage
+
+The `verify-no-libc.sh` script validates that a binary doesn't use any system libc code:
+
+```
+$ ./verify-no-libc.sh ./target/release/app-x1
+=== Verifying: ./target/release/app-x1 ===
+
+1. Dynamic linking check... PASS (not a dynamic executable)
+2. Interpreter (INTERP) check... PASS (no INTERP section)
+3. NEEDED libraries check... PASS (no NEEDED libraries)
+4. Undefined symbols check... PASS (no undefined symbols)
+5. GLIBC version references check... PASS (no @GLIBC version symbols)
+6. Direct syscall instructions check... PASS (2 syscall instructions)
+7. Runtime library file check... PASS (no libc/ld-linux files opened)
+8. Runtime syscall trace check... PASS (3 syscalls, no dynamic loader activity)
+
+========================================
+RESULT: PASS - No libc code used
+```
+
+### Checks Performed
+
+| # | Check | Tool | Why |
+|---|-------|------|-----|
+| 1 | Not dynamically linked | `ldd` | Binary should report "statically linked" or "not a dynamic executable" |
+| 2 | No INTERP section | `readelf -l` | No dynamic linker (ld-linux.so) needed to load the binary |
+| 3 | No NEEDED libraries | `readelf -d` | No shared library dependencies declared |
+| 4 | No strong undefined symbols | `readelf --dyn-syms` | All symbols resolved (weak undefined is acceptable) |
+| 5 | No @GLIBC references | `objdump -T` | No glibc version-tagged symbols |
+| 6 | Direct syscall instructions | `objdump -d` | Binary contains `syscall` instructions (direct kernel calls) |
+| 7 | No libc files opened | `strace -e openat` | Runtime doesn't open libc.so or ld-linux.so |
+| 8 | No dynamic loader activity | `strace` | Full syscall trace shows no library loading |
+
+### The "Dynamically Linked" Discrepancy
+
+You may notice that `file` and `ldd` report different things for `app-x2`:
+
+```
+$ file target/release/app-x2
+target/release/app-x2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, ...
+
+$ ldd target/release/app-x2
+	statically linked
+```
+
+**Both are correct!**
+
+- **`file`** reports "dynamically linked" because `app-x2` has `.dynamic` and `.dynsym` ELF sections (required by Rust's std for symbol exports)
+- **`ldd`** reports "statically linked" because there's no INTERP section, so no dynamic linker is invoked
+
+The definitive proof is **`strace`** - it shows exactly what happens at runtime:
+
+```
+$ strace ./target/release/app-x2
+execve("./target/release/app-x2", ...) = 0
+brk(NULL)                               = 0x...
+brk(0x...)                              = 0x...
+arch_prctl(ARCH_SET_FS, 0x...)          = 0
+poll([...], 3, 0)                       = 0 (Timeout)
+gettid()                                = ...
+exit(42)                                = ?
+```
+
+Only 7 syscalls, no library loading. Compare to a typical glibc-linked binary which would show:
+- `openat("/etc/ld.so.cache", ...)`
+- `openat("/usr/lib/libc.so.6", ...)`
+- Multiple `mmap()` calls to load shared libraries
+
+### Weak Undefined Symbols
+
+`app-x2` has one weak undefined symbol (`gettid`) from Rust's std library. This is acceptable because:
+1. Weak symbols resolve to NULL if not provided
+2. Rust's std has fallback code that uses `syscall(SYS_gettid)` when `gettid` is unavailable
+3. No actual libc code is called
+
 ## Status
 
 This is an experimental/educational project. For production use, consider mature alternatives:

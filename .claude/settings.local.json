@@ -14,7 +14,11 @@
       "Bash(git -C /home/wink/data/prgs/rust/rlibc-x show:*)",
       "Bash(git -C /home/wink/data/prgs/rust/rlibc-x log --oneline -5)",
       "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff app/build.rs)",
-      "Bash(size:*)"
+      "Bash(size:*)",
+      "Bash(tree:*)",
+      "Bash(strace:*)",
+      "Bash(./verify-no-libc.sh:*)",
+      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff --stat)"
     ]
   }
 }
