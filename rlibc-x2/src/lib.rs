@@ -82,8 +82,19 @@ stub!(mmap64, *mut u8);
 stub!(mprotect, i32);
 stub!(munmap, i32);
 
-// System stubs
-stub!(syscall, i64);
+// Generic syscall - all x86_64 Linux syscalls use at most 6 arguments
+#[unsafe(no_mangle)]
+pub extern "C" fn syscall(
+    num: i64,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+    arg6: u64,
+) -> i64 {
+    unsafe { syscall::syscall6(num as u64, arg1, arg2, arg3, arg4, arg5, arg6) as i64 }
+}
 
 // Unwinding stubs (for panic/backtrace)
 stub!(_Unwind_Backtrace, i32);

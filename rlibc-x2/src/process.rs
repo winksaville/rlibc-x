@@ -18,6 +18,13 @@ pub extern "C" fn abort() -> ! {
     exit(134) // 128 + SIGABRT(6)
 }
 
+/// Rust panic entry point for panic=abort
+/// This is what std's panic machinery calls when panic=abort is set
+#[unsafe(no_mangle)]
+pub extern "Rust" fn __rust_start_panic(_payload: *mut u8) -> ! {
+    abort()
+}
+
 // External reference to the C ABI main that rustc generates
 unsafe extern "C" {
     fn main(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32;
@@ -34,11 +41,17 @@ pub extern "C" fn __libc_start_main(
     _rtld_fini: usize,
     _stack_end: *mut u8,
 ) -> ! {
+    crate::io::write(2, b"A\n".as_ptr(), 2); // Before heap init
+
     // Initialize heap first (TLS needs malloc)
     init_heap();
 
+    crate::io::write(2, b"B\n".as_ptr(), 2); // After heap init
+
     // Initialize TLS before calling main
     init_tls();
+
+    crate::io::write(2, b"C\n".as_ptr(), 2); // After TLS init
 
     // Calculate envp (follows argv + NULL terminator)
     let envp = unsafe { argv.offset(argc as isize + 1) };

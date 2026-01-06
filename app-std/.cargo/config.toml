@@ -1,0 +1,9 @@
+[build]
+target = ".cargo/x86_64-unknown-linux-rlibc-x2.json"
+
+#[target.x86_64-unknown-linux-rlibcx]
+#rustflags = [
+#  "-C", "link-arg=-L/home/wink/data/prgs/rust/rlibc-x/app-std/.cargo/out"
+#  "-C", "link-arg=-l:librlibcx.a"
+#]
+

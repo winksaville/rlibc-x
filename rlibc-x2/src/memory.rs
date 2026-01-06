@@ -29,6 +29,7 @@ pub extern "C" fn malloc(size: usize) -> *mut u8 {
             let grow_size = (aligned_size + 4095) & !4095;
             let new_end = brk(HEAP_END.add(grow_size));
             if new_end <= HEAP_END {
+                crate::io::write(2, b"malloc: brk failed\n".as_ptr(), 19);
                 return core::ptr::null_mut();
             }
             HEAP_END = new_end;
@@ -47,9 +48,7 @@ pub extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
     }
     let new_ptr = malloc(size);
     if !new_ptr.is_null() {
-        unsafe {
-            core::ptr::copy_nonoverlapping(ptr, new_ptr, size);
-        }
+        memcpy(new_ptr, ptr, size);
     }
     new_ptr
 }
@@ -59,9 +58,8 @@ pub extern "C" fn calloc(nmemb: usize, size: usize) -> *mut u8 {
     let total = nmemb.saturating_mul(size);
     let ptr = malloc(total);
     if !ptr.is_null() {
-        unsafe {
-            core::ptr::write_bytes(ptr, 0, total);
-        }
+        // Use memset directly to avoid compiler optimizing write_bytes -> memset
+        memset(ptr, 0, total);
     }
     ptr
 }
@@ -88,27 +86,33 @@ pub extern "C" fn posix_memalign(memptr: *mut *mut u8, alignment: usize, size: u
     0
 }
 
-// Memory operations needed by std
+// Memory operations - must use manual loops, never core::ptr::* which LLVM optimizes to libc calls
 #[unsafe(no_mangle)]
 pub extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-    unsafe {
-        core::ptr::copy_nonoverlapping(src, dest, n);
+    for i in 0..n {
+        unsafe { *dest.add(i) = *src.add(i); }
     }
     dest
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-    unsafe {
-        core::ptr::copy(src, dest, n);
+    if (dest as usize) <= (src as usize) {
+        for i in 0..n {
+            unsafe { *dest.add(i) = *src.add(i); }
+        }
+    } else {
+        for i in (0..n).rev() {
+            unsafe { *dest.add(i) = *src.add(i); }
+        }
     }
     dest
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
-    unsafe {
-        core::ptr::write_bytes(dest, c as u8, n);
+    for i in 0..n {
+        unsafe { *dest.add(i) = c as u8; }
     }
     dest
 }

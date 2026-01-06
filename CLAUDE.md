@@ -9,17 +9,16 @@ rlibc-x is a minimal, educational Rust libc implementation for Linux x86_64. It 
 ## Build Commands
 
 ```bash
-# Build the workspace (both library and app) - uses default target
+# Build the workspace
 cargo build
-
-# Build release
 cargo build --release
 
 # Build with custom target (from app directory, requires nightly)
 cd app && cargo +nightly build --release -Z build-std
 
-# Run the app (returns exit code 47)
+# Run apps (app returns 47, app-std returns 0)
 cargo build && ./target/debug/app; echo $?
+cargo build && ./target/debug/app-std; echo $?
 
 # Check/lint
 cargo check
@@ -30,40 +29,50 @@ cargo clippy
 
 ### Workspace Structure
 
-- **rlibc-x1/** - Core `#![no_std]` library providing libc functionality
-- **app/** - Example application demonstrating library usage
+- **rlibc-x1/** - `#![no_std]` library for apps that don't use Rust std
+- **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
+- **app/** - Example no_std app using rlibc-x1
+- **app-std/** - Example std app using rlibc-x2
+
+### Two Approaches
+
+**rlibc-x1** (no_std path): App uses `#![no_std]` and `#![no_main]`. Library provides `_start` → `_start_rust()` → user's `main()`. Minimal, but requires explicit no_std annotations.
+
+**rlibc-x2** (std path): App uses normal `fn main()` with Rust std. Library provides `_start` → `__libc_start_main()` → Rust's generated main. Replaces glibc while keeping std functionality. Uses stub macros for unimplemented functions that print "STUB: funcname" and exit(99).
 
 ### Key Design Decisions
 
 - **panic="abort"** - No unwinding support
-- **Identical dev/release profiles** - Both use `opt-level='z'`, LTO, `codegen-units=1`, `debug=2`, `debug-assertions=false`, `overflow-checks=false`, `incremental=false`. Only difference: `strip=false` (dev) vs `strip=true` (release)
-- **-nostartfiles -static** - App uses custom `_start` entry point and static linking (set in `app/build.rs`)
-- **Custom target** - `app/.cargo/x86_64-unknown-linux-rlibc-x1.json` for builds with `-Z build-std`
+- **Identical dev/release profiles** - Both use `opt-level='z'`, LTO, `codegen-units=1`, `debug=2`. Only difference: `strip=false` (dev) vs `strip=true` (release)
 - **Bump allocator** - Simple linear allocator where `free()` is a no-op; memory grows via `brk()` syscall
-- **Early heap init** - Heap is initialized once in `_start_rust()` before `main()`, not lazily per-malloc
+- **TLS initialization** - rlibc-x2 sets up FS segment register for thread-local storage before calling main
 
-### rlibc-x1 Library (rlibc-x1/src/lib.rs)
+### rlibc-x2 Module Structure
 
-**Syscall Interface**:
-- `syscall0` through `syscall6` - Inline assembly wrappers for x86_64 Linux syscalls
-- Follows System V ABI: rax=syscall number, rdi/rsi/rdx/r10/r8/r9=args
+- **syscall.rs** - `syscall0` through `syscall6` wrappers, syscall constants
+- **process.rs** - `_start`, `__libc_start_main`, `exit`, `abort`
+- **memory.rs** - `malloc`, `realloc`, `calloc`, `free`, `memcpy`, `memset`, `memmove`, `memcmp`, `posix_memalign`
+- **io.rs** - `read`, `write`, `writev`
+- **thread.rs** - TLS init, pthread stubs, `poll`, `sysconf`
+- **signal.rs** - Signal handling stubs (`signal`, `sigaction`, `sigaltstack`)
+- **errno.rs** - `__errno_location`, `strlen`
+- **lib.rs** - Module re-exports and stub! macro for unimplemented functions
 
-**Syscall Constants**:
-- `SYS_READ` (0), `SYS_WRITE` (1), `SYS_BRK` (12), `SYS_EXIT` (60)
+### Creating Applications with rlibc-x2
 
-**Public API** (extern "C" for libc compatibility):
-- `exit(code)` - Process exit
-- `read(fd, buf, count)` / `write(fd, buf, count)` - Basic I/O
-- `malloc(size)` / `realloc(ptr, size)` / `calloc(nmemb, size)` / `free(ptr)` - Memory allocation
+Applications using rlibc-x2 need:
+1. Add `extern crate rlibc_x2;` to force linking
+2. Use build.rs with linker flags:
+   ```rust
+   println!("cargo:rustc-link-arg=-static");
+   println!("cargo:rustc-link-arg=-nostdlib");
+   println!("cargo:rustc-link-arg=-nodefaultlibs");
+   println!("cargo:rustc-link-arg=-e_start");
+   println!("cargo:rustc-link-arg=-Wl,--undefined=_start");
+   println!("cargo:rustc-link-arg=-Wl,--undefined=__libc_start_main");
+   ```
 
-**Runtime**:
-- `_start()` (naked) - Entry point; sets up argc/argv/envp in registers, calls `_start_rust()`
-- `_start_rust()` - Initializes heap, calls `main()`, then `exit(0)`
-- `main()` - User-defined; call `exit()` explicitly for non-zero exit codes
-- `panic_handler` - Routes panics to exit(101)
-- `rust_eh_personality()` - Empty stub required by compiler
-
-### Creating New Applications
+### Creating Applications with rlibc-x1
 
 Applications using rlibc-x1 must:
 1. Use `#![no_std]` and `#![no_main]`

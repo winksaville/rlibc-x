@@ -1,6 +1,6 @@
 //! Thread-local storage and pthread stubs
 
-use crate::memory::malloc;
+use crate::memory::{malloc, memset};
 use crate::syscall::{syscall2, syscall3, ARCH_SET_FS, SYS_ARCH_PRCTL, SYS_POLL};
 
 /// Initialize Thread-Local Storage
@@ -19,12 +19,11 @@ pub fn init_tls() {
     unsafe {
         let block = malloc(TLS_SIZE + SELF_PTR_SIZE);
         if block.is_null() {
-            // Can't do much without memory
             return;
         }
 
-        // Zero-initialize the TLS block
-        core::ptr::write_bytes(block, 0, TLS_SIZE + SELF_PTR_SIZE);
+        // Zero-initialize the TLS block (use our memset, not core::ptr::write_bytes)
+        memset(block, 0, TLS_SIZE + SELF_PTR_SIZE);
 
         // The self-pointer goes at the end, and FS.base points to it
         let tcb = block.add(TLS_SIZE) as *mut usize;
