@@ -1,4 +1,6 @@
 [package]
-name = "rlibc-x1"
+name = "rlibc-x2"
 version = "0.1.0"
 edition = "2024"
+
+[lib]

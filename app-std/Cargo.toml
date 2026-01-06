@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rlibc-x1 = { path = "../rlibc-x1", default-features = false, features = ["libc-only"] }
+rlibc-x2 = { path = "../rlibc-x2" }
