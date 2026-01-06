@@ -1,9 +1,13 @@
 [build]
+
+# Target is the default target created using:
+# rustc +nightly -Z unstable-options \
+# --print target-spec-json \
+#  --target x86_64-unknown-linux-gnu \
+#  > x86_64-unknown-linux-rlibc-x1.json
 target = ".cargo/x86_64-unknown-linux-rlibc-x1.json"
 
-#[target.x86_64-unknown-linux-rlibcx]
-#rustflags = [
-#  "-C", "link-arg=-L/home/wink/data/prgs/rust/rlibc-x/app/.cargo/out"
-#  "-C", "link-arg=-l:librlibcx.a"
-#]
+[unstable]
 
+# Eliminate need to pass -Z build-std on command line
+build-std = ["core", "alloc", "std"]

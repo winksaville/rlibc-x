@@ -32,9 +32,18 @@ I started this with this prompt for Claude Code 4.5:
 > exit, free, malloc, realloc, exit and probably a few others. And main.rs is something like
 > `fn main() { exit(2) }`."
 
-## Created by working with Claude Code 4.5
+## Creation
 
-Thanks for the help Claude :)
+The initial version of app was created by Claude Code 4.5
+and the initial version of app-std where a custom Target is defined
+in .cargo/config was suggested by ChatGPT and then Claude Code 4.5
+completed the implementation!
+
+Thanks for the help Claude and ChatGPT :)
+
+https://chatgpt.com/share/695b4ae1-d84c-800c-8d09-34cff3de3b33
+And use claude-code to see the many conversations with it!
+
 
 If you'd like to use claude-code and keep the claude sessions locally install
 [claude-code](https://code.claude.com/docs/en/setup) and also install

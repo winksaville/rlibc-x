@@ -41,17 +41,11 @@ pub extern "C" fn __libc_start_main(
     _rtld_fini: usize,
     _stack_end: *mut u8,
 ) -> ! {
-    crate::io::write(2, b"A\n".as_ptr(), 2); // Before heap init
-
     // Initialize heap first (TLS needs malloc)
     init_heap();
 
-    crate::io::write(2, b"B\n".as_ptr(), 2); // After heap init
-
     // Initialize TLS before calling main
     init_tls();
-
-    crate::io::write(2, b"C\n".as_ptr(), 2); // After TLS init
 
     // Calculate envp (follows argv + NULL terminator)
     let envp = unsafe { argv.offset(argc as isize + 1) };
