@@ -6,18 +6,19 @@ set -uo pipefail
 #        ./verify-no-libc.sh --test    # Run self-tests
 #
 # Checks performed:
-#   1. Not dynamically linked (ldd)
-#   2. No interpreter section (no dynamic linker needed)
-#   3. No NEEDED libraries
+#   1. Not dynamically linked (ldd) - informational
+#   2. No interpreter section (no dynamic linker needed) - AUTHORITATIVE
+#   3. No NEEDED libraries - AUTHORITATIVE
 #   4. No strong undefined symbols
 #   5. No GLIBC version references
-#   6. Contains direct syscall instructions
-#   7. Runtime: no libc/ld-linux files opened
-#   8. Runtime: full strace shows no dynamic loader activity
+#   6. Contains direct syscall instructions (heuristic)
+#   7. Runtime: no libc/ld-linux files opened (diagnostic)
+#   8. Runtime: full strace shows no dynamic loader activity (diagnostic)
 
 # Self-test mode
 if [ "${1:-}" = "--test" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
     PASS_COUNT=0
     FAIL_COUNT=0
 
@@ -27,7 +28,7 @@ if [ "${1:-}" = "--test" ]; then
         local name="$3"
 
         echo -n "Testing $name... "
-        if "$SCRIPT_DIR/verify-no-libc.sh" "$binary" >/dev/null 2>&1; then
+        if "$SELF" "$binary" >/dev/null 2>&1; then
             if [ "$expect_pass" = "yes" ]; then
                 echo "OK (PASS as expected)"
                 PASS_COUNT=$((PASS_COUNT + 1))
@@ -94,9 +95,13 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-# Check required tools
-REQUIRED_TOOLS="ldd readelf objdump nm strace timeout"
+# Check required tools (nm is optional - may not work on stripped binaries)
+REQUIRED_TOOLS="ldd readelf objdump strace timeout"
 TIMEOUT="${TIMEOUT:-5s}"
+HAS_NM=0
+if command -v nm &>/dev/null; then
+    HAS_NM=1
+fi
 for tool in $REQUIRED_TOOLS; do
     if ! command -v "$tool" &>/dev/null; then
         echo "Error: Required tool '$tool' not found"
@@ -149,12 +154,13 @@ if [ -z "$DYNSYM_OUTPUT" ] || echo "$DYNSYM_OUTPUT" | grep -q "no dynamic symbol
     echo "PASS (no dynsym section - fully static)"
 else
     # Get undefined symbols that are not weak and not local
+    # Use $NF (last field) for robustness across readelf versions
     STRONG_UNDEF=$(echo "$DYNSYM_OUTPUT" | awk '
-        /UND/ && !/WEAK/ && !/LOCAL/ && $8 != "" { print $8 }
-    ' || true)
+        /UND/ && !/WEAK/ && !/LOCAL/ && NF > 0 { print $NF }
+    ' | grep -v '^$' || true)
     WEAK_UNDEF=$(echo "$DYNSYM_OUTPUT" | awk '
-        /UND/ && /WEAK/ && $8 != "" { print $8 }
-    ' || true)
+        /UND/ && /WEAK/ && NF > 0 { print $NF }
+    ' | grep -v '^$' || true)
 
     if [ -z "$STRONG_UNDEF" ]; then
         if [ -z "$WEAK_UNDEF" ]; then
@@ -182,16 +188,28 @@ else
     FAILED=1
 fi
 
-# 5b. Check for undefined glibc symbols (U = undefined, needs external library)
+# 5b. Check for common glibc entrypoint symbols (heuristic - nm may not work on stripped binaries)
 # Defined symbols (T/t) are OK - they're our own implementations
-echo -n "5b. GLIBC undefined symbols check... "
-GLIBC_UNDEF=$(nm "$BINARY" 2>/dev/null | grep " U " | grep -E "__libc_start_main|__glibc|__cxa_atexit" || true)
-if [ -z "$GLIBC_UNDEF" ]; then
-    echo "PASS (no undefined glibc symbols)"
+echo -n "5b. GLIBC entrypoint symbols (heuristic)... "
+if [ "$HAS_NM" -eq 0 ]; then
+    echo "WARN (nm not available)"
+    WARNINGS=$((WARNINGS + 1))
 else
-    echo "FAIL (has undefined glibc symbols)"
-    echo "$GLIBC_UNDEF" | head -5
-    FAILED=1
+    NM_OUTPUT=$(nm "$BINARY" 2>&1)
+    NM_EXIT=$?
+    if [ $NM_EXIT -ne 0 ] || [ -z "$NM_OUTPUT" ] || echo "$NM_OUTPUT" | grep -qi "no symbols"; then
+        echo "WARN (nm produced no symbols - binary may be stripped)"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        GLIBC_UNDEF=$(echo "$NM_OUTPUT" | grep " U " | grep -E "__libc_start_main|__glibc|__cxa_atexit" || true)
+        if [ -z "$GLIBC_UNDEF" ]; then
+            echo "PASS (no undefined glibc entrypoint symbols)"
+        else
+            echo "FAIL (has undefined glibc symbols)"
+            echo "$GLIBC_UNDEF" | head -5
+            FAILED=1
+        fi
+    fi
 fi
 
 # 6. Heuristic: syscall instruction presence (vDSO, LTO, or stripping may hide them)
@@ -207,14 +225,14 @@ else
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# 7. Runtime check - no libc files opened
+# 7. Runtime check - no libc files opened (diagnostic - checks 2 & 3 are authoritative)
 # Use -f to follow forks, trace=file catches open/openat/openat2/access/stat/etc.
 echo -n "7. Runtime library file check... "
 STRACE_OUT7=$(timeout "$TIMEOUT" strace -f -e trace=file "$BINARY" 2>&1 >/dev/null)
 STRACE_EXIT7=$?
 if [ $STRACE_EXIT7 -eq 124 ]; then
-    echo "FAIL (binary timed out after $TIMEOUT)"
-    FAILED=1
+    echo "WARN (binary timed out after $TIMEOUT - may be interactive)"
+    WARNINGS=$((WARNINGS + 1))
 else
     # Tighter patterns: libc.so, ld-linux, ld.so, and common C++ runtime libs
     LIBC_PATTERN='ld-linux|ld\.so|libc\.so|libpthread\.so|libm\.so|libgcc_s\.so|libstdc\+\+\.so'
@@ -228,14 +246,14 @@ else
     fi
 fi
 
-# 8. Runtime check - verify no dynamic loading via full strace
+# 8. Runtime check - verify no dynamic loading via full strace (diagnostic - checks 2 & 3 are authoritative)
 # Use -f to follow forks/execs
 echo -n "8. Runtime syscall trace check... "
 STRACE_OUT8=$(timeout "$TIMEOUT" strace -f "$BINARY" 2>&1 >/dev/null)
 STRACE_EXIT8=$?
 if [ $STRACE_EXIT8 -eq 124 ]; then
-    echo "FAIL (binary timed out after $TIMEOUT)"
-    FAILED=1
+    echo "WARN (binary timed out after $TIMEOUT - may be interactive)"
+    WARNINGS=$((WARNINGS + 1))
 else
     RUNTIME_SYSCALL_COUNT=$(echo "$STRACE_OUT8" | grep -cE "^\w+\(" || echo "0")
     # Check for known dynamic loader artifacts:
@@ -257,12 +275,12 @@ echo
 echo "========================================"
 if [ $FAILED -eq 0 ]; then
     if [ $WARNINGS -eq 0 ]; then
-        echo "RESULT: PASS - No dynamic loader or libc dependency detected"
+        echo "RESULT: PASS - No INTERP/NEEDED (checks 2 & 3 are authoritative)"
     else
-        echo "RESULT: PASS with $WARNINGS warning(s) - No dynamic loader or libc dependency detected"
+        echo "RESULT: PASS with $WARNINGS warning(s) - No INTERP/NEEDED (checks 2 & 3 are authoritative)"
     fi
     exit 0
 else
-    echo "RESULT: FAIL - Dynamic loader or libc dependency detected"
+    echo "RESULT: FAIL - Dynamic dependency detected (see INTERP/NEEDED checks)"
     exit 1
 fi

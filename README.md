@@ -53,13 +53,13 @@ $ ./verify-no-libc.sh ./target/release/app-x1
 3. NEEDED libraries check... PASS (no NEEDED libraries)
 4. Undefined symbols check... PASS (no dynsym section - fully static)
 5a. GLIBC dynamic symbols check... PASS (no @GLIBC version symbols)
-5b. GLIBC undefined symbols check... PASS (no undefined glibc symbols)
+5b. GLIBC entrypoint symbols (heuristic)... PASS (no undefined glibc entrypoint symbols)
 6. Syscall instructions (heuristic)... PASS (2 syscall instructions)
 7. Runtime library file check... PASS (no libc/runtime libraries accessed)
 8. Runtime syscall trace check... PASS (3 syscalls, no dynamic loader activity)
 
 ========================================
-RESULT: PASS - No dynamic loader or libc dependency detected
+RESULT: PASS - No INTERP/NEEDED (checks 2 & 3 are authoritative)
 ```
 
 ### Self-Test Mode
@@ -96,7 +96,7 @@ RESULT: ALL TESTS PASSED
 | 3 | No NEEDED libraries | `readelf -d` | No shared library dependencies - **primary check** |
 | 4 | No strong undefined symbols | `readelf --dyn-syms` | All symbols resolved (weak undefined is acceptable) |
 | 5a | No @GLIBC dynamic symbols | `objdump -T` | No dynamically linked glibc version-tagged symbols |
-| 5b | No undefined glibc symbols | `nm` | No statically linked glibc (checks for undefined `__libc_start_main`, etc.) |
+| 5b | No glibc entrypoint symbols (heuristic) | `nm` | No undefined `__libc_start_main`, etc. (nm optional - may not work on stripped binaries) |
 | 6 | Syscall instructions (heuristic) | `objdump -d` | Looks for `syscall`/`svc`/`int 0x80` - may be hidden by vDSO or LTO |
 | 7 | No libc files accessed | `strace -f -e trace=file` | Runtime doesn't access libc.so, ld-linux.so, or runtime libs |
 | 8 | No dynamic loader activity | `strace -f` | Full syscall trace shows no library loading (ld.so.cache, etc.) |

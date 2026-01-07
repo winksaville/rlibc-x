@@ -80,6 +80,23 @@ Applications using rlibc-x1 must:
 3. Add `-nostartfiles` and `-static` linker flags via build.rs
 4. Call `rlibc_x1::exit()` to terminate with non-zero exit code
 
+## Verification
+
+Use `verify-no-libc.sh` to validate binaries don't depend on libc:
+
+```bash
+# Verify a binary has no libc dependency
+./verify-no-libc.sh ./target/release/app-x1
+
+# Run self-tests (requires built binaries)
+./verify-no-libc.sh --test
+
+# Override timeout for slow/interactive binaries
+TIMEOUT=10s ./verify-no-libc.sh ./mybinary
+```
+
+Key checks: INTERP header (check 2) and NEEDED libraries (check 3) are authoritative - if both pass, the binary is truly libc-free.
+
 ## Platform Support
 
 Currently **Linux x86_64 only**. Syscall numbers and ABI are architecture-specific.
