@@ -42,37 +42,64 @@ For comparison, `app-x2` using `rlibc-x2` (which supports Rust's std library) is
 
 ## Verifying No libc Usage
 
-The `verify-no-libc.sh` script validates that a binary doesn't use any system libc code:
+The `verify-no-libc.sh` script validates that a binary doesn't use any C library (glibc, musl, etc.):
 
 ```
 $ ./verify-no-libc.sh ./target/release/app-x1
 === Verifying: ./target/release/app-x1 ===
 
-1. Dynamic linking check... PASS (not a dynamic executable)
-2. Interpreter (INTERP) check... PASS (no INTERP section)
+1. Dynamic linking check (ldd)... INFO (not a dynamic executable)
+2. Interpreter (INTERP) check... PASS (no INTERP program header)
 3. NEEDED libraries check... PASS (no NEEDED libraries)
-4. Undefined symbols check... PASS (no undefined symbols)
-5. GLIBC version references check... PASS (no @GLIBC version symbols)
-6. Direct syscall instructions check... PASS (2 syscall instructions)
-7. Runtime library file check... PASS (no libc/ld-linux files opened)
+4. Undefined symbols check... PASS (no dynsym section - fully static)
+5a. GLIBC dynamic symbols check... PASS (no @GLIBC version symbols)
+5b. GLIBC undefined symbols check... PASS (no undefined glibc symbols)
+6. Syscall instructions (heuristic)... PASS (2 syscall instructions)
+7. Runtime library file check... PASS (no libc/runtime libraries accessed)
 8. Runtime syscall trace check... PASS (3 syscalls, no dynamic loader activity)
 
 ========================================
-RESULT: PASS - No libc code used
+RESULT: PASS - No dynamic loader or libc dependency detected
 ```
+
+### Self-Test Mode
+
+Run the built-in test suite to verify the script works correctly:
+
+```
+$ ./verify-no-libc.sh --test
+=== verify-no-libc.sh self-test ===
+
+Testing app-x1 (debug)... OK (PASS as expected)
+Testing app-x1 (release)... OK (PASS as expected)
+Testing app-x2 (debug)... OK (PASS as expected)
+Testing app-x2 (release)... OK (PASS as expected)
+Testing /usr/bin/ls... OK (FAIL as expected)
+Testing /usr/bin/true... OK (FAIL as expected)
+
+========================================
+Tests passed: 6
+Tests failed: 0
+RESULT: ALL TESTS PASSED
+```
+
+### Configuration
+
+- **Timeout**: Runtime checks default to 5 seconds. Override with: `TIMEOUT=10s ./verify-no-libc.sh ./mybinary`
 
 ### Checks Performed
 
 | # | Check | Tool | Why |
 |---|-------|------|-----|
-| 1 | Not dynamically linked | `ldd` | Binary should report "statically linked" or "not a dynamic executable" |
-| 2 | No INTERP section | `readelf -l` | No dynamic linker (ld-linux.so) needed to load the binary |
-| 3 | No NEEDED libraries | `readelf -d` | No shared library dependencies declared |
+| 1 | Dynamic linking (info) | `ldd` | Informational only - ldd can execute code, so checks 2 & 3 are authoritative |
+| 2 | No INTERP header | `readelf -lW` | No dynamic linker (ld-linux.so) needed - **primary check** |
+| 3 | No NEEDED libraries | `readelf -d` | No shared library dependencies - **primary check** |
 | 4 | No strong undefined symbols | `readelf --dyn-syms` | All symbols resolved (weak undefined is acceptable) |
-| 5 | No @GLIBC references | `objdump -T` | No glibc version-tagged symbols |
-| 6 | Direct syscall instructions | `objdump -d` | Binary contains `syscall` instructions (direct kernel calls) |
-| 7 | No libc files opened | `strace -e openat` | Runtime doesn't open libc.so or ld-linux.so |
-| 8 | No dynamic loader activity | `strace` | Full syscall trace shows no library loading |
+| 5a | No @GLIBC dynamic symbols | `objdump -T` | No dynamically linked glibc version-tagged symbols |
+| 5b | No undefined glibc symbols | `nm` | No statically linked glibc (checks for undefined `__libc_start_main`, etc.) |
+| 6 | Syscall instructions (heuristic) | `objdump -d` | Looks for `syscall`/`svc`/`int 0x80` - may be hidden by vDSO or LTO |
+| 7 | No libc files accessed | `strace -f -e trace=file` | Runtime doesn't access libc.so, ld-linux.so, or runtime libs |
+| 8 | No dynamic loader activity | `strace -f` | Full syscall trace shows no library loading (ld.so.cache, etc.) |
 
 ### The "Dynamically Linked" Discrepancy
 
