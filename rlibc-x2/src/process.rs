@@ -4,6 +4,10 @@ use crate::memory::init_heap;
 use crate::syscall::{SYS_EXIT, syscall1};
 use crate::thread::init_tls;
 
+/// Stack end pointer - set during startup, used for stack overflow detection
+#[unsafe(no_mangle)]
+pub static mut __libc_stack_end: *mut u8 = core::ptr::null_mut();
+
 /// Exit the process with the given code
 pub fn exit(code: i32) -> ! {
     unsafe {
@@ -36,11 +40,14 @@ pub extern "C" fn __libc_start_main(
     main_fn: extern "C" fn(i32, *const *const u8, *const *const u8) -> i32,
     argc: i32,
     argv: *const *const u8,
-    _init: usize,
-    _fini: usize,
-    _rtld_fini: usize,
-    _stack_end: *mut u8,
+    init: Option<unsafe extern "C" fn(i32, *const *const u8, *const *const u8)>,
+    fini: Option<unsafe extern "C" fn()>,
+    rtld_fini: Option<unsafe extern "C" fn()>,
+    stack_end: *mut u8,
 ) -> ! {
+    // Store stack_end for stack overflow detection
+    unsafe { __libc_stack_end = stack_end; }
+
     // Initialize heap first (TLS needs malloc)
     init_heap();
 
@@ -50,8 +57,24 @@ pub extern "C" fn __libc_start_main(
     // Calculate envp (follows argv + NULL terminator)
     let envp = unsafe { argv.offset(argc as isize + 1) };
 
+    // Call init if provided (runs .init_array constructors)
+    if let Some(init_fn) = init {
+        unsafe { init_fn(argc, argv, envp); }
+    }
+
     // Call main and exit with its return value
     let ret = main_fn(argc, argv, envp);
+
+    // Call fini if provided (runs .fini_array destructors)
+    if let Some(fini_fn) = fini {
+        unsafe { fini_fn(); }
+    }
+
+    // Call rtld_fini if provided (dynamic linker cleanup)
+    if let Some(rtld_fini_fn) = rtld_fini {
+        unsafe { rtld_fini_fn(); }
+    }
+
     exit(ret)
 }
 
