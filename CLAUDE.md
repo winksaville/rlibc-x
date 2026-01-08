@@ -50,13 +50,15 @@ cargo clippy
 ### rlibc-x2 Module Structure
 
 - **syscall.rs** - `syscall0` through `syscall6` wrappers, syscall constants
-- **process.rs** - `_start`, `__libc_start_main`, `exit`, `abort`
+- **process.rs** - `_start`, `__libc_start_main`, `exit`, `abort`, `__libc_stack_end`
+- **environ.rs** - `environ` global pointer, `getenv` function for `std::env`
 - **memory.rs** - `malloc`, `realloc`, `calloc`, `free`, `memcpy`, `memset`, `memmove`, `memcmp`, `posix_memalign`
 - **io.rs** - `read`, `write`, `writev`
 - **thread.rs** - TLS init, pthread stubs, `poll`, `sysconf`
 - **signal.rs** - Signal handling stubs (`signal`, `sigaction`, `sigaltstack`)
 - **errno.rs** - `__errno_location`, `strlen`
 - **lib.rs** - Module re-exports and stub! macro for unimplemented functions
+- **tests/** - Integration test binaries (separate crate)
 
 ### Creating Applications with rlibc-x2
 
@@ -79,6 +81,23 @@ Applications using rlibc-x1 must:
 2. Define `#[unsafe(no_mangle)] fn main()` (called by rlibc-x1's `_start_rust`)
 3. Add `-nostartfiles` and `-static` linker flags via build.rs
 4. Call `rlibc_x1::exit()` to terminate with non-zero exit code
+
+## Testing
+
+Integration tests are in `rlibc-x2/tests/` as a separate crate with proper linker flags.
+
+```bash
+# Run all tests
+./rlibc-x2/tests/run.sh
+
+# Run specific test
+./rlibc-x2/tests/run.sh environ
+
+# Via cargo
+cargo run -p rlibc-x2-tests --bin test-environ --release
+```
+
+Adding a test: create `foo.rs`, add `[[bin]]` entry to `rlibc-x2/tests/Cargo.toml`.
 
 ## Verification
 

@@ -1,0 +1,11 @@
+[package]
+name = "rlibc-x2-tests"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rlibc-x2 = { path = ".." }
+
+[[bin]]
+name = "test-environ"
+path = "environ.rs"

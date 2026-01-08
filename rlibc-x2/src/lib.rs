@@ -25,6 +25,7 @@
 
 #![no_std]
 
+pub mod environ;
 pub mod errno;
 pub mod io;
 pub mod memory;
@@ -33,7 +34,8 @@ pub mod signal;
 pub mod syscall;
 pub mod thread;
 
-// Re-export key functions
+// Re-export key symbols
+pub use environ::environ;
 pub use process::exit;
 
 // Note: We don't provide a panic handler because std provides one.
@@ -74,7 +76,6 @@ stub!(readlink, isize);
 stub!(realpath, *mut u8);
 
 // Environment stubs
-stub!(getenv, *const u8);
 stub!(getauxval, usize);
 
 // Memory mapping stubs

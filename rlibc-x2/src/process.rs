@@ -1,5 +1,6 @@
 //! Process management (_start, exit, __libc_start_main)
 
+use crate::environ;
 use crate::memory::init_heap;
 use crate::syscall::{SYS_EXIT, syscall1};
 use crate::thread::init_tls;
@@ -56,6 +57,9 @@ pub extern "C" fn __libc_start_main(
 
     // Calculate envp (follows argv + NULL terminator)
     let envp = unsafe { argv.offset(argc as isize + 1) };
+
+    // Initialize environ for std::env
+    environ::init(envp.cast());
 
     // Call init if provided (runs .init_array constructors)
     if let Some(init_fn) = init {

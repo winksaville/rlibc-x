@@ -23,3 +23,10 @@ version = "0.1.0"
 [[package]]
 name = "rlibc-x2"
 version = "0.1.0"
+
+[[package]]
+name = "rlibc-x2-tests"
+version = "0.1.0"
+dependencies = [
+ "rlibc-x2",
+]

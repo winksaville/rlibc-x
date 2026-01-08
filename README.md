@@ -147,6 +147,58 @@ Only 7 syscalls, no library loading. Compare to a typical glibc-linked binary wh
 2. Rust's std has fallback code that uses `syscall(SYS_gettid)` when `gettid` is unavailable
 3. No actual libc code is called
 
+## rlibc-x2 Symbols
+
+Key symbols provided by rlibc-x2 for std compatibility:
+
+| Category | Symbols |
+|----------|---------|
+| Process | `_start`, `__libc_start_main`, `exit`, `abort`, `__libc_stack_end` |
+| Environment | `environ`, `getenv` - environment variable support for `std::env` |
+| Memory | `malloc`, `realloc`, `calloc`, `free`, `memcpy`, `memset`, `memmove`, `memcmp` |
+| I/O | `read`, `write`, `writev` |
+| Threading | `pthread_*` stubs, TLS initialization |
+| Other | `__errno_location`, signal stubs |
+
+## Testing
+
+Integration tests for rlibc-x2 are in `rlibc-x2/tests/`. Tests are standalone binaries that link against rlibc-x2 with the proper linker flags.
+
+```bash
+# Run all tests
+./rlibc-x2/tests/run.sh
+
+# Run specific test
+./rlibc-x2/tests/run.sh environ
+
+# Or via cargo
+cargo run -p rlibc-x2-tests --bin test-environ --release
+
+# Verbose output (shows debug info)
+VERBOSE=1 ./rlibc-x2/tests/run.sh
+VERBOSE=1 cargo run -p rlibc-x2-tests --bin test-environ --release
+```
+
+### Adding a Test
+
+1. Create `rlibc-x2/tests/foo.rs`:
+   ```rust
+   use std::process::ExitCode;
+   extern crate rlibc_x2;
+
+   fn main() -> ExitCode {
+       // Test logic - return 0 on success
+       ExitCode::from(0)
+   }
+   ```
+
+2. Add to `rlibc-x2/tests/Cargo.toml`:
+   ```toml
+   [[bin]]
+   name = "test-foo"
+   path = "foo.rs"
+   ```
+
 ## Status
 
 This is an experimental/educational project. For production use, consider mature alternatives:
