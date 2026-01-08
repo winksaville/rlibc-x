@@ -1,6 +1,10 @@
 # rlibc-x
 
 A minimal, educational Rust libc implementation for Linux x86_64.
+I briefly explored with Claude-code and
+[ChatGPT](https://chatgpt.com/share/695efdde-3c88-800c-b661-bbe5c24a9b94)
+the option of supporting dynamic linking with rblic-xX, but
+for now decided to just stick static linking.
 
 ## Goals
 
