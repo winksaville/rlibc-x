@@ -64,6 +64,14 @@ if [ "${1:-}" = "--test" ]; then
         run_test "$SCRIPT_DIR/target/release/app-x2" "yes" "app-x2 (release)"
     fi
 
+    # Test binaries from rlibc-x2/tests
+    if [ -f "$SCRIPT_DIR/target/debug/test-environ" ]; then
+        run_test "$SCRIPT_DIR/target/debug/test-environ" "yes" "test-environ (debug)"
+    fi
+    if [ -f "$SCRIPT_DIR/target/release/test-environ" ]; then
+        run_test "$SCRIPT_DIR/target/release/test-environ" "yes" "test-environ (release)"
+    fi
+
     # Test system binaries that should FAIL (use libc)
     run_test "/usr/bin/ls" "no" "/usr/bin/ls"
     run_test "/usr/bin/true" "no" "/usr/bin/true"
