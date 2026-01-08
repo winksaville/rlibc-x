@@ -71,6 +71,12 @@ if [ "${1:-}" = "--test" ]; then
     if [ -f "$SCRIPT_DIR/target/release/test-environ" ]; then
         run_test "$SCRIPT_DIR/target/release/test-environ" "yes" "test-environ (release)"
     fi
+    if [ -f "$SCRIPT_DIR/target/debug/test-std-env" ]; then
+        run_test "$SCRIPT_DIR/target/debug/test-std-env" "yes" "test-std-env (debug)"
+    fi
+    if [ -f "$SCRIPT_DIR/target/release/test-std-env" ]; then
+        run_test "$SCRIPT_DIR/target/release/test-std-env" "yes" "test-std-env (release)"
+    fi
 
     # Test system binaries that should FAIL (use libc)
     run_test "/usr/bin/ls" "no" "/usr/bin/ls"
