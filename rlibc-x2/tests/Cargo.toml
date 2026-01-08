@@ -9,3 +9,7 @@ rlibc-x2 = { path = ".." }
 [[bin]]
 name = "test-environ"
 path = "environ.rs"
+
+[[bin]]
+name = "test-std-env"
+path = "std_env.rs"

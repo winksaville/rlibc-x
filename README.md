@@ -164,19 +164,28 @@ Key symbols provided by rlibc-x2 for std compatibility:
 
 Integration tests for rlibc-x2 are in `rlibc-x2/tests/`. Tests are standalone binaries that link against rlibc-x2 with the proper linker flags.
 
+### Available Tests
+
+| Test | Description |
+|------|-------------|
+| `test-environ` | Tests raw `environ` pointer and `getenv()` function |
+| `test-std-env` | Tests Rust's `std::env` API (`var()`, `var_os()`, `vars()`) |
+
 ```bash
 # Run all tests
 ./rlibc-x2/tests/run.sh
 
 # Run specific test
 ./rlibc-x2/tests/run.sh environ
+./rlibc-x2/tests/run.sh std-env
 
 # Or via cargo
 cargo run -p rlibc-x2-tests --bin test-environ --release
+cargo run -p rlibc-x2-tests --bin test-std-env --release
 
 # Verbose output (shows debug info)
 VERBOSE=1 ./rlibc-x2/tests/run.sh
-VERBOSE=1 cargo run -p rlibc-x2-tests --bin test-environ --release
+VERBOSE=1 cargo run -p rlibc-x2-tests --bin test-std-env --release
 ```
 
 ### Adding a Test
