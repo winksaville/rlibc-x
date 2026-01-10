@@ -21,6 +21,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hw-glibc-dl"
+version = "0.1.0"
+
+[[package]]
+name = "hw-musl-sl"
+version = "0.1.0"
+
+[[package]]
 name = "rlibc-x1"
 version = "0.1.0"
 

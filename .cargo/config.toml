@@ -1,0 +1,3 @@
+[alias]
+musl = "build -p hw-musl-sl --target x86_64-unknown-linux-musl"
+gnu = "build -p hw-glibc-dl --target x86_64-unknown-linux-gnu"
