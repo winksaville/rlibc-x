@@ -25,6 +25,20 @@ cargo check
 cargo clippy
 ```
 
+### Cargo Aliases
+
+Aliases for building/running with specific targets (defined in `.cargo/config.toml`):
+
+```bash
+# Build with musl (static) or glibc (dynamic)
+cargo b-musl -p hw-musl-sl --release
+cargo b-gnu -p hw-glibc-dl --release
+
+# Run with musl or glibc
+cargo r-musl -p hw-musl-sl --release
+cargo r-gnu -p hw-glibc-dl --release
+```
+
 ## Architecture
 
 ### Workspace Structure
@@ -33,6 +47,9 @@ cargo clippy
 - **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
 - **app-x1/** - Example no_std app using rlibc-x1
 - **app-x2/** - Example std app using rlibc-x2
+- **apps/** - Baseline comparison apps:
+  - **hw-glibc-dl/** - Hello world with glibc, dynamically linked
+  - **hw-musl-sl/** - Hello world with musl, statically linked
 
 ### Two Approaches
 

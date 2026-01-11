@@ -18,7 +18,9 @@
       "Bash(tree:*)",
       "Bash(strace:*)",
       "Bash(./verify-no-libc.sh:*)",
-      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff --stat)"
+      "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff --stat)",
+      "Bash(cargo r-musl:*)",
+      "Bash(cargo r-gnu:*)"
     ]
   }
 }

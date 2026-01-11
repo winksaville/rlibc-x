@@ -18,6 +18,24 @@ for now decided to just stick static linking.
 One hypothesis: if a CLI or GUI app doesn't parse command line arguments, a minimal runtime could
 skip that machinery entirely, potentially reducing binary size significantly.
 
+## Baseline Comparison Apps
+
+The `apps/` directory contains hello world apps for comparing against rlibc-x binaries:
+
+| App | libc | Linking |
+|-----|------|---------|
+| hw-glibc-dl | glibc | dynamic |
+| hw-musl-sl | musl | static |
+
+Build and run using cargo aliases:
+
+```bash
+cargo b-musl -p hw-musl-sl --release
+cargo b-gnu -p hw-glibc-dl --release
+cargo r-musl -p hw-musl-sl --release
+cargo r-gnu -p hw-glibc-dl --release
+```
+
 ## Results
 
 The `app-x1` + `rlibc-x1` combination produces a **1,480 byte** statically-linked executable:
