@@ -24,16 +24,16 @@ The `apps/` directory contains hello world apps for comparing against rlibc-x bi
 
 | App | libc | Linking |
 |-----|------|---------|
-| hw-glibc-dl | glibc | dynamic |
-| hw-musl-sl | musl | static |
+| hw-glibc | glibc | dynamic |
+| hw-musl | musl | static |
 
 Build and run using cargo aliases:
 
 ```bash
-cargo b-musl -p hw-musl-sl --release
-cargo b-gnu -p hw-glibc-dl --release
-cargo r-musl -p hw-musl-sl --release
-cargo r-gnu -p hw-glibc-dl --release
+cargo b-musl -p hw-musl --release
+cargo b-gnu -p hw-glibc --release
+cargo r-musl -p hw-musl --release
+cargo r-gnu -p hw-glibc --release
 ```
 
 ## Results

@@ -1,5 +1,5 @@
 [package]
-name = "hw-musl-sl"
+name = "hw-glibc"
 version = "0.1.0"
 edition = "2024"
 

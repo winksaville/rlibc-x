@@ -17,11 +17,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "hw-glibc-dl"
+name = "hw-glibc"
 version = "0.1.0"
 
 [[package]]
-name = "hw-musl-sl"
+name = "hw-musl"
 version = "0.1.0"
 
 [[package]]
