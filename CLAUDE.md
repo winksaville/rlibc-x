@@ -17,9 +17,9 @@ cargo build --release
 cargo build -p ex-x1 --release
 cargo run -p ex-x1; echo $?
 
-# Build/run app-x2 (returns 42)
-cargo build -p app-x2 --release
-cargo run -p app-x2; echo $?
+# Build/run ex-x2 (returns 42)
+cargo build -p ex-x2 --release
+cargo run -p ex-x2; echo $?
 
 # Check/lint
 cargo check
@@ -46,9 +46,9 @@ cargo r-gnu -p hw-glibc --release
 
 - **rlibc-x1/** - `#![no_std]` library for apps that don't use Rust std
 - **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
-- **app-x2/** - Example std app using rlibc-x2
 - **apps/** - Example and comparison apps:
   - **ex-x1/** - Minimal exit-only using rlibc-x1 (no_std + no_main)
+  - **ex-x2/** - Minimal exit-only using rlibc-x2 (std with custom libc)
   - **hw-glibc/** - Hello world with glibc (dynamic)
   - **hw-musl/** - Hello world with musl (static)
 

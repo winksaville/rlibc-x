@@ -25,15 +25,18 @@ The `apps/` directory contains example apps for comparing binary sizes across di
 | App | Runtime | Linking | Description |
 |-----|---------|---------|-------------|
 | ex-x1 | rlibc-x1 | static | Minimal exit-only (no_std + no_main) |
+| ex-x2 | rlibc-x2 | static | Minimal exit-only (std with custom libc) |
 | hw-glibc | glibc | dynamic | Hello world |
 | hw-musl | musl | static | Hello world |
 
 Build and run:
 
 ```bash
-# rlibc-x1 (works on stable Rust)
+# rlibc-x1 / rlibc-x2 (works on stable Rust)
 cargo build -p ex-x1 --release
-cargo run -p ex-x1 --release
+cargo build -p ex-x2 --release
+cargo run -p ex-x1
+cargo run -p ex-x2
 
 # musl/glibc using cargo aliases
 cargo b-musl -p hw-musl --release
@@ -66,7 +69,7 @@ This is achieved through:
 - **`panic="abort"`** - No unwinding machinery
 - **Aggressive optimization** - `opt-level='z'`, LTO, single codegen unit, stripped symbols
 
-For comparison, `app-x2` using `rlibc-x2` (which supports Rust's std library) is ~41KB.
+For comparison, `ex-x2` using `rlibc-x2` (which supports Rust's std library) is ~41KB.
 
 ## Verifying No libc Usage
 
@@ -100,8 +103,8 @@ $ ./verify-no-libc.sh --test
 
 Testing ex-x1 (debug)... OK (PASS as expected)
 Testing ex-x1 (release)... OK (PASS as expected)
-Testing app-x2 (debug)... OK (PASS as expected)
-Testing app-x2 (release)... OK (PASS as expected)
+Testing ex-x2 (debug)... OK (PASS as expected)
+Testing ex-x2 (release)... OK (PASS as expected)
 Testing /usr/bin/ls... OK (FAIL as expected)
 Testing /usr/bin/true... OK (FAIL as expected)
 
@@ -131,26 +134,26 @@ RESULT: ALL TESTS PASSED
 
 ### The "Dynamically Linked" Discrepancy
 
-You may notice that `file` and `ldd` report different things for `app-x2`:
+You may notice that `file` and `ldd` report different things for `ex-x2`:
 
 ```
-$ file target/release/app-x2
-target/release/app-x2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, ...
+$ file target/release/ex-x2
+target/release/ex-x2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, ...
 
-$ ldd target/release/app-x2
+$ ldd target/release/ex-x2
 	statically linked
 ```
 
 **Both are correct!**
 
-- **`file`** reports "dynamically linked" because `app-x2` has `.dynamic` and `.dynsym` ELF sections (required by Rust's std for symbol exports)
+- **`file`** reports "dynamically linked" because `ex-x2` has `.dynamic` and `.dynsym` ELF sections (required by Rust's std for symbol exports)
 - **`ldd`** reports "statically linked" because there's no INTERP section, so no dynamic linker is invoked
 
 The definitive proof is **`strace`** - it shows exactly what happens at runtime:
 
 ```
-$ strace ./target/release/app-x2
-execve("./target/release/app-x2", ...) = 0
+$ strace ./target/release/ex-x2
+execve("./target/release/ex-x2", ...) = 0
 brk(NULL)                               = 0x...
 brk(0x...)                              = 0x...
 arch_prctl(ARCH_SET_FS, 0x...)          = 0
@@ -166,7 +169,7 @@ Only 7 syscalls, no library loading. Compare to a typical glibc-linked binary wh
 
 ### Weak Undefined Symbols
 
-`app-x2` has one weak undefined symbol (`gettid`) from Rust's std library. This is acceptable because:
+`ex-x2` has one weak undefined symbol (`gettid`) from Rust's std library. This is acceptable because:
 1. Weak symbols resolve to NULL if not provided
 2. Rust's std has fallback code that uses `syscall(SYS_gettid)` when `gettid` is unavailable
 3. No actual libc code is called
@@ -253,7 +256,7 @@ I started this with this prompt for Claude Code 4.5:
 ## Creation
 
 The initial version of ex-x1 (originally app-x1) was created by Claude Code 4.5
-and the initial version of app-x2 where a custom Target is defined
+and the initial version of ex-x2 where a custom Target is defined
 in .cargo/config was suggested by ChatGPT and then Claude Code 4.5
 completed the implementation!
 
