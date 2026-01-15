@@ -63,6 +63,18 @@ if [ "${1:-}" = "--test" ]; then
     if [ -f "$SCRIPT_DIR/target/release/ex-x2" ]; then
         run_test "$SCRIPT_DIR/target/release/ex-x2" "yes" "ex-x2 (release)"
     fi
+    if [ -f "$SCRIPT_DIR/target/debug/hw-x1" ]; then
+        run_test "$SCRIPT_DIR/target/debug/hw-x1" "yes" "hw-x1 (debug)"
+    fi
+    if [ -f "$SCRIPT_DIR/target/release/hw-x1" ]; then
+        run_test "$SCRIPT_DIR/target/release/hw-x1" "yes" "hw-x1 (release)"
+    fi
+    if [ -f "$SCRIPT_DIR/target/debug/hw-x2" ]; then
+        run_test "$SCRIPT_DIR/target/debug/hw-x2" "yes" "hw-x2 (debug)"
+    fi
+    if [ -f "$SCRIPT_DIR/target/release/hw-x2" ]; then
+        run_test "$SCRIPT_DIR/target/release/hw-x2" "yes" "hw-x2 (release)"
+    fi
 
     # Test binaries from rlibc-x2/tests
     if [ -f "$SCRIPT_DIR/target/debug/test-environ" ]; then
