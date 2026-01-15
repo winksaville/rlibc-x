@@ -51,11 +51,11 @@ if [ "${1:-}" = "--test" ]; then
     echo
 
     # Test binaries that should PASS (no libc)
-    if [ -f "$SCRIPT_DIR/target/debug/app-x1" ]; then
-        run_test "$SCRIPT_DIR/target/debug/app-x1" "yes" "app-x1 (debug)"
+    if [ -f "$SCRIPT_DIR/target/debug/ex-x1" ]; then
+        run_test "$SCRIPT_DIR/target/debug/ex-x1" "yes" "ex-x1 (debug)"
     fi
-    if [ -f "$SCRIPT_DIR/target/release/app-x1" ]; then
-        run_test "$SCRIPT_DIR/target/release/app-x1" "yes" "app-x1 (release)"
+    if [ -f "$SCRIPT_DIR/target/release/ex-x1" ]; then
+        run_test "$SCRIPT_DIR/target/release/ex-x1" "yes" "ex-x1 (release)"
     fi
     if [ -f "$SCRIPT_DIR/target/debug/app-x2" ]; then
         run_test "$SCRIPT_DIR/target/debug/app-x2" "yes" "app-x2 (debug)"
@@ -98,7 +98,7 @@ fi
 if [ -z "${1:-}" ]; then
     echo "Usage: $0 <binary>"
     echo "       $0 --test    # Run self-tests"
-    echo "Example: $0 ./target/release/app-x1"
+    echo "Example: $0 ./target/release/ex-x1"
     exit 1
 fi
 

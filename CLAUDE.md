@@ -13,12 +13,13 @@ rlibc-x is a minimal, educational Rust libc implementation for Linux x86_64. It 
 cargo build
 cargo build --release
 
-# Build with custom target (from app-x1 directory, requires nightly)
-cd app-x1 && cargo +nightly build --release -Z build-std
+# Build/run ex-x1 (works on stable Rust, returns 47)
+cargo build -p ex-x1 --release
+cargo run -p ex-x1; echo $?
 
-# Run apps (app-x1 returns 47, app-x2 returns 42)
-cargo build && ./target/debug/app-x1; echo $?
-cargo build && ./target/debug/app-x2; echo $?
+# Build/run app-x2 (returns 42)
+cargo build -p app-x2 --release
+cargo run -p app-x2; echo $?
 
 # Check/lint
 cargo check
@@ -45,9 +46,9 @@ cargo r-gnu -p hw-glibc --release
 
 - **rlibc-x1/** - `#![no_std]` library for apps that don't use Rust std
 - **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
-- **app-x1/** - Example no_std app using rlibc-x1
 - **app-x2/** - Example std app using rlibc-x2
-- **apps/** - Baseline comparison apps:
+- **apps/** - Example and comparison apps:
+  - **ex-x1/** - Minimal exit-only using rlibc-x1 (no_std + no_main)
   - **hw-glibc/** - Hello world with glibc (dynamic)
   - **hw-musl/** - Hello world with musl (static)
 
@@ -122,7 +123,7 @@ Use `verify-no-libc.sh` to validate binaries don't depend on libc:
 
 ```bash
 # Verify a binary has no libc dependency
-./verify-no-libc.sh ./target/release/app-x1
+./verify-no-libc.sh ./target/release/ex-x1
 
 # Run self-tests (requires built binaries)
 ./verify-no-libc.sh --test

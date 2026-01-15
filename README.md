@@ -18,18 +18,24 @@ for now decided to just stick static linking.
 One hypothesis: if a CLI or GUI app doesn't parse command line arguments, a minimal runtime could
 skip that machinery entirely, potentially reducing binary size significantly.
 
-## Baseline Comparison Apps
+## Example and Comparison Apps
 
-The `apps/` directory contains hello world apps for comparing against rlibc-x binaries:
+The `apps/` directory contains example apps for comparing binary sizes across different runtimes:
 
-| App | libc | Linking |
-|-----|------|---------|
-| hw-glibc | glibc | dynamic |
-| hw-musl | musl | static |
+| App | Runtime | Linking | Description |
+|-----|---------|---------|-------------|
+| ex-x1 | rlibc-x1 | static | Minimal exit-only (no_std + no_main) |
+| hw-glibc | glibc | dynamic | Hello world |
+| hw-musl | musl | static | Hello world |
 
-Build and run using cargo aliases:
+Build and run:
 
 ```bash
+# rlibc-x1 (works on stable Rust)
+cargo build -p ex-x1 --release
+cargo run -p ex-x1 --release
+
+# musl/glibc using cargo aliases
 cargo b-musl -p hw-musl --release
 cargo b-gnu -p hw-glibc --release
 cargo r-musl -p hw-musl --release
@@ -38,19 +44,19 @@ cargo r-gnu -p hw-glibc --release
 
 ## Results
 
-The `app-x1` + `rlibc-x1` combination produces a **1,480 byte** statically-linked executable:
+The `ex-x1` + `rlibc-x1` combination produces a **1,480 byte** statically-linked executable:
 
 ```
-$ cargo build --release
-$ ls -la target/release/app-x1
--rwxr-xr-x 2 wink users 1480 Jan  6 09:38 target/release/app-x1
+$ cargo build -p ex-x1 --release
+$ ls -la target/release/ex-x1
+-rwxr-xr-x 2 wink users 1480 Jan 15 11:52 target/release/ex-x1
 
-$ file target/release/app-x1
-target/release/app-x1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, stripped
+$ file target/release/ex-x1
+target/release/ex-x1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, stripped
 
-$ size target/release/app-x1
+$ size target/release/ex-x1
    text    data     bss     dec     hex filename
-    284       0      24     308     134 target/release/app-x1
+    284       0      24     308     134 target/release/ex-x1
 ```
 
 This is achieved through:
@@ -67,8 +73,8 @@ For comparison, `app-x2` using `rlibc-x2` (which supports Rust's std library) is
 The `verify-no-libc.sh` script validates that a binary doesn't use any C library (glibc, musl, etc.):
 
 ```
-$ ./verify-no-libc.sh ./target/release/app-x1
-=== Verifying: ./target/release/app-x1 ===
+$ ./verify-no-libc.sh ./target/release/ex-x1
+=== Verifying: ./target/release/ex-x1 ===
 
 1. Dynamic linking check (ldd)... INFO (not a dynamic executable)
 2. Interpreter (INTERP) check... PASS (no INTERP program header)
@@ -92,8 +98,8 @@ Run the built-in test suite to verify the script works correctly:
 $ ./verify-no-libc.sh --test
 === verify-no-libc.sh self-test ===
 
-Testing app-x1 (debug)... OK (PASS as expected)
-Testing app-x1 (release)... OK (PASS as expected)
+Testing ex-x1 (debug)... OK (PASS as expected)
+Testing ex-x1 (release)... OK (PASS as expected)
 Testing app-x2 (debug)... OK (PASS as expected)
 Testing app-x2 (release)... OK (PASS as expected)
 Testing /usr/bin/ls... OK (FAIL as expected)
@@ -246,7 +252,7 @@ I started this with this prompt for Claude Code 4.5:
 
 ## Creation
 
-The initial version of app-x1 was created by Claude Code 4.5
+The initial version of ex-x1 (originally app-x1) was created by Claude Code 4.5
 and the initial version of app-x2 where a custom Target is defined
 in .cargo/config was suggested by ChatGPT and then Claude Code 4.5
 completed the implementation!

@@ -1,0 +1,8 @@
+[package]
+name = "ex-x1"
+version = "0.1.0"
+edition = "2024"
+description = "Minimal exit-only binary using rlibc-x1 (no_std + no_main)"
+
+[dependencies]
+rlibc-x1 = { path = "../../rlibc-x1" }
