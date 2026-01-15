@@ -22,16 +22,16 @@ skip that machinery entirely, potentially reducing binary size significantly.
 
 The `apps/` directory contains example apps for comparing binary sizes across different runtimes:
 
-| App | Runtime | Linking | Description |
-|-----|---------|---------|-------------|
-| ex-x1 | rlibc-x1 | static | Minimal exit-only (no_std + no_main) |
-| ex-x2 | rlibc-x2 | static | Minimal exit-only (std with custom libc) |
-| ex-glibc | glibc | dynamic | Minimal exit-only |
-| ex-musl | musl | static | Minimal exit-only |
-| hw-x1 | rlibc-x1 | static | Hello world (no_std + no_main) |
-| hw-x2 | rlibc-x2 | static | Hello world (std with custom libc) |
-| hw-glibc | glibc | dynamic | Hello world |
-| hw-musl | musl | static | Hello world |
+| App | Runtime | Linking | Size | Description |
+|-----|---------|---------|-----:|-------------|
+| ex-x1 | rlibc-x1 | static | 1.4 KB | Minimal exit-only (no_std + no_main) |
+| ex-x2 | rlibc-x2 | static | 41.4 KB | Minimal exit-only (std with custom libc) |
+| ex-glibc | glibc | dynamic | 283.7 KB | Minimal exit-only |
+| ex-musl | musl | static | 372.6 KB | Minimal exit-only |
+| hw-x1 | rlibc-x1 | static | 1.5 KB | Hello world |
+| hw-x2 | rlibc-x2 | static | 45.8 KB | Hello world |
+| hw-glibc | glibc | dynamic | 286.7 KB | Hello world |
+| hw-musl | musl | static | 376.6 KB | Hello world |
 
 Build and run:
 
