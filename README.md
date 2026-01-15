@@ -28,6 +28,7 @@ The `apps/` directory contains example apps for comparing binary sizes across di
 | ex-x2 | rlibc-x2 | static | Minimal exit-only (std with custom libc) |
 | ex-glibc | glibc | dynamic | Minimal exit-only |
 | ex-musl | musl | static | Minimal exit-only |
+| hw-x1 | rlibc-x1 | static | Hello world (no_std + no_main) |
 | hw-glibc | glibc | dynamic | Hello world |
 | hw-musl | musl | static | Hello world |
 

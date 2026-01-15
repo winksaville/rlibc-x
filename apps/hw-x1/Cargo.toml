@@ -1,0 +1,8 @@
+[package]
+name = "hw-x1"
+version = "0.1.0"
+edition = "2024"
+description = "Hello world using rlibc-x1 (no_std + no_main)"
+
+[dependencies]
+rlibc-x1 = { path = "../../rlibc-x1" }
