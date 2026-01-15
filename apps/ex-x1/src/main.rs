@@ -3,5 +3,5 @@
 
 #[unsafe(no_mangle)]
 fn main() {
-    rlibc_x1::exit(47)
+    rlibc_x1::exit(41)
 }
