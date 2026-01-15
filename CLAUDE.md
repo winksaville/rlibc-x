@@ -49,6 +49,7 @@ cargo r-gnu -p hw-glibc --release
 - **apps/** - Example and comparison apps:
   - **ex-x1/** - Minimal exit-only using rlibc-x1 (no_std + no_main)
   - **ex-x2/** - Minimal exit-only using rlibc-x2 (std with custom libc)
+  - **ex-glibc/** - Minimal exit-only using glibc (dynamic)
   - **hw-glibc/** - Hello world with glibc (dynamic)
   - **hw-musl/** - Hello world with musl (static)
 
