@@ -35,14 +35,18 @@ The `apps/` directory contains example apps for comparing binary sizes across di
 
 Build and run:
 
+These all use "--release", dropping the "--release"
+generates a debug as this is the default for rust.
 ```bash
 # rlibc-x1 / rlibc-x2 (default target, no alias needed)
 cargo build -p ex-x1 --release
 cargo build -p ex-x2 --release
 cargo build -p hw-x1 --release
 cargo build -p hw-x2 --release
-cargo run -p ex-x1
-cargo run -p hw-x1
+cargo run -p ex-x1 --release
+cargo run -p ex-x2 --release
+cargo run -p hw-x1 --release
+cargo run -p hw-x2 --release
 
 # glibc (requires --target, use alias)
 cargo b-glibc -p ex-glibc --release
