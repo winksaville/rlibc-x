@@ -105,10 +105,10 @@ Run the built-in test suite to verify the script works correctly:
 $ ./verify-no-libc.sh --test
 === verify-no-libc.sh self-test ===
 
-Testing ex-x1 (debug)... OK (PASS as expected)
 Testing ex-x1 (release)... OK (PASS as expected)
-Testing ex-x2 (debug)... OK (PASS as expected)
 Testing ex-x2 (release)... OK (PASS as expected)
+Testing hw-x1 (release)... OK (PASS as expected)
+Testing hw-x2 (release)... OK (PASS as expected)
 Testing /usr/bin/ls... OK (FAIL as expected)
 Testing /usr/bin/true... OK (FAIL as expected)
 
