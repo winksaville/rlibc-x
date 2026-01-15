@@ -7,6 +7,10 @@ name = "ex-glibc"
 version = "0.1.0"
 
 [[package]]
+name = "ex-musl"
+version = "0.1.0"
+
+[[package]]
 name = "ex-x1"
 version = "0.1.0"
 dependencies = [

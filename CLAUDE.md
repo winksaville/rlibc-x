@@ -50,6 +50,7 @@ cargo r-gnu -p hw-glibc --release
   - **ex-x1/** - Minimal exit-only using rlibc-x1 (no_std + no_main)
   - **ex-x2/** - Minimal exit-only using rlibc-x2 (std with custom libc)
   - **ex-glibc/** - Minimal exit-only using glibc (dynamic)
+  - **ex-musl/** - Minimal exit-only using musl (static)
   - **hw-glibc/** - Hello world with glibc (dynamic)
   - **hw-musl/** - Hello world with musl (static)
 

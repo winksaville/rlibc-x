@@ -1,0 +1,7 @@
+[package]
+name = "ex-musl"
+version = "0.1.0"
+edition = "2024"
+description = "Minimal exit-only binary using musl (static linking)"
+
+[dependencies]
