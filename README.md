@@ -36,17 +36,23 @@ The `apps/` directory contains example apps for comparing binary sizes across di
 Build and run:
 
 ```bash
-# rlibc-x1 / rlibc-x2 (works on stable Rust)
+# rlibc-x1 / rlibc-x2 (default target, no alias needed)
 cargo build -p ex-x1 --release
 cargo build -p ex-x2 --release
+cargo build -p hw-x1 --release
+cargo build -p hw-x2 --release
 cargo run -p ex-x1
-cargo run -p ex-x2
+cargo run -p hw-x1
 
-# musl/glibc using cargo aliases
+# glibc (requires --target, use alias)
+cargo b-glibc -p ex-glibc --release
+cargo b-glibc -p hw-glibc --release
+cargo r-glibc -p hw-glibc --release
+
+# musl (requires --target, use alias)
+cargo b-musl -p ex-musl --release
 cargo b-musl -p hw-musl --release
-cargo b-gnu -p hw-glibc --release
 cargo r-musl -p hw-musl --release
-cargo r-gnu -p hw-glibc --release
 ```
 
 ## Results

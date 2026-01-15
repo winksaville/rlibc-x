@@ -33,11 +33,11 @@ Aliases for building/running with specific targets (defined in `.cargo/config.to
 ```bash
 # Build with musl (static) or glibc (dynamic)
 cargo b-musl -p hw-musl --release
-cargo b-gnu -p hw-glibc --release
+cargo b-glibc -p hw-glibc --release
 
 # Run with musl or glibc
 cargo r-musl -p hw-musl --release
-cargo r-gnu -p hw-glibc --release
+cargo r-glibc -p hw-glibc --release
 ```
 
 ## Architecture

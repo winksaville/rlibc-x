@@ -1,5 +1,5 @@
 [alias]
 b-musl = "build --target x86_64-unknown-linux-musl"
-b-gnu = "build --target x86_64-unknown-linux-gnu"
+b-glibc = "build --target x86_64-unknown-linux-gnu"
 r-musl = "run --target x86_64-unknown-linux-musl"
-r-gnu = "run --target x86_64-unknown-linux-gnu"
+r-glibc = "run --target x86_64-unknown-linux-gnu"
