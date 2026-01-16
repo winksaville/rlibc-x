@@ -1,5 +1,5 @@
 [workspace]
-members = ["rlibc-x1", "rlibc-x2", "rlibc-x2/tests", "apps/ex-x1", "apps/ex-x2", "apps/ex-glibc", "apps/ex-musl", "apps/hw-x1", "apps/hw-x2", "apps/hw-glibc", "apps/hw-musl"]
+members = ["rlibc-x1", "rlibc-x2", "rlibc-x2/tests", "apps/ex-x1", "apps/ex-x2", "apps/ex-glibc", "apps/ex-musl", "apps/hw-x1", "apps/hw-x2", "apps/hw-glibc", "apps/hw-musl", "tools/is-libc-used"]
 resolver = "3"
 
 [profile.dev]

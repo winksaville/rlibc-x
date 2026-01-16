@@ -1,0 +1,16 @@
+[package]
+name = "is-libc-used"
+version = "0.1.0"
+edition = "2024"
+description = "Check if a binary uses libc"
+
+[dependencies]
+object = { version = "0.36", default-features = false, features = ["read", "elf"] }
+
+[[bin]]
+name = "is-libc-used"
+path = "src/main.rs"
+
+[lib]
+name = "is_libc_used"
+path = "src/lib.rs"
