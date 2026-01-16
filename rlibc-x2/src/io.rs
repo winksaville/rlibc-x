@@ -1,6 +1,6 @@
 //! I/O operations (read, write, etc.)
 
-use crate::syscall::{syscall3, SYS_READ, SYS_WRITE};
+use crate::syscall::{SYS_READ, SYS_WRITE, syscall3};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn read(fd: i32, buf: *mut u8, count: usize) -> isize {

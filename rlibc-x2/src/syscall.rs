@@ -2,6 +2,11 @@
 
 use core::arch::asm;
 
+/// Invoke a syscall with 0 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and that invoking
+/// this syscall is safe in the current context.
 #[inline(always)]
 pub unsafe fn syscall0(n: u64) -> u64 {
     let ret: u64;
@@ -18,6 +23,11 @@ pub unsafe fn syscall0(n: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 1 argument.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall1(n: u64, arg1: u64) -> u64 {
     let ret: u64;
@@ -35,6 +45,11 @@ pub unsafe fn syscall1(n: u64, arg1: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 2 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall2(n: u64, arg1: u64, arg2: u64) -> u64 {
     let ret: u64;
@@ -53,6 +68,11 @@ pub unsafe fn syscall2(n: u64, arg1: u64, arg2: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 3 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall3(n: u64, arg1: u64, arg2: u64, arg3: u64) -> u64 {
     let ret: u64;
@@ -72,6 +92,11 @@ pub unsafe fn syscall3(n: u64, arg1: u64, arg2: u64, arg3: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 4 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall4(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64) -> u64 {
     let ret: u64;
@@ -92,6 +117,11 @@ pub unsafe fn syscall4(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64) -> u6
     ret
 }
 
+/// Invoke a syscall with 5 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall5(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> u64 {
     let ret: u64;
@@ -113,6 +143,11 @@ pub unsafe fn syscall5(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5:
     ret
 }
 
+/// Invoke a syscall with 6 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall6(
     n: u64,

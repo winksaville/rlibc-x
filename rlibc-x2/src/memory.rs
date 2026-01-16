@@ -1,6 +1,6 @@
 //! Memory allocation (malloc, free, etc.)
 
-use crate::syscall::{syscall1, SYS_BRK};
+use crate::syscall::{SYS_BRK, syscall1};
 
 // Heap state
 static mut HEAP_START: *mut u8 = core::ptr::null_mut();
@@ -41,14 +41,20 @@ pub extern "C" fn malloc(size: usize) -> *mut u8 {
     }
 }
 
+/// Reallocate memory.
+///
+/// # Safety
+/// If `ptr` is non-null, it must have been returned by a previous call to
+/// `malloc`, `realloc`, or `calloc`, and `size` must not exceed the original
+/// allocation size (this simple allocator doesn't track sizes).
 #[unsafe(no_mangle)]
-pub extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
+pub unsafe extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
     if ptr.is_null() {
         return malloc(size);
     }
     let new_ptr = malloc(size);
     if !new_ptr.is_null() {
-        memcpy(new_ptr, ptr, size);
+        unsafe { memcpy(new_ptr, ptr, size) };
     }
     new_ptr
 }
@@ -58,8 +64,9 @@ pub extern "C" fn calloc(nmemb: usize, size: usize) -> *mut u8 {
     let total = nmemb.saturating_mul(size);
     let ptr = malloc(total);
     if !ptr.is_null() {
+        // SAFETY: ptr points to at least total bytes (just allocated)
         // Use memset directly to avoid compiler optimizing write_bytes -> memset
-        memset(ptr, 0, total);
+        unsafe { memset(ptr, 0, total) };
     }
     ptr
 }
@@ -69,8 +76,16 @@ pub extern "C" fn free(_ptr: *mut u8) {
     // Bump allocator doesn't free individual allocations
 }
 
+/// Allocate aligned memory.
+///
+/// # Safety
+/// `memptr` must point to valid writable memory for a pointer.
 #[unsafe(no_mangle)]
-pub extern "C" fn posix_memalign(memptr: *mut *mut u8, alignment: usize, size: usize) -> i32 {
+pub unsafe extern "C" fn posix_memalign(
+    memptr: *mut *mut u8,
+    alignment: usize,
+    size: usize,
+) -> i32 {
     // Simple implementation: over-allocate and align
     if !alignment.is_power_of_two() || alignment < core::mem::size_of::<*mut u8>() {
         return 22; // EINVAL
@@ -87,38 +102,58 @@ pub extern "C" fn posix_memalign(memptr: *mut *mut u8, alignment: usize, size: u
 }
 
 // Memory operations - must use manual loops, never core::ptr::* which LLVM optimizes to libc calls
+
+/// Copy memory.
+///
+/// # Safety
+/// `dest` must point to at least `n` bytes of writable memory.
+/// `src` must point to at least `n` bytes of readable memory.
+/// The memory regions must not overlap.
 #[unsafe(no_mangle)]
-pub extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
+pub unsafe extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
     for i in 0..n {
-        unsafe { *dest.add(i) = *src.add(i); }
+        unsafe { *dest.add(i) = *src.add(i) };
     }
     dest
 }
 
+/// Copy memory (handles overlapping regions).
+///
+/// # Safety
+/// `dest` must point to at least `n` bytes of writable memory.
+/// `src` must point to at least `n` bytes of readable memory.
 #[unsafe(no_mangle)]
-pub extern "C" fn memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
+pub unsafe extern "C" fn memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
     if (dest as usize) <= (src as usize) {
         for i in 0..n {
-            unsafe { *dest.add(i) = *src.add(i); }
+            unsafe { *dest.add(i) = *src.add(i) };
         }
     } else {
         for i in (0..n).rev() {
-            unsafe { *dest.add(i) = *src.add(i); }
+            unsafe { *dest.add(i) = *src.add(i) };
         }
     }
     dest
 }
 
+/// Fill memory with a constant byte.
+///
+/// # Safety
+/// `dest` must point to at least `n` bytes of writable memory.
 #[unsafe(no_mangle)]
-pub extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
+pub unsafe extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
     for i in 0..n {
-        unsafe { *dest.add(i) = c as u8; }
+        unsafe { *dest.add(i) = c as u8 };
     }
     dest
 }
 
+/// Compare memory.
+///
+/// # Safety
+/// `s1` and `s2` must each point to at least `n` bytes of readable memory.
 #[unsafe(no_mangle)]
-pub extern "C" fn memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
+pub unsafe extern "C" fn memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
     for i in 0..n {
         let a = unsafe { *s1.add(i) };
         let b = unsafe { *s2.add(i) };
@@ -129,7 +164,11 @@ pub extern "C" fn memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
     0
 }
 
+/// Compare memory (BSD variant).
+///
+/// # Safety
+/// `s1` and `s2` must each point to at least `n` bytes of readable memory.
 #[unsafe(no_mangle)]
-pub extern "C" fn bcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
-    memcmp(s1, s2, n)
+pub unsafe extern "C" fn bcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
+    unsafe { memcmp(s1, s2, n) }
 }

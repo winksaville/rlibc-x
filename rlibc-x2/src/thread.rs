@@ -1,7 +1,7 @@
 //! Thread-local storage and pthread stubs
 
 use crate::memory::{malloc, memset};
-use crate::syscall::{syscall2, syscall3, ARCH_SET_FS, SYS_ARCH_PRCTL, SYS_POLL};
+use crate::syscall::{ARCH_SET_FS, SYS_ARCH_PRCTL, SYS_POLL, syscall2, syscall3};
 
 /// Initialize Thread-Local Storage
 ///
@@ -23,6 +23,7 @@ pub fn init_tls() {
         }
 
         // Zero-initialize the TLS block (use our memset, not core::ptr::write_bytes)
+        // SAFETY: block points to TLS_SIZE + SELF_PTR_SIZE bytes just allocated
         memset(block, 0, TLS_SIZE + SELF_PTR_SIZE);
 
         // The self-pointer goes at the end, and FS.base points to it
@@ -46,8 +47,10 @@ pub extern "C" fn pthread_getattr_np(_thread: usize, _attr: *mut u8) -> i32 {
     0 // Success
 }
 
+/// # Safety
+/// `stackaddr` and `stacksize` must be valid pointers.
 #[unsafe(no_mangle)]
-pub extern "C" fn pthread_attr_getstack(
+pub unsafe extern "C" fn pthread_attr_getstack(
     _attr: *const u8,
     stackaddr: *mut *mut u8,
     stacksize: *mut usize,
@@ -59,8 +62,10 @@ pub extern "C" fn pthread_attr_getstack(
     0
 }
 
+/// # Safety
+/// `guardsize` must be a valid pointer.
 #[unsafe(no_mangle)]
-pub extern "C" fn pthread_attr_getguardsize(_attr: *const u8, guardsize: *mut usize) -> i32 {
+pub unsafe extern "C" fn pthread_attr_getguardsize(_attr: *const u8, guardsize: *mut usize) -> i32 {
     unsafe {
         *guardsize = 4096; // One page guard
     }

@@ -2,7 +2,7 @@
 //!
 //! Provides the `environ` symbol and `getenv` function needed by std::env.
 
-use core::ffi::{c_char, CStr};
+use core::ffi::{CStr, c_char};
 
 /// Global environment pointer - set during startup by __libc_start_main
 #[unsafe(no_mangle)]
@@ -38,10 +38,13 @@ fn iter_environ() -> EnvIter {
     EnvIter(unsafe { environ })
 }
 
-/// Get an environment variable by name
-/// Returns pointer to the value (after '=') or null if not found
+/// Get an environment variable by name.
+/// Returns pointer to the value (after '=') or null if not found.
+///
+/// # Safety
+/// `name` must be a valid null-terminated C string.
 #[unsafe(no_mangle)]
-pub extern "C" fn getenv(name: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn getenv(name: *const c_char) -> *const c_char {
     if name.is_null() {
         return core::ptr::null();
     }
@@ -55,11 +58,11 @@ pub extern "C" fn getenv(name: *const c_char) -> *const c_char {
 
     for entry in iter_environ() {
         let entry_bytes = entry.to_bytes();
-        if let Some(rest) = entry_bytes.strip_prefix(name_bytes) {
-            if rest.first() == Some(&b'=') {
-                // Return pointer to value (after '=')
-                return rest[1..].as_ptr() as *const c_char;
-            }
+        if let Some(rest) = entry_bytes.strip_prefix(name_bytes)
+            && rest.first() == Some(&b'=')
+        {
+            // Return pointer to value (after '=')
+            return rest[1..].as_ptr() as *const c_char;
         }
     }
 

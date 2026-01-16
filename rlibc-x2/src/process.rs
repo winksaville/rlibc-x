@@ -13,8 +13,8 @@ pub static mut __libc_stack_end: *mut u8 = core::ptr::null_mut();
 pub fn exit(code: i32) -> ! {
     unsafe {
         syscall1(SYS_EXIT, code as u64);
+        core::arch::asm!("ud2", options(noreturn));
     }
-    loop {}
 }
 
 /// C-compatible abort
@@ -35,9 +35,12 @@ unsafe extern "C" {
     fn main(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32;
 }
 
-/// The libc entry point called by _start
+/// The libc entry point called by _start.
+///
+/// # Safety
+/// All pointer arguments must be valid as passed by the kernel/dynamic linker.
 #[unsafe(no_mangle)]
-pub extern "C" fn __libc_start_main(
+pub unsafe extern "C" fn __libc_start_main(
     main_fn: extern "C" fn(i32, *const *const u8, *const *const u8) -> i32,
     argc: i32,
     argv: *const *const u8,
@@ -47,7 +50,9 @@ pub extern "C" fn __libc_start_main(
     stack_end: *mut u8,
 ) -> ! {
     // Store stack_end for stack overflow detection
-    unsafe { __libc_stack_end = stack_end; }
+    unsafe {
+        __libc_stack_end = stack_end;
+    }
 
     // Initialize heap first (TLS needs malloc)
     init_heap();
@@ -63,7 +68,9 @@ pub extern "C" fn __libc_start_main(
 
     // Call init if provided (runs .init_array constructors)
     if let Some(init_fn) = init {
-        unsafe { init_fn(argc, argv, envp); }
+        unsafe {
+            init_fn(argc, argv, envp);
+        }
     }
 
     // Call main and exit with its return value
@@ -71,12 +78,16 @@ pub extern "C" fn __libc_start_main(
 
     // Call fini if provided (runs .fini_array destructors)
     if let Some(fini_fn) = fini {
-        unsafe { fini_fn(); }
+        unsafe {
+            fini_fn();
+        }
     }
 
     // Call rtld_fini if provided (dynamic linker cleanup)
     if let Some(rtld_fini_fn) = rtld_fini {
-        unsafe { rtld_fini_fn(); }
+        unsafe {
+            rtld_fini_fn();
+        }
     }
 
     exit(ret)

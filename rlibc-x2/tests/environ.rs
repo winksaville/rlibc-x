@@ -33,11 +33,11 @@ fn main() -> ExitCode {
     unsafe {
         while !(*current).is_null() {
             let entry = CStr::from_ptr(*current);
-            if let Ok(s) = entry.to_str() {
-                if s.starts_with("PATH=") {
-                    found_path = true;
-                    break;
-                }
+            if let Ok(s) = entry.to_str()
+                && s.starts_with("PATH=")
+            {
+                found_path = true;
+                break;
             }
             current = current.add(1);
         }
