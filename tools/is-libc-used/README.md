@@ -58,3 +58,78 @@ A binary is considered libc-free only if both checks pass (no INTERP and no NEED
 | 0 | Binary does NOT use libc |
 | 1 | Binary DOES use libc |
 | 2 | Error (file not found, parse error, etc.) |
+
+## Testing Apps for libc Usage
+
+To verify an app binary doesn't use libc via `cargo test -p <app>`:
+
+### For no_std apps (rlibc-x1)
+
+Apps using rlibc-x1 define a `#[panic_handler]`, which conflicts with std's panic handler.
+You **cannot** use the library as a dev-dependency. Instead, invoke the binary via `Command`.
+
+**Cargo.toml:**
+```toml
+[[bin]]
+name = "my-app"
+test = false  # Prevent cargo from compiling binary in test mode
+
+[[test]]
+name = "no_libc"
+harness = false  # Custom test binary, not std test harness
+```
+
+**build.rs** - Use bin-specific linker args so test binaries aren't affected:
+```rust
+fn main() {
+    // Only applies to the binary, not tests
+    println!("cargo:rustc-link-arg-bin=my-app=-nostartfiles");
+    println!("cargo:rustc-link-arg-bin=my-app=-static");
+}
+```
+
+**tests/no_libc.rs:**
+```rust
+use std::path::Path;
+use std::process::{Command, ExitCode};
+
+fn main() -> ExitCode {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent().unwrap().parent().unwrap();
+
+    let is_libc_used = ["target/release/is-libc-used", "target/debug/is-libc-used"]
+        .iter().map(|p| workspace_root.join(p)).find(|p| p.exists())
+        .expect("is-libc-used not found");
+
+    let binary = ["target/release/my-app", "target/debug/my-app"]
+        .iter().map(|p| workspace_root.join(p)).find(|p| p.exists())
+        .expect("my-app not found");
+
+    let output = Command::new(&is_libc_used).arg(&binary).output().unwrap();
+    if output.status.success() { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+}
+```
+
+### For std apps (rlibc-x2)
+
+Apps using rlibc-x2 may be able to use the library directly as a dev-dependency.
+Try the library approach first; if conflicts occur, fall back to the binary approach above.
+
+**Cargo.toml:**
+```toml
+[dev-dependencies]
+is-libc-used = { path = "../../tools/is-libc-used" }
+```
+
+**tests/no_libc.rs:**
+```rust
+use is_libc_used::is_libc_used;
+use std::path::Path;
+
+#[test]
+fn binary_does_not_use_libc() {
+    let binary = env!("CARGO_BIN_EXE_my-app");
+    let result = is_libc_used(Path::new(binary)).unwrap();
+    assert!(!result.uses_libc, "should not use libc: {:?}", result.info);
+}
+```
