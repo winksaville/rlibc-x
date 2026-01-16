@@ -63,10 +63,52 @@ A binary is considered libc-free only if both checks pass (no INTERP and no NEED
 
 To verify an app binary doesn't use libc via `cargo test -p <app>`:
 
-### For no_std apps (rlibc-x1)
+### Library Approach (Recommended)
 
-Apps using rlibc-x1 define a `#[panic_handler]`, which conflicts with std's panic handler.
-You **cannot** use the library as a dev-dependency. Instead, invoke the binary via `Command`.
+The library approach works for both rlibc-x1 (no_std) and rlibc-x2 (std) apps.
+The key is using `test = false` on the binary and bin-specific linker args.
+
+**Cargo.toml:**
+```toml
+[dev-dependencies]
+is-libc-used = { path = "../../tools/is-libc-used" }
+
+[[bin]]
+name = "my-app"
+test = false  # Prevent cargo from compiling binary in test mode
+```
+
+**build.rs** - Use bin-specific linker args so test binaries aren't affected.
+
+The syntax is `cargo:rustc-link-arg-bin=<BIN_NAME>=<LINKER_ARG>` where:
+- `<BIN_NAME>` is your binary name (e.g., `my-app`)
+- `<LINKER_ARG>` is the linker flag (e.g., `-static`, `-nostdlib`, ...)
+
+```rust
+fn main() {
+    // All of these link-arg only apply to the "my-app" binary, not the tests
+    println!("cargo:rustc-link-arg-bin=my-app=-nostartfiles");
+    println!("cargo:rustc-link-arg-bin=my-app=-static");
+}
+```
+
+**tests/no_libc.rs:**
+```rust
+use is_libc_used::is_libc_used;
+use std::path::Path;
+
+#[test]
+fn binary_does_not_use_libc() {
+    let binary = env!("CARGO_BIN_EXE_my-app");
+    let result = is_libc_used(Path::new(binary)).unwrap();
+    assert!(!result.uses_libc, "should not use libc: {:?}", result.info);
+}
+```
+
+### Binary Approach (Fallback)
+
+If the library approach doesn't work (e.g., due to unexpected conflicts),
+you can invoke the `is-libc-used` binary via `Command` instead.
 
 **Cargo.toml:**
 ```toml
@@ -77,15 +119,6 @@ test = false  # Prevent cargo from compiling binary in test mode
 [[test]]
 name = "no_libc"
 harness = false  # Custom test binary, not std test harness
-```
-
-**build.rs** - Use bin-specific linker args so test binaries aren't affected:
-```rust
-fn main() {
-    // Only applies to the binary, not tests
-    println!("cargo:rustc-link-arg-bin=my-app=-nostartfiles");
-    println!("cargo:rustc-link-arg-bin=my-app=-static");
-}
 ```
 
 **tests/no_libc.rs:**
@@ -107,52 +140,5 @@ fn main() -> ExitCode {
 
     let output = Command::new(&is_libc_used).arg(&binary).output().unwrap();
     if output.status.success() { ExitCode::SUCCESS } else { ExitCode::FAILURE }
-}
-```
-
-### For std apps (rlibc-x2)
-
-Apps using rlibc-x2 can use the library directly as a dev-dependency.
-However, you still need `test = false` on the binary and bin-specific linker args
-in build.rs, otherwise the test binary gets the wrong linker flags applied.
-
-**Cargo.toml:**
-```toml
-[dev-dependencies]
-is-libc-used = { path = "../../tools/is-libc-used" }
-
-[[bin]]
-name = "my-app"
-test = false  # Prevent cargo from compiling binary in test mode
-```
-
-**build.rs** - Use bin-specific linker args so test binaries aren't affected.
-
-The syntax is `cargo:rustc-link-arg-bin=<BIN_NAME>=<LINKER_ARG>` where:
-- `<BIN_NAME>` is your binary name (e.g., `my-app`)
-- `<LINKER_ARG>` is the linker flag (e.g., `-static`, `-nostdlib`, ...)
-
-```rust
-fn main() {
-    // All of these link-arg only apply to the "my-app" binary, not the tests
-    println!("cargo:rustc-link-arg-bin=my-app=-static");
-    println!("cargo:rustc-link-arg-bin=my-app=-nostdlib");
-    println!("cargo:rustc-link-arg-bin=my-app=-nodefaultlibs");
-    println!("cargo:rustc-link-arg-bin=my-app=-e_start");
-    println!("cargo:rustc-link-arg-bin=my-app=-Wl,--undefined=_start");
-    println!("cargo:rustc-link-arg-bin=my-app=-Wl,--undefined=__libc_start_main");
-}
-```
-
-**tests/no_libc.rs:**
-```rust
-use is_libc_used::is_libc_used;
-use std::path::Path;
-
-#[test]
-fn binary_does_not_use_libc() {
-    let binary = env!("CARGO_BIN_EXE_my-app");
-    let result = is_libc_used(Path::new(binary)).unwrap();
-    assert!(!result.uses_libc, "should not use libc: {:?}", result.info);
 }
 ```
