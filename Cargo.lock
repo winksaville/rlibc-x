@@ -14,6 +14,7 @@ version = "0.1.0"
 name = "ex-x1"
 version = "0.1.0"
 dependencies = [
+ "is-libc-used",
  "rlibc-x1",
 ]
 
@@ -37,6 +38,7 @@ version = "0.1.0"
 name = "hw-x1"
 version = "0.1.0"
 dependencies = [
+ "is-libc-used",
  "rlibc-x1",
 ]
 
@@ -44,6 +46,7 @@ dependencies = [
 name = "hw-x2"
 version = "0.1.0"
 dependencies = [
+ "is-libc-used",
  "rlibc-x2",
 ]
 
