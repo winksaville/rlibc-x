@@ -6,14 +6,13 @@ set -uo pipefail
 #        ./verify-no-libc.sh --test    # Run self-tests
 #
 # Checks performed:
+#   0. is-libc-used tool (INTERP + NEEDED check) - AUTHORITATIVE
 #   1. Not dynamically linked (ldd) - informational
-#   2. No interpreter section (no dynamic linker needed) - AUTHORITATIVE
-#   3. No NEEDED libraries - AUTHORITATIVE
-#   4. No strong undefined symbols
-#   5. No GLIBC version references
-#   6. Contains direct syscall instructions (heuristic)
-#   7. Runtime: no libc/ld-linux files opened (diagnostic)
-#   8. Runtime: full strace shows no dynamic loader activity (diagnostic)
+#   2. No strong undefined symbols
+#   3. No GLIBC version references
+#   4. Contains direct syscall instructions (heuristic)
+#   5. Runtime: no libc/ld-linux files opened (diagnostic)
+#   6. Runtime: full strace shows no dynamic loader activity (diagnostic)
 
 # Self-test mode
 if [ "${1:-}" = "--test" ]; then
@@ -135,45 +134,55 @@ for tool in $REQUIRED_TOOLS; do
     fi
 done
 
+# Find is-libc-used binary
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+IS_LIBC_USED=""
+if [ -x "$SCRIPT_DIR/target/release/is-libc-used" ]; then
+    IS_LIBC_USED="$SCRIPT_DIR/target/release/is-libc-used"
+elif [ -x "$SCRIPT_DIR/target/debug/is-libc-used" ]; then
+    IS_LIBC_USED="$SCRIPT_DIR/target/debug/is-libc-used"
+fi
+
 FAILED=0
 WARNINGS=0
 
 echo "=== Verifying: $BINARY ==="
 echo
 
-# 1. Dynamic linking check (informational - ldd can execute code, so checks 2 & 3 are authoritative)
+# 0. Primary check using is-libc-used tool (AUTHORITATIVE - checks INTERP and NEEDED)
+echo -n "0. is-libc-used tool check... "
+if [ -n "$IS_LIBC_USED" ]; then
+    IS_LIBC_OUTPUT=$("$IS_LIBC_USED" -v "$BINARY" 2>&1)
+    IS_LIBC_EXIT=$?
+    if [ $IS_LIBC_EXIT -eq 0 ]; then
+        echo "PASS (no libc dependency)"
+        echo "$IS_LIBC_OUTPUT" | sed 's/^/   /'
+    elif [ $IS_LIBC_EXIT -eq 1 ]; then
+        echo "FAIL (uses libc)"
+        echo "$IS_LIBC_OUTPUT" | sed 's/^/   /'
+        FAILED=1
+    else
+        echo "WARN (tool error: exit $IS_LIBC_EXIT)"
+        echo "$IS_LIBC_OUTPUT" | sed 's/^/   /'
+        WARNINGS=$((WARNINGS + 1))
+    fi
+else
+    echo "SKIP (is-libc-used not found - build with: cargo build -p is-libc-used)"
+    WARNINGS=$((WARNINGS + 1))
+fi
+
+# 1. Dynamic linking check (informational - ldd can execute code, so check 0 is authoritative)
 echo -n "1. Dynamic linking check (ldd)... "
 LDD_OUTPUT=$(ldd "$BINARY" 2>&1)
 if echo "$LDD_OUTPUT" | grep -qE "not a dynamic executable|statically linked"; then
     echo "INFO ($(echo "$LDD_OUTPUT" | tr -d '\t'))"
 else
-    echo "INFO (ldd reports dynamically linked - see checks 2 & 3)"
+    echo "INFO (ldd reports dynamically linked - see check 0)"
     echo "$LDD_OUTPUT" | head -5
 fi
 
-# 2. Check no INTERP program header (no dynamic linker needed)
-echo -n "2. Interpreter (INTERP) check... "
-if ! readelf -lW "$BINARY" 2>/dev/null | grep -q "^ *INTERP"; then
-    echo "PASS (no INTERP program header)"
-else
-    echo "FAIL (has INTERP - needs dynamic linker)"
-    readelf -lW "$BINARY" 2>/dev/null | grep -A1 "^ *INTERP"
-    FAILED=1
-fi
-
-# 3. Check no NEEDED libraries (fully static binaries may have no .dynamic section at all)
-echo -n "3. NEEDED libraries check... "
-NEEDED=$(readelf -d "$BINARY" 2>/dev/null | grep NEEDED || true)
-if [ -z "$NEEDED" ]; then
-    echo "PASS (no NEEDED libraries)"
-else
-    echo "FAIL (has NEEDED libraries)"
-    echo "$NEEDED"
-    FAILED=1
-fi
-
-# 4. Check no strong undefined symbols
-echo -n "4. Undefined symbols check... "
+# 2. Check no strong undefined symbols
+echo -n "2. Undefined symbols check... "
 # Check if dynsym section exists
 DYNSYM_OUTPUT=$(readelf --dyn-syms "$BINARY" 2>/dev/null || true)
 if [ -z "$DYNSYM_OUTPUT" ] || echo "$DYNSYM_OUTPUT" | grep -q "no dynamic symbol"; then
@@ -203,9 +212,9 @@ else
     fi
 fi
 
-# 5a. Check no GLIBC version references in dynamic symbols
-# Note: This only catches dynamically linked glibc; check 5b covers statically linked
-echo -n "5a. GLIBC dynamic symbols check... "
+# 3a. Check no GLIBC version references in dynamic symbols
+# Note: This only catches dynamically linked glibc; check 3b covers statically linked
+echo -n "3a. GLIBC dynamic symbols check... "
 if ! objdump -T "$BINARY" 2>/dev/null | grep -qi "@glibc"; then
     echo "PASS (no @GLIBC version symbols)"
 else
@@ -214,9 +223,9 @@ else
     FAILED=1
 fi
 
-# 5b. Check for common glibc entrypoint symbols (heuristic - nm may not work on stripped binaries)
+# 3b. Check for common glibc entrypoint symbols (heuristic - nm may not work on stripped binaries)
 # Defined symbols (T/t) are OK - they're our own implementations
-echo -n "5b. GLIBC entrypoint symbols (heuristic)... "
+echo -n "3b. GLIBC entrypoint symbols (heuristic)... "
 if [ "$HAS_NM" -eq 0 ]; then
     echo "WARN (nm not available)"
     WARNINGS=$((WARNINGS + 1))
@@ -238,8 +247,8 @@ else
     fi
 fi
 
-# 6. Heuristic: syscall instruction presence (vDSO, LTO, or stripping may hide them)
-echo -n "6. Syscall instructions (heuristic)... "
+# 4. Heuristic: syscall instruction presence (vDSO, LTO, or stripping may hide them)
+echo -n "4. Syscall instructions (heuristic)... "
 # Match syscall instructions at end of line: syscall (x86_64), svc (ARM/AArch64), int $0x80 (x86 32-bit)
 SYSCALL_PATTERN='(syscall|svc|int.*0x80)\s*$'
 SYSCALL_INSTR_COUNT=$(objdump -d "$BINARY" 2>/dev/null | grep -cE "$SYSCALL_PATTERN" || true)
@@ -251,9 +260,9 @@ else
     WARNINGS=$((WARNINGS + 1))
 fi
 
-# 7. Runtime check - no libc files opened (diagnostic - checks 2 & 3 are authoritative)
+# 5. Runtime check - no libc files opened (diagnostic - check 0 is authoritative)
 # Use -f to follow forks, trace=file catches open/openat/openat2/access/stat/etc.
-echo -n "7. Runtime library file check... "
+echo -n "5. Runtime library file check... "
 STRACE_OUT7=$(timeout "$TIMEOUT" strace -f -e trace=file "$BINARY" 2>&1 >/dev/null)
 STRACE_EXIT7=$?
 if [ $STRACE_EXIT7 -eq 124 ]; then
@@ -272,9 +281,9 @@ else
     fi
 fi
 
-# 8. Runtime check - verify no dynamic loading via full strace (diagnostic - checks 2 & 3 are authoritative)
+# 6. Runtime check - verify no dynamic loading via full strace (diagnostic - check 0 is authoritative)
 # Use -f to follow forks/execs
-echo -n "8. Runtime syscall trace check... "
+echo -n "6. Runtime syscall trace check... "
 STRACE_OUT8=$(timeout "$TIMEOUT" strace -f "$BINARY" 2>&1 >/dev/null)
 STRACE_EXIT8=$?
 if [ $STRACE_EXIT8 -eq 124 ]; then
@@ -301,12 +310,12 @@ echo
 echo "========================================"
 if [ $FAILED -eq 0 ]; then
     if [ $WARNINGS -eq 0 ]; then
-        echo "RESULT: PASS - No INTERP/NEEDED (checks 2 & 3 are authoritative)"
+        echo "RESULT: PASS - No INTERP/NEEDED (check 0 is authoritative)"
     else
-        echo "RESULT: PASS with $WARNINGS warning(s) - No INTERP/NEEDED (checks 2 & 3 are authoritative)"
+        echo "RESULT: PASS with $WARNINGS warning(s) - No INTERP/NEEDED (check 0 is authoritative)"
     fi
     exit 0
 else
-    echo "RESULT: FAIL - Dynamic dependency detected (see INTERP/NEEDED checks)"
+    echo "RESULT: FAIL - Dynamic dependency detected (see check 0)"
     exit 1
 fi
