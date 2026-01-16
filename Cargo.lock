@@ -21,6 +21,7 @@ dependencies = [
 name = "ex-x2"
 version = "0.1.0"
 dependencies = [
+ "is-libc-used",
  "rlibc-x2",
 ]
 

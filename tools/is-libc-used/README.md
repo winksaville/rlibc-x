@@ -112,13 +112,36 @@ fn main() -> ExitCode {
 
 ### For std apps (rlibc-x2)
 
-Apps using rlibc-x2 may be able to use the library directly as a dev-dependency.
-Try the library approach first; if conflicts occur, fall back to the binary approach above.
+Apps using rlibc-x2 can use the library directly as a dev-dependency.
+However, you still need `test = false` on the binary and bin-specific linker args
+in build.rs, otherwise the test binary gets the wrong linker flags applied.
 
 **Cargo.toml:**
 ```toml
 [dev-dependencies]
 is-libc-used = { path = "../../tools/is-libc-used" }
+
+[[bin]]
+name = "my-app"
+test = false  # Prevent cargo from compiling binary in test mode
+```
+
+**build.rs** - Use bin-specific linker args so test binaries aren't affected.
+
+The syntax is `cargo:rustc-link-arg-bin=<BIN_NAME>=<LINKER_ARG>` where:
+- `<BIN_NAME>` is your binary name (e.g., `my-app`)
+- `<LINKER_ARG>` is the linker flag (e.g., `-static`, `-nostdlib`, ...)
+
+```rust
+fn main() {
+    // All of these link-arg only apply to the "my-app" binary, not the tests
+    println!("cargo:rustc-link-arg-bin=my-app=-static");
+    println!("cargo:rustc-link-arg-bin=my-app=-nostdlib");
+    println!("cargo:rustc-link-arg-bin=my-app=-nodefaultlibs");
+    println!("cargo:rustc-link-arg-bin=my-app=-e_start");
+    println!("cargo:rustc-link-arg-bin=my-app=-Wl,--undefined=_start");
+    println!("cargo:rustc-link-arg-bin=my-app=-Wl,--undefined=__libc_start_main");
+}
 ```
 
 **tests/no_libc.rs:**
