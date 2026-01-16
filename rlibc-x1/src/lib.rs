@@ -16,6 +16,11 @@ static mut HEAP_START: *mut u8 = core::ptr::null_mut();
 static mut HEAP_END: *mut u8 = core::ptr::null_mut();
 static mut HEAP_CURRENT: *mut u8 = core::ptr::null_mut();
 
+/// Invoke a syscall with 0 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and that invoking
+/// this syscall is safe in the current context.
 #[inline(always)]
 pub unsafe fn syscall0(n: u64) -> u64 {
     let ret: u64;
@@ -32,6 +37,11 @@ pub unsafe fn syscall0(n: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 1 argument.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall1(n: u64, arg1: u64) -> u64 {
     let ret: u64;
@@ -49,6 +59,11 @@ pub unsafe fn syscall1(n: u64, arg1: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 2 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall2(n: u64, arg1: u64, arg2: u64) -> u64 {
     let ret: u64;
@@ -67,6 +82,11 @@ pub unsafe fn syscall2(n: u64, arg1: u64, arg2: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 3 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall3(n: u64, arg1: u64, arg2: u64, arg3: u64) -> u64 {
     let ret: u64;
@@ -86,6 +106,11 @@ pub unsafe fn syscall3(n: u64, arg1: u64, arg2: u64, arg3: u64) -> u64 {
     ret
 }
 
+/// Invoke a syscall with 4 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall4(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64) -> u64 {
     let ret: u64;
@@ -106,6 +131,11 @@ pub unsafe fn syscall4(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64) -> u6
     ret
 }
 
+/// Invoke a syscall with 5 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall5(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) -> u64 {
     let ret: u64;
@@ -127,6 +157,11 @@ pub unsafe fn syscall5(n: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5:
     ret
 }
 
+/// Invoke a syscall with 6 arguments.
+///
+/// # Safety
+/// Caller must ensure `n` is a valid syscall number and all arguments
+/// are valid for that syscall.
 #[inline(always)]
 pub unsafe fn syscall6(
     n: u64,
@@ -162,17 +197,25 @@ pub unsafe fn syscall6(
 pub fn exit(code: i32) -> ! {
     unsafe {
         syscall1(SYS_EXIT, code as u64);
+        asm!("ud2", options(noreturn));
     }
-    loop {}
 }
 
+/// Write bytes to a file descriptor.
+///
+/// # Safety
+/// `buf` must point to at least `count` valid bytes.
 #[unsafe(no_mangle)]
-pub extern "C" fn write(fd: i32, buf: *const u8, count: usize) -> isize {
+pub unsafe extern "C" fn write(fd: i32, buf: *const u8, count: usize) -> isize {
     unsafe { syscall3(SYS_WRITE, fd as u64, buf as u64, count as u64) as isize }
 }
 
+/// Read bytes from a file descriptor.
+///
+/// # Safety
+/// `buf` must point to at least `count` bytes of writable memory.
 #[unsafe(no_mangle)]
-pub extern "C" fn read(fd: i32, buf: *mut u8, count: usize) -> isize {
+pub unsafe extern "C" fn read(fd: i32, buf: *mut u8, count: usize) -> isize {
     unsafe { syscall3(SYS_READ, fd as u64, buf as u64, count as u64) as isize }
 }
 
@@ -209,8 +252,14 @@ pub extern "C" fn malloc(size: usize) -> *mut u8 {
     }
 }
 
+/// Reallocate memory.
+///
+/// # Safety
+/// If `ptr` is non-null, it must have been returned by a previous call to
+/// `malloc`, `realloc`, or `calloc`, and `size` must not exceed the original
+/// allocation size (this simple allocator doesn't track sizes).
 #[unsafe(no_mangle)]
-pub extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
+pub unsafe extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
     if ptr.is_null() {
         return malloc(size);
     }
