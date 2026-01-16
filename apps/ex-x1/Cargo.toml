@@ -6,3 +6,12 @@ description = "Minimal exit-only binary using rlibc-x1 (no_std + no_main)"
 
 [dependencies]
 rlibc-x1 = { path = "../../rlibc-x1" }
+
+[[bin]]
+name = "ex-x1"
+test = false
+
+[[test]]
+name = "no_libc"
+path = "tests/no_libc.rs"
+harness = false
