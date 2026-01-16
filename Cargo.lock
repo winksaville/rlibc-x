@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "ex-glibc"
 version = "0.1.0"
+dependencies = [
+ "is-libc-used",
+]
 
 [[package]]
 name = "ex-musl"
