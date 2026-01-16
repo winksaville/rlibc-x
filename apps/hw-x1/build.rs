@@ -1,4 +1,5 @@
 fn main() {
-    println!("cargo:rustc-link-arg=-nostartfiles");
-    println!("cargo:rustc-link-arg=-static");
+    // Only apply these flags to the hw-x1 binary, not tests
+    println!("cargo:rustc-link-arg-bin=hw-x1=-nostartfiles");
+    println!("cargo:rustc-link-arg-bin=hw-x1=-static");
 }
