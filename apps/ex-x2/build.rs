@@ -1,7 +1,4 @@
 fn main() {
-    // Use static C runtime
-    println!("cargo:rustc-flag=-C target-feature=+crt-static");
-
     // Link statically, use rlibc-x2 instead of system libc
     println!("cargo:rustc-link-arg=-static");
     println!("cargo:rustc-link-arg=-nostdlib");
