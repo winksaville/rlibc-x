@@ -125,19 +125,12 @@ fn run_filtered_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult>
     // Check if rlibc-x2 is requested (triggers rlibc-x2-tests)
     let run_rlibc_x2_tests_flag = config.crates.iter().any(|c| c == "rlibc-x2");
 
-    // Run default target crates
-    if !default_crates.is_empty() {
-        let crate_list: Vec<&str> = default_crates.iter().map(|s| s.as_str()).collect();
-        let crate_display = crate_list.join(", ");
-        print_section(&format!("cargo test ({crate_display})"));
+    // Run default target crates (each individually for clear per-crate results)
+    for crate_name in &default_crates {
+        print_section(&format!("cargo test ({crate_name})"));
 
-        let mut args: Vec<&str> = Vec::new();
-        for crate_name in &crate_list {
-            args.push("-p");
-            args.push(crate_name);
-        }
-
-        let result = run_cargo_test(&format!("cargo test ({crate_display})"), &args, workspace_root, config);
+        let args = vec!["-p", crate_name.as_str()];
+        let result = run_cargo_test(&format!("cargo test ({crate_name})"), &args, workspace_root, config);
         let failed = !result.passed;
         results.push(result);
         if failed && config.fail_fast {
@@ -145,19 +138,12 @@ fn run_filtered_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult>
         }
     }
 
-    // Run musl target crates
-    if !musl_crates.is_empty() {
-        let crate_list: Vec<&str> = musl_crates.iter().map(|s| s.as_str()).collect();
-        let crate_display = crate_list.join(", ");
-        print_section(&format!("cargo test musl ({crate_display})"));
+    // Run musl target crates (each individually for clear per-crate results)
+    for crate_name in &musl_crates {
+        print_section(&format!("cargo test musl ({crate_name})"));
 
-        let mut args: Vec<&str> = vec!["--target", "x86_64-unknown-linux-musl"];
-        for crate_name in &crate_list {
-            args.push("-p");
-            args.push(crate_name);
-        }
-
-        let result = run_cargo_test(&format!("cargo test musl ({crate_display})"), &args, workspace_root, config);
+        let args = vec!["--target", "x86_64-unknown-linux-musl", "-p", crate_name.as_str()];
+        let result = run_cargo_test(&format!("cargo test musl ({crate_name})"), &args, workspace_root, config);
         let failed = !result.passed;
         results.push(result);
         if failed && config.fail_fast {
