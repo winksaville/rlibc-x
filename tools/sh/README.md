@@ -41,7 +41,7 @@ For regular development, use the integrated Rust tools:
 
 ```bash
 # Run all tests (includes libc usage checks for all apps)
-cargo run -p test-repo
+cargo xtask test
 
 # Check a specific binary
 cargo run -p is-libc-used -- ./target/release/ex-x1

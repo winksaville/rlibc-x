@@ -97,7 +97,7 @@ cargo run -p is-libc-used -- ./target/release/ex-x1
 cargo run -p is-libc-used -- -v ./target/release/ex-x1
 ```
 
-All apps include libc usage tests that run automatically with `cargo test`. The `test-repo` tool runs the complete test suite including these checks.
+All apps include libc usage tests that run automatically with `cargo test`. The `cargo xtask test` command runs the complete test suite including these checks.
 
 For additional diagnostic checks (strace, syscall inspection, etc.), see the reference script at `tools/sh/verify-no-libc.sh`.
 
@@ -152,7 +152,7 @@ Only 7 syscalls, no library loading. Compare to a typical glibc-linked binary wh
 - **apps/** - Example and comparison apps (ex-x1, ex-x2, hw-x1, hw-x2, etc.)
 - **tools/** - Development tools:
   - **is-libc-used/** - Library and binary to check if an ELF uses libc
-  - **test-repo/** - Runs all repository tests
+- **xtask/** - Project automation tasks (test, etc.)
 
 ### Two Approaches
 
@@ -210,17 +210,20 @@ Key symbols provided by rlibc-x2 for std compatibility:
 
 ### Running All Tests
 
-Use the `test-repo` tool to run the full test suite:
+Use `cargo xtask test` to run the full test suite:
 
 ```bash
-# Run all tests
-cargo run -p test-repo
+# Run all tests (release builds, default)
+cargo xtask test
 
 # Verbose output
-cargo run -p test-repo -- -v
+cargo xtask test -v
 
 # Stop on first failure
-cargo run -p test-repo -- --fail-fast
+cargo xtask test --fail-fast
+
+# Use debug builds (faster iteration)
+cargo xtask test --debug
 ```
 
 This runs:

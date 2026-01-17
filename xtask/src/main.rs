@@ -1,25 +1,28 @@
-//! Run all repository tests
-//!
-//! This tool runs:
-//! 1. `cargo test` - default target tests
-//! 2. `cargo test --target x86_64-unknown-linux-musl` - musl-specific tests
-//! 3. rlibc-x2-tests binaries - standalone integration tests
+//! Project automation tasks
 //!
 //! # Usage
 //!
 //! ```text
-//! cargo run -p test-repo
-//! cargo run -p test-repo -- -v          # verbose output
-//! cargo run -p test-repo -- --fail-fast # stop on first failure
-//! cargo run -p test-repo -- --release   # use release builds (default)
-//! cargo run -p test-repo -- --debug     # use debug builds (faster iteration)
+//! cargo xtask test                # run all tests (release builds, default)
+//! cargo xtask test -v             # verbose output
+//! cargo xtask test --fail-fast    # stop on first failure
+//! cargo xtask test --debug        # use debug builds (faster iteration)
 //! ```
+//!
+//! # Available Commands
+//!
+//! - `test` - Run all repository tests (default, musl, and rlibc-x2-tests)
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, ExitCode, Stdio};
 
+enum Subcommand {
+    Test,
+}
+
 struct Config {
+    subcommand: Subcommand,
     verbose: bool,
     fail_fast: bool,
     debug: bool,
@@ -34,13 +37,19 @@ struct TestResult {
 
 fn main() -> ExitCode {
     let config = parse_args();
-    let mut results = Vec::new();
 
-    // Get workspace root (we're in tools/test-repo)
+    // Get workspace root (xtask is at workspace root level)
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .and_then(|p| p.parent())
         .expect("Could not find workspace root");
+
+    match config.subcommand {
+        Subcommand::Test => run_tests(&config, workspace_root),
+    }
+}
+
+fn run_tests(config: &Config, workspace_root: &Path) -> ExitCode {
+    let mut results = Vec::new();
 
     // 1. cargo test (default target)
     print_section("cargo test (default target)");
@@ -88,27 +97,42 @@ fn main() -> ExitCode {
 
 fn parse_args() -> Config {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args_iter = args.iter();
+
+    // Parse subcommand (first argument)
+    let subcommand = match args_iter.next().map(|s| s.as_str()) {
+        Some("test") => Subcommand::Test,
+        Some("-h" | "--help") => {
+            print_main_help();
+            std::process::exit(0);
+        }
+        Some(other) => {
+            eprintln!("Unknown command: {other}");
+            eprintln!("Use --help for usage information");
+            std::process::exit(1);
+        }
+        None => {
+            print_main_help();
+            std::process::exit(0);
+        }
+    };
+
     let mut config = Config {
+        subcommand,
         verbose: false,
         fail_fast: false,
         debug: false,
     };
 
-    for arg in args {
+    // Parse options for the subcommand
+    for arg in args_iter {
         match arg.as_str() {
             "-v" | "--verbose" => config.verbose = true,
             "-f" | "--fail-fast" | "--fail" => config.fail_fast = true,
             "-r" | "--release" => config.debug = false,
             "-d" | "--debug" => config.debug = true,
             "-h" | "--help" => {
-                println!("Usage: test-repo [OPTIONS]");
-                println!();
-                println!("Options:");
-                println!("  -v, --verbose     Show full test output");
-                println!("  -f, --fail-fast   Stop on first failure");
-                println!("  -r, --release     Use release builds (default)");
-                println!("  -d, --debug       Use debug builds (faster iteration)");
-                println!("  -h, --help        Show this help");
+                print_test_help();
                 std::process::exit(0);
             }
             other => {
@@ -120,6 +144,31 @@ fn parse_args() -> Config {
     }
 
     config
+}
+
+fn print_main_help() {
+    println!("Usage: cargo xtask <COMMAND> [OPTIONS]");
+    println!();
+    println!("Commands:");
+    println!("  test    Run all repository tests");
+    println!();
+    println!("Options:");
+    println!("  -h, --help    Show this help");
+    println!();
+    println!("Run 'cargo xtask <COMMAND> --help' for command-specific options");
+}
+
+fn print_test_help() {
+    println!("Usage: cargo xtask test [OPTIONS]");
+    println!();
+    println!("Run all repository tests (default target, musl target, rlibc-x2-tests)");
+    println!();
+    println!("Options:");
+    println!("  -v, --verbose     Show full test output");
+    println!("  -f, --fail-fast   Stop on first failure");
+    println!("  -r, --release     Use release builds (default)");
+    println!("  -d, --debug       Use debug builds (faster iteration)");
+    println!("  -h, --help        Show this help");
 }
 
 fn print_section(name: &str) {

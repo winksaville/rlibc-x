@@ -1,7 +1,0 @@
-[package]
-name = "test-repo"
-version = "0.1.0"
-edition = "2024"
-description = "Run all repository tests including musl targets and rlibc-x2-tests"
-
-[dependencies]

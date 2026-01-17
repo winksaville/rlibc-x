@@ -12,21 +12,15 @@ members = [
     "apps/hw-glibc",
     "apps/hw-musl",
     "tools/is-libc-used",
-    "tools/test-repo",
+    "xtask",
 ]
 resolver = "3"
 
+# Minimize compile times for development
 [profile.dev]
-panic = "abort"
-opt-level = 'z'
-lto = true
-codegen-units = 1
-debug = 2
-debug-assertions = false
-overflow-checks = false
-incremental = false
-strip = false
+panic = "abort" # Required for rlibc-x1 as it's no-std
 
+# Optimized for size
 [profile.release]
 panic = "abort"
 opt-level = 'z'

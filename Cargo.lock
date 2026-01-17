@@ -100,5 +100,5 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-repo"
+name = "xtask"
 version = "0.1.0"
