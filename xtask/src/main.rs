@@ -3,15 +3,18 @@
 //! # Usage
 //!
 //! ```text
-//! cargo xtask test                # run all tests (release builds, default)
-//! cargo xtask test -v             # verbose output
-//! cargo xtask test --fail-fast    # stop on first failure
-//! cargo xtask test --debug        # use debug builds (faster iteration)
+//! cargo xtask test                  # run all tests (release builds, default)
+//! cargo xtask test ex-x1            # test specific crate
+//! cargo xtask test ex-x1 hw-x2      # test multiple crates
+//! cargo xtask test ex-musl          # auto-detects musl target
+//! cargo xtask test rlibc-x2         # includes rlibc-x2-tests binaries
+//! cargo xtask test -v               # verbose output
+//! cargo xtask test --debug          # use debug builds (faster iteration)
 //! ```
 //!
 //! # Available Commands
 //!
-//! - `test` - Run all repository tests (default, musl, and rlibc-x2-tests)
+//! - `test` - Run repository tests (all, or specific crates)
 
 use std::fs;
 use std::path::Path;
@@ -26,6 +29,7 @@ struct Config {
     verbose: bool,
     fail_fast: bool,
     debug: bool,
+    crates: Vec<String>, // Empty means all crates
 }
 
 struct TestResult {
@@ -51,13 +55,27 @@ fn main() -> ExitCode {
 fn run_tests(config: &Config, workspace_root: &Path) -> ExitCode {
     let mut results = Vec::new();
 
+    if config.crates.is_empty() {
+        // Run all tests (original behavior)
+        results.extend(run_all_tests(config, workspace_root));
+    } else {
+        // Run tests for specified crates only
+        results.extend(run_filtered_tests(config, workspace_root));
+    }
+
+    print_summary(&results)
+}
+
+fn run_all_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult> {
+    let mut results = Vec::new();
+
     // 1. cargo test (default target)
     print_section("cargo test (default target)");
-    let result = run_cargo_test("cargo test", &[], workspace_root, &config);
+    let result = run_cargo_test("cargo test", &[], workspace_root, config);
     let failed = !result.passed;
     results.push(result);
     if failed && config.fail_fast {
-        return print_summary(&results);
+        return results;
     }
 
     // 2. cargo test (musl target)
@@ -73,26 +91,94 @@ fn run_tests(config: &Config, workspace_root: &Path) -> ExitCode {
             "hw-musl",
         ],
         workspace_root,
-        &config,
+        config,
     );
     let failed = !result.passed;
     results.push(result);
     if failed && config.fail_fast {
-        return print_summary(&results);
+        return results;
     }
 
     // 3. rlibc-x2-tests
     print_section("rlibc-x2-tests");
-    let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, &config);
+    let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, config);
     for result in rlibc_x2_results {
         let failed = !result.passed;
         results.push(result);
         if failed && config.fail_fast {
-            return print_summary(&results);
+            return results;
         }
     }
 
-    print_summary(&results)
+    results
+}
+
+fn run_filtered_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult> {
+    let mut results = Vec::new();
+
+    // Separate crates by target (musl vs default)
+    let (musl_crates, default_crates): (Vec<_>, Vec<_>) = config
+        .crates
+        .iter()
+        .partition(|c| c.contains("musl"));
+
+    // Check if rlibc-x2 is requested (triggers rlibc-x2-tests)
+    let run_rlibc_x2_tests_flag = config.crates.iter().any(|c| c == "rlibc-x2");
+
+    // Run default target crates
+    if !default_crates.is_empty() {
+        let crate_list: Vec<&str> = default_crates.iter().map(|s| s.as_str()).collect();
+        let crate_display = crate_list.join(", ");
+        print_section(&format!("cargo test ({crate_display})"));
+
+        let mut args: Vec<&str> = Vec::new();
+        for crate_name in &crate_list {
+            args.push("-p");
+            args.push(crate_name);
+        }
+
+        let result = run_cargo_test(&format!("cargo test ({crate_display})"), &args, workspace_root, config);
+        let failed = !result.passed;
+        results.push(result);
+        if failed && config.fail_fast {
+            return results;
+        }
+    }
+
+    // Run musl target crates
+    if !musl_crates.is_empty() {
+        let crate_list: Vec<&str> = musl_crates.iter().map(|s| s.as_str()).collect();
+        let crate_display = crate_list.join(", ");
+        print_section(&format!("cargo test musl ({crate_display})"));
+
+        let mut args: Vec<&str> = vec!["--target", "x86_64-unknown-linux-musl"];
+        for crate_name in &crate_list {
+            args.push("-p");
+            args.push(crate_name);
+        }
+
+        let result = run_cargo_test(&format!("cargo test musl ({crate_display})"), &args, workspace_root, config);
+        let failed = !result.passed;
+        results.push(result);
+        if failed && config.fail_fast {
+            return results;
+        }
+    }
+
+    // Run rlibc-x2-tests if rlibc-x2 was specified
+    if run_rlibc_x2_tests_flag {
+        print_section("rlibc-x2-tests");
+        let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, config);
+        for result in rlibc_x2_results {
+            let failed = !result.passed;
+            results.push(result);
+            if failed && config.fail_fast {
+                return results;
+            }
+        }
+    }
+
+    results
 }
 
 fn parse_args() -> Config {
@@ -122,9 +208,10 @@ fn parse_args() -> Config {
         verbose: false,
         fail_fast: false,
         debug: false,
+        crates: Vec::new(),
     };
 
-    // Parse options for the subcommand
+    // Parse options and positional arguments for the subcommand
     for arg in args_iter {
         match arg.as_str() {
             "-v" | "--verbose" => config.verbose = true,
@@ -135,10 +222,13 @@ fn parse_args() -> Config {
                 print_test_help();
                 std::process::exit(0);
             }
-            other => {
+            other if other.starts_with('-') => {
                 eprintln!("Unknown option: {other}");
                 eprintln!("Use --help for usage information");
                 std::process::exit(1);
+            }
+            crate_name => {
+                config.crates.push(crate_name.to_string());
             }
         }
     }
@@ -159,9 +249,15 @@ fn print_main_help() {
 }
 
 fn print_test_help() {
-    println!("Usage: cargo xtask test [OPTIONS]");
+    println!("Usage: cargo xtask test [OPTIONS] [CRATES]...");
     println!();
-    println!("Run all repository tests (default target, musl target, rlibc-x2-tests)");
+    println!("Run repository tests. With no crates specified, runs all tests.");
+    println!("With crates specified, tests only those crates.");
+    println!();
+    println!("Arguments:");
+    println!("  [CRATES]...       Crates to test (e.g., ex-x1, hw-x2, rlibc-x2)");
+    println!("                    Musl target auto-detected from crate name");
+    println!("                    Specifying rlibc-x2 also runs rlibc-x2-tests");
     println!();
     println!("Options:");
     println!("  -v, --verbose     Show full test output");
@@ -169,6 +265,12 @@ fn print_test_help() {
     println!("  -r, --release     Use release builds (default)");
     println!("  -d, --debug       Use debug builds (faster iteration)");
     println!("  -h, --help        Show this help");
+    println!();
+    println!("Examples:");
+    println!("  cargo xtask test              # all tests");
+    println!("  cargo xtask test ex-x1        # test ex-x1 only");
+    println!("  cargo xtask test ex-musl      # test ex-musl (musl target)");
+    println!("  cargo xtask test rlibc-x2     # test rlibc-x2 + rlibc-x2-tests");
 }
 
 fn print_section(name: &str) {
