@@ -5,3 +5,6 @@ edition = "2024"
 description = "Minimal exit-only binary using musl (static linking)"
 
 [dependencies]
+
+[dev-dependencies]
+is-libc-used = { path = "../../tools/is-libc-used" }

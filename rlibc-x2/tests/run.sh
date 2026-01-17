@@ -24,7 +24,7 @@ pattern="${1:-*}"
 passed=0
 failed=0
 
-for bin in "$TARGET_DIR"/test-$pattern; do
+for bin in "$TARGET_DIR"/$pattern-tests; do
     [[ -x "$bin" ]] || continue
     name=$(basename "$bin")
 

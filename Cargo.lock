@@ -12,6 +12,9 @@ dependencies = [
 [[package]]
 name = "ex-musl"
 version = "0.1.0"
+dependencies = [
+ "is-libc-used",
+]
 
 [[package]]
 name = "ex-x1"
@@ -32,10 +35,16 @@ dependencies = [
 [[package]]
 name = "hw-glibc"
 version = "0.1.0"
+dependencies = [
+ "is-libc-used",
+]
 
 [[package]]
 name = "hw-musl"
 version = "0.1.0"
+dependencies = [
+ "is-libc-used",
+]
 
 [[package]]
 name = "hw-x1"
