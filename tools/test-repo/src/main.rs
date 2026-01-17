@@ -13,9 +13,9 @@
 //! cargo run -p test-repo -- --fail-fast # stop on first failure
 //! ```
 
-use std::process::{Command, ExitCode, Stdio};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
+use std::process::{Command, ExitCode, Stdio};
 
 struct Config {
     verbose: bool,
@@ -53,9 +53,12 @@ fn main() -> ExitCode {
     let result = run_cargo_test(
         "cargo test (musl)",
         &[
-            "--target", "x86_64-unknown-linux-musl",
-            "-p", "ex-musl",
-            "-p", "hw-musl",
+            "--target",
+            "x86_64-unknown-linux-musl",
+            "-p",
+            "ex-musl",
+            "-p",
+            "hw-musl",
         ],
         workspace_root,
         &config,
@@ -115,7 +118,12 @@ fn print_section(name: &str) {
     println!("=== {name} ===");
 }
 
-fn run_cargo_test(name: &str, extra_args: &[&str], workspace_root: &Path, config: &Config) -> TestResult {
+fn run_cargo_test(
+    name: &str,
+    extra_args: &[&str],
+    workspace_root: &Path,
+    config: &Config,
+) -> TestResult {
     let mut cmd = Command::new("cargo");
     cmd.arg("test");
     cmd.args(extra_args);
@@ -142,7 +150,8 @@ fn run_cargo_test(name: &str, extra_args: &[&str], workspace_root: &Path, config
                 let passed = output.status.success();
 
                 // Collect crate names from stderr ("Running" lines)
-                let crate_names: Vec<String> = stderr.lines()
+                let crate_names: Vec<String> = stderr
+                    .lines()
                     .filter(|line| line.trim_start().starts_with("Running "))
                     .filter_map(|line| {
                         line.find("deps/").and_then(|pos| {
@@ -161,14 +170,23 @@ fn run_cargo_test(name: &str, extra_args: &[&str], workspace_root: &Path, config
                 for line in stdout.lines() {
                     if line.contains("test result:") {
                         let (p, f, i) = parse_test_result(line);
-                        let crate_name = crate_names.get(crate_idx)
+                        let crate_name = crate_names
+                            .get(crate_idx)
                             .map(|s| s.as_str())
                             .unwrap_or("unknown");
                         crate_idx += 1;
 
                         if p > 0 || f > 0 || i > 0 {
-                            let status = if f > 0 { "FAIL" } else if p > 0 { "ok" } else { "skip" };
-                            println!("  {crate_name}: {status} ({p} passed, {f} failed, {i} ignored)");
+                            let status = if f > 0 {
+                                "FAIL"
+                            } else if p > 0 {
+                                "ok"
+                            } else {
+                                "skip"
+                            };
+                            println!(
+                                "  {crate_name}: {status} ({p} passed, {f} failed, {i} ignored)"
+                            );
                         }
                         total_passed += p;
                         total_failed += f;
@@ -177,9 +195,13 @@ fn run_cargo_test(name: &str, extra_args: &[&str], workspace_root: &Path, config
                 }
 
                 if passed {
-                    println!("  Total: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n");
+                    println!(
+                        "  Total: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n"
+                    );
                 } else {
-                    println!("  FAILED: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n");
+                    println!(
+                        "  FAILED: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n"
+                    );
                     println!("{combined}");
                 }
 
@@ -213,24 +235,24 @@ fn parse_test_result(line: &str) -> (u32, u32, u32) {
         if part.ends_with(" passed") {
             // Find the number - it's the last word before "passed"
             let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2 {
-                if let Ok(n) = words[words.len() - 2].parse() {
-                    passed = n;
-                }
+            if words.len() >= 2
+                && let Ok(n) = words[words.len() - 2].parse()
+            {
+                passed = n;
             }
         } else if part.ends_with(" failed") {
             let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2 {
-                if let Ok(n) = words[words.len() - 2].parse() {
-                    failed = n;
-                }
+            if words.len() >= 2
+                && let Ok(n) = words[words.len() - 2].parse()
+            {
+                failed = n;
             }
         } else if part.ends_with(" ignored") {
             let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2 {
-                if let Ok(n) = words[words.len() - 2].parse() {
-                    ignored = n;
-                }
+            if words.len() >= 2
+                && let Ok(n) = words[words.len() - 2].parse()
+            {
+                ignored = n;
             }
         }
     }
@@ -373,7 +395,10 @@ fn print_summary(results: &[TestResult]) -> ExitCode {
         println!("  [{status}] {}", result.name);
     }
 
-    println!("\n  Total: {} passed, {} failed", passed_count, failed_count);
+    println!(
+        "\n  Total: {} passed, {} failed",
+        passed_count, failed_count
+    );
     println!("========================================\n");
 
     if failed_count > 0 {
