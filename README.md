@@ -188,6 +188,56 @@ Only 7 syscalls, no library loading. Compare to a typical glibc-linked binary wh
 2. Rust's std has fallback code that uses `syscall(SYS_gettid)` when `gettid` is unavailable
 3. No actual libc code is called
 
+## Architecture
+
+### Workspace Structure
+
+- **rlibc-x1/** - `#![no_std]` library for apps that don't use Rust std
+- **rlibc-x2/** - Library for apps that use Rust std (replaces glibc)
+- **apps/** - Example and comparison apps (ex-x1, ex-x2, hw-x1, hw-x2, etc.)
+- **tools/** - Development tools:
+  - **is-libc-used/** - Library and binary to check if an ELF uses libc
+  - **test-repo/** - Runs all repository tests
+
+### Two Approaches
+
+**rlibc-x1** (no_std path): App uses `#![no_std]` and `#![no_main]`. Library provides `_start` → `_start_rust()` → user's `main()`. Minimal, but requires explicit no_std annotations.
+
+**rlibc-x2** (std path): App uses normal `fn main()` with Rust std. Library provides `_start` → `__libc_start_main()` → Rust's generated main. Replaces glibc while keeping std functionality.
+
+### Key Design Decisions
+
+- **panic="abort"** - No unwinding support
+- **Bump allocator** - Simple linear allocator where `free()` is a no-op; memory grows via `brk()` syscall
+- **TLS initialization** - rlibc-x2 sets up FS segment register for thread-local storage before calling main
+- **Linux x86_64 only** - Syscall numbers and ABI are architecture-specific
+
+### Creating Applications with rlibc-x1
+
+1. Use `#![no_std]` and `#![no_main]`
+2. Define `#[unsafe(no_mangle)] fn main()` (called by rlibc-x1's `_start_rust`)
+3. Add linker flags via build.rs:
+   ```rust
+   println!("cargo:rustc-link-arg-bin=myapp=-nostartfiles");
+   println!("cargo:rustc-link-arg-bin=myapp=-static");
+   ```
+4. Call `rlibc_x1::exit()` to terminate
+
+### Creating Applications with rlibc-x2
+
+1. Add `extern crate rlibc_x2;` to force linking
+2. Add linker flags via build.rs:
+   ```rust
+   println!("cargo:rustc-link-arg-bin=myapp=-static");
+   println!("cargo:rustc-link-arg-bin=myapp=-nostdlib");
+   println!("cargo:rustc-link-arg-bin=myapp=-nodefaultlibs");
+   println!("cargo:rustc-link-arg-bin=myapp=-e_start");
+   println!("cargo:rustc-link-arg-bin=myapp=-Wl,--undefined=_start");
+   println!("cargo:rustc-link-arg-bin=myapp=-Wl,--undefined=__libc_start_main");
+   ```
+
+Note: Use `rustc-link-arg-bin=<name>=` to apply flags only to the binary, not tests.
+
 ## rlibc-x2 Symbols
 
 Key symbols provided by rlibc-x2 for std compatibility:
@@ -203,35 +253,52 @@ Key symbols provided by rlibc-x2 for std compatibility:
 
 ## Testing
 
-Integration tests for rlibc-x2 are in `rlibc-x2/tests/`. Tests are standalone binaries that link against rlibc-x2 with the proper linker flags.
+### Running All Tests
 
-### Available Tests
-
-| Test | Description |
-|------|-------------|
-| `test-environ` | Tests raw `environ` pointer and `getenv()` function |
-| `test-std-env` | Tests Rust's `std::env` API (`var()`, `var_os()`, `vars()`) |
+Use the `test-repo` tool to run the full test suite:
 
 ```bash
 # Run all tests
-./rlibc-x2/tests/run.sh
+cargo run -p test-repo
 
-# Run specific test
-./rlibc-x2/tests/run.sh environ
-./rlibc-x2/tests/run.sh std-env
+# Verbose output
+cargo run -p test-repo -- -v
 
-# Or via cargo
-cargo run -p rlibc-x2-tests --bin test-environ --release
-cargo run -p rlibc-x2-tests --bin test-std-env --release
+# Stop on first failure
+cargo run -p test-repo -- --fail-fast
+```
 
-# Verbose output (shows debug info)
-VERBOSE=1 ./rlibc-x2/tests/run.sh
-VERBOSE=1 cargo run -p rlibc-x2-tests --bin test-std-env --release
+This runs:
+1. `cargo test` - default target tests (includes libc usage tests for apps)
+2. `cargo test --target x86_64-unknown-linux-musl` - musl-specific tests
+3. rlibc-x2-tests binaries - standalone integration tests
+
+### Cargo Test Aliases
+
+```bash
+# Run tests with specific target
+cargo t-musl -p ex-musl -p hw-musl    # musl target
+cargo t-glibc -p ex-glibc -p hw-glibc  # glibc target
+```
+
+### rlibc-x2 Integration Tests
+
+Integration tests for rlibc-x2 are in `rlibc-x2/tests/`. These are standalone binaries that link against rlibc-x2 with the proper linker flags.
+
+| Test | Description |
+|------|-------------|
+| `environ-tests` | Tests raw `environ` pointer and `getenv()` function |
+| `std-env-tests` | Tests Rust's `std::env` API (`var()`, `var_os()`, `vars()`) |
+
+```bash
+# Run directly via cargo
+cargo run -p rlibc-x2-tests --bin environ-tests --release
+cargo run -p rlibc-x2-tests --bin std-env-tests --release
 ```
 
 ### Adding a Test
 
-1. Create `rlibc-x2/tests/foo.rs`:
+1. Create `rlibc-x2/tests/foo-tests.rs`:
    ```rust
    use std::process::ExitCode;
    extern crate rlibc_x2;
@@ -245,8 +312,9 @@ VERBOSE=1 cargo run -p rlibc-x2-tests --bin test-std-env --release
 2. Add to `rlibc-x2/tests/Cargo.toml`:
    ```toml
    [[bin]]
-   name = "test-foo"
-   path = "foo.rs"
+   name = "foo-tests"
+   path = "foo-tests.rs"
+   test = false
    ```
 
 ## Status
