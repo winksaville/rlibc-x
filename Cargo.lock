@@ -98,3 +98,7 @@ version = "0.1.0"
 dependencies = [
  "rlibc-x2",
 ]
+
+[[package]]
+name = "test-repo"
+version = "0.1.0"
