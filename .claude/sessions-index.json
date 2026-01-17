@@ -62,18 +62,6 @@
       "isSidechain": false
     },
     {
-      "sessionId": "de0ca0e5-a925-4621-8a95-26ff141f2f96",
-      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/de0ca0e5-a925-4621-8a95-26ff141f2f96.jsonl",
-      "fileMtime": 1768628776903,
-      "firstPrompt": "No prompt",
-      "messageCount": 9,
-      "created": "2026-01-17T05:42:58.571Z",
-      "modified": "2026-01-17T05:46:16.863Z",
-      "gitBranch": "main",
-      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
-      "isSidechain": false
-    },
-    {
       "sessionId": "6b9c4408-913e-4495-bf33-3df2050cc1a2",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/6b9c4408-913e-4495-bf33-3df2050cc1a2.jsonl",
       "fileMtime": 1768502662813,
@@ -285,6 +273,30 @@
       "messageCount": 91,
       "created": "2026-01-07T01:21:18.138Z",
       "modified": "2026-01-07T03:32:24.576Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "de0ca0e5-a925-4621-8a95-26ff141f2f96",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/de0ca0e5-a925-4621-8a95-26ff141f2f96.jsonl",
+      "fileMtime": 1768677101892,
+      "firstPrompt": "No prompt",
+      "messageCount": 9,
+      "created": "2026-01-17T05:42:58.571Z",
+      "modified": "2026-01-17T05:46:16.863Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "4693a7cf-a43a-4568-a19c-9ece7613e294",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/4693a7cf-a43a-4568-a19c-9ece7613e294.jsonl",
+      "fileMtime": 1768677101890,
+      "firstPrompt": "I think we can remove verify-no-libc.sh and references to it inre README.md since we have tools is-libc-used and test-repo, thoughts?",
+      "messageCount": 18,
+      "created": "2026-01-17T05:50:09.890Z",
+      "modified": "2026-01-17T06:00:12.976Z",
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false

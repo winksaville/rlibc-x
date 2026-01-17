@@ -11,6 +11,8 @@
 //! cargo run -p test-repo
 //! cargo run -p test-repo -- -v          # verbose output
 //! cargo run -p test-repo -- --fail-fast # stop on first failure
+//! cargo run -p test-repo -- --release   # use release builds (default)
+//! cargo run -p test-repo -- --debug     # use debug builds (faster iteration)
 //! ```
 
 use std::fs;
@@ -20,6 +22,7 @@ use std::process::{Command, ExitCode, Stdio};
 struct Config {
     verbose: bool,
     fail_fast: bool,
+    debug: bool,
 }
 
 struct TestResult {
@@ -88,18 +91,23 @@ fn parse_args() -> Config {
     let mut config = Config {
         verbose: false,
         fail_fast: false,
+        debug: false,
     };
 
     for arg in args {
         match arg.as_str() {
             "-v" | "--verbose" => config.verbose = true,
             "-f" | "--fail-fast" | "--fail" => config.fail_fast = true,
+            "-r" | "--release" => config.debug = false,
+            "-d" | "--debug" => config.debug = true,
             "-h" | "--help" => {
                 println!("Usage: test-repo [OPTIONS]");
                 println!();
                 println!("Options:");
                 println!("  -v, --verbose     Show full test output");
                 println!("  -f, --fail-fast   Stop on first failure");
+                println!("  -r, --release     Use release builds (default)");
+                println!("  -d, --debug       Use debug builds (faster iteration)");
                 println!("  -h, --help        Show this help");
                 std::process::exit(0);
             }
@@ -126,6 +134,9 @@ fn run_cargo_test(
 ) -> TestResult {
     let mut cmd = Command::new("cargo");
     cmd.arg("test");
+    if !config.debug {
+        cmd.arg("--release");
+    }
     cmd.args(extra_args);
     cmd.current_dir(workspace_root);
 
@@ -266,8 +277,12 @@ fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult>
     // First, build the test binaries
     print!("  Building rlibc-x2-tests... ");
 
-    let build_output = Command::new("cargo")
-        .args(["build", "-p", "rlibc-x2-tests", "--release"])
+    let mut build_cmd = Command::new("cargo");
+    build_cmd.args(["build", "-p", "rlibc-x2-tests"]);
+    if !config.debug {
+        build_cmd.arg("--release");
+    }
+    let build_output = build_cmd
         .current_dir(workspace_root)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -301,7 +316,8 @@ fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult>
     }
 
     // Find and run test binaries
-    let target_dir = workspace_root.join("target/release");
+    let profile = if config.debug { "debug" } else { "release" };
+    let target_dir = workspace_root.join(format!("target/{profile}"));
 
     let test_binaries: Vec<_> = fs::read_dir(&target_dir)
         .into_iter()
