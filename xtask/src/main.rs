@@ -4,6 +4,7 @@
 //!
 //! ```text
 //! cargo xtask test                  # run all tests (release builds, default)
+//! cargo xtask test .                # test crate in current directory
 //! cargo xtask test ex-x1            # test specific crate
 //! cargo xtask test ex-x1 hw-x2      # test multiple crates
 //! cargo xtask test ex-musl          # auto-detects musl target
@@ -213,6 +214,16 @@ fn parse_args() -> Config {
                 eprintln!("Use --help for usage information");
                 std::process::exit(1);
             }
+            "." => {
+                match resolve_current_crate() {
+                    Ok(Some(name)) => config.crates.push(name),
+                    Ok(None) => {} // Workspace root - leave crates empty for "all"
+                    Err(e) => {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    }
+                }
+            }
             crate_name => {
                 config.crates.push(crate_name.to_string());
             }
@@ -220,6 +231,46 @@ fn parse_args() -> Config {
     }
 
     config
+}
+
+/// Resolve "." to the crate name in the current directory
+/// Returns None if at workspace root (meaning "all"), Some(name) for a crate, or error
+fn resolve_current_crate() -> Result<Option<String>, String> {
+    let cargo_toml = std::env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {e}"))?
+        .join("Cargo.toml");
+
+    if !cargo_toml.exists() {
+        return Err("No Cargo.toml found in current directory".to_string());
+    }
+
+    let content = fs::read_to_string(&cargo_toml)
+        .map_err(|e| format!("Failed to read Cargo.toml: {e}"))?;
+
+    // Simple parsing - look for name = "..." in [package] section
+    let mut in_package = false;
+    for line in content.lines() {
+        let line = line.trim();
+        if line == "[package]" {
+            in_package = true;
+            continue;
+        }
+        if line.starts_with('[') {
+            in_package = false;
+            continue;
+        }
+        if in_package && line.starts_with("name") {
+            // Parse: name = "crate-name"
+            if let Some(eq_pos) = line.find('=') {
+                let value = line[eq_pos + 1..].trim();
+                let value = value.trim_matches('"').trim_matches('\'');
+                return Ok(Some(value.to_string()));
+            }
+        }
+    }
+
+    // No [package] section - likely workspace root, treat as "all"
+    Ok(None)
 }
 
 fn print_main_help() {
@@ -242,6 +293,7 @@ fn print_test_help() {
     println!();
     println!("Arguments:");
     println!("  [CRATES]...       Crates to test (e.g., ex-x1, hw-x2, rlibc-x2)");
+    println!("                    Use '.' for the crate in the current directory");
     println!("                    Musl target auto-detected from crate name");
     println!("                    Specifying rlibc-x2 also runs rlibc-x2-tests");
     println!();
@@ -254,6 +306,7 @@ fn print_test_help() {
     println!();
     println!("Examples:");
     println!("  cargo xtask test              # all tests");
+    println!("  cargo xtask test .            # test crate in current directory");
     println!("  cargo xtask test ex-x1        # test ex-x1 only");
     println!("  cargo xtask test ex-musl      # test ex-musl (musl target)");
     println!("  cargo xtask test rlibc-x2     # test rlibc-x2 + rlibc-x2-tests");
