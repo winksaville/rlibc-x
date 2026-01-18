@@ -6,7 +6,7 @@
 //! For dynamically linked binaries (glibc): identifies imported libc functions
 //! and counts references through PLT stubs.
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use capstone::prelude::*;
 use clap::{Parser, ValueEnum};
 use goblin::elf::Elf;
@@ -236,8 +236,7 @@ fn build_plt_map(elf: &Elf) -> Result<HashMap<String, u64>> {
     // Find .rela.plt section for PLT relocations
     for reloc in &elf.pltrelocs {
         let sym_idx = reloc.r_sym;
-        if sym_idx < elf.dynsyms.len() {
-            let sym = &elf.dynsyms[sym_idx];
+        if let Some(sym) = elf.dynsyms.get(sym_idx) {
             let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
 
             // PLT entry address: typically the relocation target + PLT base
