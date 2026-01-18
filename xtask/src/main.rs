@@ -1,30 +1,26 @@
 //! Project automation tasks
 //!
+//! All commands default to debug builds for faster iteration. Use `-r` for release.
+//!
 //! # Usage
 //!
 //! ```text
-//! cargo xtask build                 # build all (release, default)
-//! cargo xtask build .               # build crate in current directory
-//! cargo xtask build ex-x1           # build specific crate
+//! cargo xtask build                 # build all (debug)
+//! cargo xtask build ex-x1 -r        # build specific crate (release)
 //!
-//! cargo xtask run hw-x1             # build and run specific crate
+//! cargo xtask run hw-x1             # run specific crate
 //! cargo xtask run .                 # run crate in current directory
 //!
 //! cargo xtask test                  # run all tests
-//! cargo xtask test .                # test crate in current directory
-//! cargo xtask test ex-x1            # test specific crate
+//! cargo xtask test . -r             # test with release builds
 //! cargo xtask test rlibc-x2         # includes rlibc-x2-tests binaries
-//!
-//! # Common options for all commands:
-//! cargo xtask <cmd> --debug         # use debug builds (faster iteration)
-//! cargo xtask <cmd> -v              # verbose output
 //! ```
 //!
 //! # Available Commands
 //!
 //! - `build` - Build crates
 //! - `run` - Build and run crates
-//! - `test` - Run tests (with special rlibc-x2-tests handling)
+//! - `test` - Run tests
 
 use std::fs;
 use std::path::Path;
@@ -353,7 +349,7 @@ fn parse_args() -> Config {
         subcommand,
         verbose: false,
         fail_fast: false,
-        debug: false,
+        debug: true, // Default to debug for faster iteration; use -r for release
         crates: Vec::new(),
     };
 
@@ -463,8 +459,8 @@ fn print_cmd_help(cmd: &str) {
     println!("Options:");
     println!("  -v, --verbose     Show full output");
     println!("  -f, --fail-fast   Stop on first failure");
-    println!("  -r, --release     Use release builds (default)");
-    println!("  -d, --debug       Use debug builds (faster iteration)");
+    println!("  -d, --debug       Use debug builds (default)");
+    println!("  -r, --release     Use release builds");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
@@ -488,8 +484,8 @@ fn print_test_help() {
     println!("Options:");
     println!("  -v, --verbose     Show full test output");
     println!("  -f, --fail-fast   Stop on first failure");
-    println!("  -r, --release     Use release builds (default)");
-    println!("  -d, --debug       Use debug builds (faster iteration)");
+    println!("  -d, --debug       Use debug builds (default)");
+    println!("  -r, --release     Use release builds");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
