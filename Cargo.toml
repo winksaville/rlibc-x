@@ -12,6 +12,7 @@ members = [
     "apps/hw-glibc",
     "apps/hw-musl",
     "tools/is-libc-used",
+    "tools/func-analysis",
     "xtask",
 ]
 resolver = "3"
