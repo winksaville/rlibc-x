@@ -41,8 +41,7 @@ fn main() -> ExitCode {
     let path = match path {
         Some(p) => p,
         None => {
-            eprintln!("Error: No binary path provided");
-            print_usage(&args[0]);
+            eprintln!("Error: No binary path provided, use -h for help");
             return ExitCode::from(2);
         }
     };

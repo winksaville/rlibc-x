@@ -72,6 +72,11 @@ fn main() -> ExitCode {
     // Run command on each crate
     let mut results = Vec::new();
     for crate_name in &crates {
+        // Skip lib-only crates for run command
+        if cmd_name == "run" && !crate_has_binary(crate_name, workspace_root) {
+            continue;
+        }
+
         let result = run_cargo_on_crate(cmd_name, crate_name, workspace_root, &config);
         let failed = !result.passed;
         results.push(result);
@@ -113,30 +118,51 @@ fn main() -> ExitCode {
     }
 }
 
-/// Get list of all runnable crates in the workspace (excludes xtask and test crates)
+/// Get list of all crates in the workspace (excludes xtask and test crates)
 fn get_all_crates(workspace_root: &Path) -> Vec<String> {
-    // These are the app crates we want to build/run/test
+    // These are the crates we want to build/run/test
     let crates = [
-        "ex-x1", "ex-x2", "ex-glibc", "ex-musl",
-        "hw-x1", "hw-x2", "hw-glibc", "hw-musl",
-        "rlibc-x1", "rlibc-x2", "is-libc-used",
+        "ex-x1",
+        "ex-x2",
+        "ex-glibc",
+        "ex-musl",
+        "hw-x1",
+        "hw-x2",
+        "hw-glibc",
+        "hw-musl",
+        "rlibc-x1",
+        "rlibc-x2",
+        "is-libc-used",
     ];
 
     // Filter to crates that exist
     crates
         .iter()
         .filter(|name| {
-            let crate_path = if name.starts_with("ex-") || name.starts_with("hw-") {
-                workspace_root.join("apps").join(name)
-            } else if **name == "is-libc-used" {
-                workspace_root.join("tools").join(name)
-            } else {
-                workspace_root.join(name)
-            };
-            crate_path.join("Cargo.toml").exists()
+            get_crate_path(name, workspace_root)
+                .join("Cargo.toml")
+                .exists()
         })
         .map(|s| s.to_string())
         .collect()
+}
+
+/// Get the path to a crate directory
+fn get_crate_path(name: &str, workspace_root: &Path) -> std::path::PathBuf {
+    if name.starts_with("ex-") || name.starts_with("hw-") {
+        workspace_root.join("apps").join(name)
+    } else if name == "is-libc-used" {
+        workspace_root.join("tools").join(name)
+    } else {
+        workspace_root.join(name)
+    }
+}
+
+/// Check if a crate has a binary (src/main.rs)
+fn crate_has_binary(name: &str, workspace_root: &Path) -> bool {
+    get_crate_path(name, workspace_root)
+        .join("src/main.rs")
+        .exists()
 }
 
 /// Run a cargo command on a single crate
@@ -303,8 +329,8 @@ fn resolve_current_crate() -> Result<Option<String>, String> {
         return Err("No Cargo.toml found in current directory".to_string());
     }
 
-    let content = fs::read_to_string(&cargo_toml)
-        .map_err(|e| format!("Failed to read Cargo.toml: {e}"))?;
+    let content =
+        fs::read_to_string(&cargo_toml).map_err(|e| format!("Failed to read Cargo.toml: {e}"))?;
 
     // Simple parsing - look for name = "..." in [package] section
     let mut in_package = false;
