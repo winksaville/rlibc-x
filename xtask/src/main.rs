@@ -1,26 +1,27 @@
 //! Project automation tasks
 //!
-//! All commands default to debug builds for faster iteration. Use `-r` for release.
+//! All commands default to debug builds and verbose output.
+//! Use `-r` for release builds, `-q` for quiet output.
 //!
 //! # Usage
 //!
 //! ```text
-//! cargo xtask build                 # build all (debug)
+//! cargo xtask build                 # build all crates
 //! cargo xtask build ex-x1 -r        # build specific crate (release)
 //!
-//! cargo xtask run hw-x1             # run specific crate
+//! cargo xtask run hw-x1             # run specific crate (shows exit code)
 //! cargo xtask run .                 # run crate in current directory
 //!
-//! cargo xtask test                  # run all tests
-//! cargo xtask test . -r             # test with release builds
+//! cargo xtask test                  # test all crates
+//! cargo xtask test ex-x1 -q         # test specific crate (quiet)
 //! cargo xtask test rlibc-x2         # includes rlibc-x2-tests binaries
 //! ```
 //!
 //! # Available Commands
 //!
-//! - `build` - Build crates
-//! - `run` - Build and run crates
-//! - `test` - Run tests
+//! - `build` - Build crates (one at a time)
+//! - `run` - Build and run crates (shows exit code)
+//! - `test` - Run tests (with summary)
 
 use std::fs;
 use std::path::Path;
@@ -34,7 +35,7 @@ enum Subcommand {
 
 struct Config {
     subcommand: Subcommand,
-    verbose: bool,
+    quiet: bool,
     fail_fast: bool,
     debug: bool,
     crates: Vec<String>, // Empty means all crates
@@ -55,141 +56,137 @@ fn main() -> ExitCode {
         .parent()
         .expect("Could not find workspace root");
 
-    match config.subcommand {
-        Subcommand::Build => run_cargo_cmd("build", &config, workspace_root),
-        Subcommand::Run => run_cargo_cmd("run", &config, workspace_root),
-        Subcommand::Test => run_tests(&config, workspace_root),
-    }
-}
+    let cmd_name = match config.subcommand {
+        Subcommand::Build => "build",
+        Subcommand::Run => "run",
+        Subcommand::Test => "test",
+    };
 
-/// Generic handler for cargo build/run commands
-fn run_cargo_cmd(cmd_name: &str, config: &Config, workspace_root: &Path) -> ExitCode {
-    let mut results = Vec::new();
-
-    if config.crates.is_empty() {
-        // Run on all crates
-        results.extend(run_cargo_cmd_all(cmd_name, config, workspace_root));
+    // Get list of crates to operate on
+    let crates = if config.crates.is_empty() {
+        get_all_crates(workspace_root)
     } else {
-        // Run on specified crates only
-        results.extend(run_cargo_cmd_filtered(cmd_name, config, workspace_root));
+        config.crates.clone()
+    };
+
+    // Run command on each crate
+    let mut results = Vec::new();
+    for crate_name in &crates {
+        let result = run_cargo_on_crate(cmd_name, crate_name, workspace_root, &config);
+        let failed = !result.passed;
+        results.push(result);
+        if failed && config.fail_fast {
+            break;
+        }
     }
 
-    print_summary(&results)
-}
+    // For test, also run rlibc-x2-tests if rlibc-x2 was included
+    if matches!(config.subcommand, Subcommand::Test) {
+        let should_run_rlibc_x2_tests = if config.crates.is_empty() {
+            true // Running all tests
+        } else {
+            config.crates.iter().any(|c| c == "rlibc-x2")
+        };
 
-fn run_cargo_cmd_all(cmd_name: &str, config: &Config, workspace_root: &Path) -> Vec<TestResult> {
-    let mut results = Vec::new();
-
-    // Default target
-    print_section(&format!("cargo {cmd_name} (default target)"));
-    let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name}"), &[], workspace_root, config);
-    let failed = !result.passed;
-    results.push(result);
-    if failed && config.fail_fast {
-        return results;
+        if should_run_rlibc_x2_tests {
+            let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, &config);
+            for result in rlibc_x2_results {
+                let failed = !result.passed;
+                results.push(result);
+                if failed && config.fail_fast {
+                    break;
+                }
+            }
+        }
     }
 
-    // Musl targets
-    print_section(&format!("cargo {cmd_name} (musl target)"));
-    let result = exec_cargo_cmd(
-        cmd_name,
-        &format!("cargo {cmd_name} (musl)"),
-        &[
-            "--target",
-            "x86_64-unknown-linux-musl",
-            "-p",
-            "ex-musl",
-            "-p",
-            "hw-musl",
-        ],
-        workspace_root,
-        config,
-    );
-    results.push(result);
-
-    results
+    // Only show summary for test command
+    if matches!(config.subcommand, Subcommand::Test) {
+        print_summary(&results)
+    } else {
+        // For build/run, just return success/failure based on results
+        if results.iter().any(|r| !r.passed) {
+            ExitCode::from(1)
+        } else {
+            ExitCode::SUCCESS
+        }
+    }
 }
 
-fn run_cargo_cmd_filtered(cmd_name: &str, config: &Config, workspace_root: &Path) -> Vec<TestResult> {
-    let mut results = Vec::new();
+/// Get list of all runnable crates in the workspace (excludes xtask and test crates)
+fn get_all_crates(workspace_root: &Path) -> Vec<String> {
+    // These are the app crates we want to build/run/test
+    let crates = [
+        "ex-x1", "ex-x2", "ex-glibc", "ex-musl",
+        "hw-x1", "hw-x2", "hw-glibc", "hw-musl",
+        "rlibc-x1", "rlibc-x2", "is-libc-used",
+    ];
 
-    // Separate crates by target (musl vs default)
-    let (musl_crates, default_crates): (Vec<_>, Vec<_>) = config
-        .crates
+    // Filter to crates that exist
+    crates
         .iter()
-        .partition(|c| c.contains("musl"));
-
-    // Default target crates
-    for crate_name in &default_crates {
-        print_section(&format!("cargo {cmd_name} ({crate_name})"));
-
-        let args = vec!["-p", crate_name.as_str()];
-        let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name} ({crate_name})"), &args, workspace_root, config);
-        let failed = !result.passed;
-        results.push(result);
-        if failed && config.fail_fast {
-            return results;
-        }
-    }
-
-    // Musl target crates
-    for crate_name in &musl_crates {
-        print_section(&format!("cargo {cmd_name} musl ({crate_name})"));
-
-        let args = vec!["--target", "x86_64-unknown-linux-musl", "-p", crate_name.as_str()];
-        let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name} musl ({crate_name})"), &args, workspace_root, config);
-        let failed = !result.passed;
-        results.push(result);
-        if failed && config.fail_fast {
-            return results;
-        }
-    }
-
-    results
+        .filter(|name| {
+            let crate_path = if name.starts_with("ex-") || name.starts_with("hw-") {
+                workspace_root.join("apps").join(name)
+            } else if **name == "is-libc-used" {
+                workspace_root.join("tools").join(name)
+            } else {
+                workspace_root.join(name)
+            };
+            crate_path.join("Cargo.toml").exists()
+        })
+        .map(|s| s.to_string())
+        .collect()
 }
 
-fn exec_cargo_cmd(
+/// Run a cargo command on a single crate
+fn run_cargo_on_crate(
     cmd_name: &str,
-    display_name: &str,
-    extra_args: &[&str],
+    crate_name: &str,
     workspace_root: &Path,
     config: &Config,
 ) -> TestResult {
+    let is_musl = crate_name.contains("musl");
+    let target_info = if is_musl { " (musl)" } else { "" };
+
+    println!("=== {crate_name}{target_info} ===");
+
     let mut cmd = Command::new("cargo");
     cmd.arg(cmd_name);
+
     if !config.debug {
         cmd.arg("--release");
     }
-    cmd.args(extra_args);
+
+    cmd.args(["-p", crate_name]);
+
+    if is_musl {
+        cmd.args(["--target", "x86_64-unknown-linux-musl"]);
+    }
+
     cmd.current_dir(workspace_root);
 
-    if config.verbose {
-        let status = cmd.status();
-        let passed = matches!(status, Ok(s) if s.success());
-        println!();
-        TestResult {
-            name: display_name.to_string(),
-            passed,
-            output: String::new(),
-        }
-    } else {
+    if config.quiet {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
         match cmd.output() {
             Ok(output) => {
                 let passed = output.status.success();
+                let exit_code = output.status.code().unwrap_or(-1);
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
-                if passed {
-                    println!("  ok\n");
+                if cmd_name == "run" {
+                    println!("  exit code: {exit_code}");
+                } else if passed {
+                    println!("  ok");
                 } else {
-                    println!("  FAILED\n");
+                    println!("  FAILED");
                     eprintln!("{stderr}");
                 }
 
                 TestResult {
-                    name: display_name.to_string(),
+                    name: crate_name.to_string(),
                     passed,
                     output: stderr.to_string(),
                 }
@@ -197,128 +194,31 @@ fn exec_cargo_cmd(
             Err(e) => {
                 eprintln!("  Failed to run cargo {cmd_name}: {e}");
                 TestResult {
-                    name: display_name.to_string(),
+                    name: crate_name.to_string(),
                     passed: false,
                     output: e.to_string(),
                 }
             }
         }
-    }
-}
-
-fn run_tests(config: &Config, workspace_root: &Path) -> ExitCode {
-    let mut results = Vec::new();
-
-    if config.crates.is_empty() {
-        // Run all tests (original behavior)
-        results.extend(run_all_tests(config, workspace_root));
     } else {
-        // Run tests for specified crates only
-        results.extend(run_filtered_tests(config, workspace_root));
-    }
+        // Verbose mode - show all output
+        let status = cmd.status();
+        let (passed, exit_code) = match &status {
+            Ok(s) => (s.success(), s.code().unwrap_or(-1)),
+            Err(_) => (false, -1),
+        };
 
-    print_summary(&results)
-}
+        if cmd_name == "run" {
+            println!("  exit code: {exit_code}");
+        }
+        println!();
 
-fn run_all_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult> {
-    let mut results = Vec::new();
-
-    // 1. cargo test (default target)
-    print_section("cargo test (default target)");
-    let result = run_cargo_test("cargo test", &[], workspace_root, config);
-    let failed = !result.passed;
-    results.push(result);
-    if failed && config.fail_fast {
-        return results;
-    }
-
-    // 2. cargo test (musl target)
-    print_section("cargo test (musl target)");
-    let result = run_cargo_test(
-        "cargo test (musl)",
-        &[
-            "--target",
-            "x86_64-unknown-linux-musl",
-            "-p",
-            "ex-musl",
-            "-p",
-            "hw-musl",
-        ],
-        workspace_root,
-        config,
-    );
-    let failed = !result.passed;
-    results.push(result);
-    if failed && config.fail_fast {
-        return results;
-    }
-
-    // 3. rlibc-x2-tests
-    print_section("rlibc-x2-tests");
-    let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, config);
-    for result in rlibc_x2_results {
-        let failed = !result.passed;
-        results.push(result);
-        if failed && config.fail_fast {
-            return results;
+        TestResult {
+            name: crate_name.to_string(),
+            passed,
+            output: String::new(),
         }
     }
-
-    results
-}
-
-fn run_filtered_tests(config: &Config, workspace_root: &Path) -> Vec<TestResult> {
-    let mut results = Vec::new();
-
-    // Separate crates by target (musl vs default)
-    let (musl_crates, default_crates): (Vec<_>, Vec<_>) = config
-        .crates
-        .iter()
-        .partition(|c| c.contains("musl"));
-
-    // Check if rlibc-x2 is requested (triggers rlibc-x2-tests)
-    let run_rlibc_x2_tests_flag = config.crates.iter().any(|c| c == "rlibc-x2");
-
-    // Run default target crates (each individually for clear per-crate results)
-    for crate_name in &default_crates {
-        print_section(&format!("cargo test ({crate_name})"));
-
-        let args = vec!["-p", crate_name.as_str()];
-        let result = run_cargo_test(&format!("cargo test ({crate_name})"), &args, workspace_root, config);
-        let failed = !result.passed;
-        results.push(result);
-        if failed && config.fail_fast {
-            return results;
-        }
-    }
-
-    // Run musl target crates (each individually for clear per-crate results)
-    for crate_name in &musl_crates {
-        print_section(&format!("cargo test musl ({crate_name})"));
-
-        let args = vec!["--target", "x86_64-unknown-linux-musl", "-p", crate_name.as_str()];
-        let result = run_cargo_test(&format!("cargo test musl ({crate_name})"), &args, workspace_root, config);
-        let failed = !result.passed;
-        results.push(result);
-        if failed && config.fail_fast {
-            return results;
-        }
-    }
-
-    // Run rlibc-x2-tests if rlibc-x2 was specified
-    if run_rlibc_x2_tests_flag {
-        print_section("rlibc-x2-tests");
-        let rlibc_x2_results = run_rlibc_x2_tests(workspace_root, config);
-        for result in rlibc_x2_results {
-            let failed = !result.passed;
-            results.push(result);
-            if failed && config.fail_fast {
-                return results;
-            }
-        }
-    }
-
-    results
 }
 
 fn parse_args() -> Config {
@@ -347,7 +247,7 @@ fn parse_args() -> Config {
 
     let mut config = Config {
         subcommand,
-        verbose: false,
+        quiet: false,
         fail_fast: false,
         debug: true, // Default to debug for faster iteration; use -r for release
         crates: Vec::new(),
@@ -356,7 +256,7 @@ fn parse_args() -> Config {
     // Parse options and positional arguments for the subcommand
     for arg in args_iter {
         match arg.as_str() {
-            "-v" | "--verbose" => config.verbose = true,
+            "-q" | "--quiet" => config.quiet = true,
             "-f" | "--fail-fast" | "--fail" => config.fail_fast = true,
             "-r" | "--release" => config.debug = false,
             "-d" | "--debug" => config.debug = true,
@@ -457,7 +357,7 @@ fn print_cmd_help(cmd: &str) {
     println!("                    Musl target auto-detected from crate name");
     println!();
     println!("Options:");
-    println!("  -v, --verbose     Show full output");
+    println!("  -q, --quiet       Suppress output (default is verbose)");
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
@@ -482,7 +382,7 @@ fn print_test_help() {
     println!("                    Specifying rlibc-x2 also runs rlibc-x2-tests");
     println!();
     println!("Options:");
-    println!("  -v, --verbose     Show full test output");
+    println!("  -q, --quiet       Suppress output (default is verbose)");
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
@@ -496,157 +396,10 @@ fn print_test_help() {
     println!("  cargo xtask test rlibc-x2     # test rlibc-x2 + rlibc-x2-tests");
 }
 
-fn print_section(name: &str) {
-    println!("=== {name} ===");
-}
-
-fn run_cargo_test(
-    name: &str,
-    extra_args: &[&str],
-    workspace_root: &Path,
-    config: &Config,
-) -> TestResult {
-    let mut cmd = Command::new("cargo");
-    cmd.arg("test");
-    if !config.debug {
-        cmd.arg("--release");
-    }
-    cmd.args(extra_args);
-    cmd.current_dir(workspace_root);
-
-    if config.verbose {
-        let status = cmd.status();
-        let passed = matches!(status, Ok(s) if s.success());
-        println!();
-        TestResult {
-            name: name.to_string(),
-            passed,
-            output: String::new(),
-        }
-    } else {
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        match cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let combined = format!("{stderr}\n{stdout}");
-                let passed = output.status.success();
-
-                // Collect crate names from stderr ("Running" lines)
-                let crate_names: Vec<String> = stderr
-                    .lines()
-                    .filter(|line| line.trim_start().starts_with("Running "))
-                    .filter_map(|line| {
-                        line.find("deps/").and_then(|pos| {
-                            let rest = &line[pos + 5..];
-                            rest.find('-').map(|dash| rest[..dash].replace('_', "-"))
-                        })
-                    })
-                    .collect();
-
-                // Parse test results from stdout
-                let mut total_passed = 0;
-                let mut total_failed = 0;
-                let mut total_ignored = 0;
-                let mut crate_idx = 0;
-
-                for line in stdout.lines() {
-                    if line.contains("test result:") {
-                        let (p, f, i) = parse_test_result(line);
-                        let crate_name = crate_names
-                            .get(crate_idx)
-                            .map(|s| s.as_str())
-                            .unwrap_or("unknown");
-                        crate_idx += 1;
-
-                        if p > 0 || f > 0 || i > 0 {
-                            let status = if f > 0 {
-                                "FAIL"
-                            } else if p > 0 {
-                                "ok"
-                            } else {
-                                "skip"
-                            };
-                            println!(
-                                "  {crate_name}: {status} ({p} passed, {f} failed, {i} ignored)"
-                            );
-                        }
-                        total_passed += p;
-                        total_failed += f;
-                        total_ignored += i;
-                    }
-                }
-
-                if passed {
-                    println!(
-                        "  Total: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n"
-                    );
-                } else {
-                    println!(
-                        "  FAILED: {total_passed} passed, {total_failed} failed, {total_ignored} ignored\n"
-                    );
-                    println!("{combined}");
-                }
-
-                TestResult {
-                    name: name.to_string(),
-                    passed,
-                    output: combined.to_string(),
-                }
-            }
-            Err(e) => {
-                eprintln!("  Failed to run cargo test: {e}");
-                TestResult {
-                    name: name.to_string(),
-                    passed: false,
-                    output: e.to_string(),
-                }
-            }
-        }
-    }
-}
-
-fn parse_test_result(line: &str) -> (u32, u32, u32) {
-    // Parse "test result: ok. X passed; Y failed; Z ignored; ..."
-    let mut passed = 0;
-    let mut failed = 0;
-    let mut ignored = 0;
-
-    // Extract numbers before "passed", "failed", "ignored"
-    for part in line.split(';') {
-        let part = part.trim();
-        if part.ends_with(" passed") {
-            // Find the number - it's the last word before "passed"
-            let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2
-                && let Ok(n) = words[words.len() - 2].parse()
-            {
-                passed = n;
-            }
-        } else if part.ends_with(" failed") {
-            let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2
-                && let Ok(n) = words[words.len() - 2].parse()
-            {
-                failed = n;
-            }
-        } else if part.ends_with(" ignored") {
-            let words: Vec<&str> = part.split_whitespace().collect();
-            if words.len() >= 2
-                && let Ok(n) = words[words.len() - 2].parse()
-            {
-                ignored = n;
-            }
-        }
-    }
-
-    (passed, failed, ignored)
-}
-
 fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult> {
     let mut results = Vec::new();
+
+    println!("=== rlibc-x2-tests ===");
 
     // First, build the test binaries
     print!("  Building rlibc-x2-tests... ");
@@ -735,7 +488,7 @@ fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult>
 
                 if passed {
                     println!("ok");
-                    if config.verbose && !stdout.is_empty() {
+                    if !config.quiet && !stdout.is_empty() {
                         println!("{stdout}");
                     }
                 } else {
