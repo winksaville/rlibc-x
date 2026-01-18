@@ -3,25 +3,36 @@
 //! # Usage
 //!
 //! ```text
-//! cargo xtask test                  # run all tests (release builds, default)
+//! cargo xtask build                 # build all (release, default)
+//! cargo xtask build .               # build crate in current directory
+//! cargo xtask build ex-x1           # build specific crate
+//!
+//! cargo xtask run hw-x1             # build and run specific crate
+//! cargo xtask run .                 # run crate in current directory
+//!
+//! cargo xtask test                  # run all tests
 //! cargo xtask test .                # test crate in current directory
 //! cargo xtask test ex-x1            # test specific crate
-//! cargo xtask test ex-x1 hw-x2      # test multiple crates
-//! cargo xtask test ex-musl          # auto-detects musl target
 //! cargo xtask test rlibc-x2         # includes rlibc-x2-tests binaries
-//! cargo xtask test -v               # verbose output
-//! cargo xtask test --debug          # use debug builds (faster iteration)
+//!
+//! # Common options for all commands:
+//! cargo xtask <cmd> --debug         # use debug builds (faster iteration)
+//! cargo xtask <cmd> -v              # verbose output
 //! ```
 //!
 //! # Available Commands
 //!
-//! - `test` - Run repository tests (all, or specific crates)
+//! - `build` - Build crates
+//! - `run` - Build and run crates
+//! - `test` - Run tests (with special rlibc-x2-tests handling)
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, ExitCode, Stdio};
 
 enum Subcommand {
+    Build,
+    Run,
     Test,
 }
 
@@ -49,7 +60,153 @@ fn main() -> ExitCode {
         .expect("Could not find workspace root");
 
     match config.subcommand {
+        Subcommand::Build => run_cargo_cmd("build", &config, workspace_root),
+        Subcommand::Run => run_cargo_cmd("run", &config, workspace_root),
         Subcommand::Test => run_tests(&config, workspace_root),
+    }
+}
+
+/// Generic handler for cargo build/run commands
+fn run_cargo_cmd(cmd_name: &str, config: &Config, workspace_root: &Path) -> ExitCode {
+    let mut results = Vec::new();
+
+    if config.crates.is_empty() {
+        // Run on all crates
+        results.extend(run_cargo_cmd_all(cmd_name, config, workspace_root));
+    } else {
+        // Run on specified crates only
+        results.extend(run_cargo_cmd_filtered(cmd_name, config, workspace_root));
+    }
+
+    print_summary(&results)
+}
+
+fn run_cargo_cmd_all(cmd_name: &str, config: &Config, workspace_root: &Path) -> Vec<TestResult> {
+    let mut results = Vec::new();
+
+    // Default target
+    print_section(&format!("cargo {cmd_name} (default target)"));
+    let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name}"), &[], workspace_root, config);
+    let failed = !result.passed;
+    results.push(result);
+    if failed && config.fail_fast {
+        return results;
+    }
+
+    // Musl targets
+    print_section(&format!("cargo {cmd_name} (musl target)"));
+    let result = exec_cargo_cmd(
+        cmd_name,
+        &format!("cargo {cmd_name} (musl)"),
+        &[
+            "--target",
+            "x86_64-unknown-linux-musl",
+            "-p",
+            "ex-musl",
+            "-p",
+            "hw-musl",
+        ],
+        workspace_root,
+        config,
+    );
+    results.push(result);
+
+    results
+}
+
+fn run_cargo_cmd_filtered(cmd_name: &str, config: &Config, workspace_root: &Path) -> Vec<TestResult> {
+    let mut results = Vec::new();
+
+    // Separate crates by target (musl vs default)
+    let (musl_crates, default_crates): (Vec<_>, Vec<_>) = config
+        .crates
+        .iter()
+        .partition(|c| c.contains("musl"));
+
+    // Default target crates
+    for crate_name in &default_crates {
+        print_section(&format!("cargo {cmd_name} ({crate_name})"));
+
+        let args = vec!["-p", crate_name.as_str()];
+        let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name} ({crate_name})"), &args, workspace_root, config);
+        let failed = !result.passed;
+        results.push(result);
+        if failed && config.fail_fast {
+            return results;
+        }
+    }
+
+    // Musl target crates
+    for crate_name in &musl_crates {
+        print_section(&format!("cargo {cmd_name} musl ({crate_name})"));
+
+        let args = vec!["--target", "x86_64-unknown-linux-musl", "-p", crate_name.as_str()];
+        let result = exec_cargo_cmd(cmd_name, &format!("cargo {cmd_name} musl ({crate_name})"), &args, workspace_root, config);
+        let failed = !result.passed;
+        results.push(result);
+        if failed && config.fail_fast {
+            return results;
+        }
+    }
+
+    results
+}
+
+fn exec_cargo_cmd(
+    cmd_name: &str,
+    display_name: &str,
+    extra_args: &[&str],
+    workspace_root: &Path,
+    config: &Config,
+) -> TestResult {
+    let mut cmd = Command::new("cargo");
+    cmd.arg(cmd_name);
+    if !config.debug {
+        cmd.arg("--release");
+    }
+    cmd.args(extra_args);
+    cmd.current_dir(workspace_root);
+
+    if config.verbose {
+        let status = cmd.status();
+        let passed = matches!(status, Ok(s) if s.success());
+        println!();
+        TestResult {
+            name: display_name.to_string(),
+            passed,
+            output: String::new(),
+        }
+    } else {
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+
+        match cmd.output() {
+            Ok(output) => {
+                let passed = output.status.success();
+                let stderr = String::from_utf8_lossy(&output.stderr);
+
+                if passed {
+                    println!("  ok\n");
+                } else {
+                    println!("  FAILED\n");
+                    eprintln!("{stderr}");
+                }
+
+                TestResult {
+                    name: display_name.to_string(),
+                    passed,
+                    output: stderr.to_string(),
+                }
+            }
+            Err(e) => {
+                eprintln!("  Failed to run cargo {cmd_name}: {e}");
+                TestResult {
+                    name: display_name.to_string(),
+                    passed: false,
+                    output: e.to_string(),
+                }
+            }
+        }
     }
 }
 
@@ -174,6 +331,8 @@ fn parse_args() -> Config {
 
     // Parse subcommand (first argument)
     let subcommand = match args_iter.next().map(|s| s.as_str()) {
+        Some("build") => Subcommand::Build,
+        Some("run") => Subcommand::Run,
         Some("test") => Subcommand::Test,
         Some("-h" | "--help") => {
             print_main_help();
@@ -206,7 +365,11 @@ fn parse_args() -> Config {
             "-r" | "--release" => config.debug = false,
             "-d" | "--debug" => config.debug = true,
             "-h" | "--help" => {
-                print_test_help();
+                match config.subcommand {
+                    Subcommand::Build => print_cmd_help("build"),
+                    Subcommand::Run => print_cmd_help("run"),
+                    Subcommand::Test => print_test_help(),
+                }
                 std::process::exit(0);
             }
             other if other.starts_with('-') => {
@@ -277,12 +440,37 @@ fn print_main_help() {
     println!("Usage: cargo xtask <COMMAND> [OPTIONS]");
     println!();
     println!("Commands:");
-    println!("  test    Run all repository tests");
+    println!("  build   Build crates");
+    println!("  run     Build and run crates");
+    println!("  test    Run tests");
     println!();
     println!("Options:");
     println!("  -h, --help    Show this help");
     println!();
     println!("Run 'cargo xtask <COMMAND> --help' for command-specific options");
+}
+
+fn print_cmd_help(cmd: &str) {
+    println!("Usage: cargo xtask {cmd} [OPTIONS] [CRATES]...");
+    println!();
+    println!("Run 'cargo {cmd}' on crates. With no crates specified, {cmd}s all.");
+    println!();
+    println!("Arguments:");
+    println!("  [CRATES]...       Crates to {cmd} (e.g., ex-x1, hw-x2)");
+    println!("                    Use '.' for the crate in the current directory");
+    println!("                    Musl target auto-detected from crate name");
+    println!();
+    println!("Options:");
+    println!("  -v, --verbose     Show full output");
+    println!("  -f, --fail-fast   Stop on first failure");
+    println!("  -r, --release     Use release builds (default)");
+    println!("  -d, --debug       Use debug builds (faster iteration)");
+    println!("  -h, --help        Show this help");
+    println!();
+    println!("Examples:");
+    println!("  cargo xtask {cmd}             # {cmd} all");
+    println!("  cargo xtask {cmd} .           # {cmd} crate in current directory");
+    println!("  cargo xtask {cmd} ex-x1       # {cmd} ex-x1 only");
 }
 
 fn print_test_help() {
