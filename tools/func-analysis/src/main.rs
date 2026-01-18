@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use capstone::prelude::*;
 use clap::{Parser, ValueEnum};
 use goblin::elf::Elf;
+use is_libc_used::is_libc_used_from_bytes;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
@@ -93,7 +94,9 @@ fn main() -> Result<()> {
     let elf = Elf::parse(&binary_data)
         .with_context(|| "Failed to parse ELF binary")?;
 
-    let is_dynamic = !elf.dynamic.is_none() && !elf.dynstrtab.to_vec()?.is_empty();
+    let is_dynamic = is_libc_used_from_bytes(&binary_data)
+        .map(|r| r.uses_libc)
+        .unwrap_or(false);
 
     let result = if is_dynamic {
         analyze_dynamic(&args, &elf, &binary_data)?

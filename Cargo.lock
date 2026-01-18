@@ -178,6 +178,7 @@ dependencies = [
  "capstone",
  "clap",
  "goblin",
+ "is-libc-used",
  "serde",
  "serde_json",
 ]
