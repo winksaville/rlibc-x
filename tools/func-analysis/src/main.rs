@@ -113,10 +113,42 @@ fn main() -> Result<()> {
 fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
     let mut functions: HashMap<u64, FunctionInfo> = HashMap::new();
 
-    // Collect all function symbols
+    // Collect function symbols from .symtab
     for sym in &elf.syms {
         if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
             let name = elf.strtab.get_at(sym.st_name).unwrap_or("???");
+
+            // Skip if filtering and doesn't match
+            if let Some(ref filter) = args.filter {
+                if !name.contains(filter) {
+                    continue;
+                }
+            }
+
+            // Skip internal rust/compiler symbols unless --all
+            if !args.all && is_internal_symbol(name) {
+                continue;
+            }
+
+            functions.insert(sym.st_value, FunctionInfo {
+                name: name.to_string(),
+                size: sym.st_size,
+                address: sym.st_value,
+                references: 0,
+                source: Some("local".to_string()),
+            });
+        }
+    }
+
+    // Also check .dynsym (release builds may strip .symtab but keep .dynsym)
+    for sym in &elf.dynsyms {
+        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
+            // Skip if we already have this address from symtab
+            if functions.contains_key(&sym.st_value) {
+                continue;
+            }
+
+            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
 
             // Skip if filtering and doesn't match
             if let Some(ref filter) = args.filter {
