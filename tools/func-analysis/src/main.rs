@@ -82,6 +82,7 @@ struct AnalysisResult {
     is_dynamic: bool,
     total_functions: usize,
     total_code_size: u64,
+    text_section_size: u64,
     functions: Vec<FunctionInfo>,
 }
 
@@ -107,6 +108,15 @@ fn main() -> Result<()> {
     output_result(&args, &result)?;
 
     Ok(())
+}
+
+/// Get the size of the .text section
+fn get_text_section_size(elf: &Elf) -> u64 {
+    elf.section_headers
+        .iter()
+        .find(|sh| elf.shdr_strtab.get_at(sh.sh_name).unwrap_or("") == ".text")
+        .map(|sh| sh.sh_size)
+        .unwrap_or(0)
 }
 
 /// Analyze a statically linked binary
@@ -180,12 +190,14 @@ fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysis
     filter_and_sort(&args, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
+    let text_section_size = get_text_section_size(elf);
 
     Ok(AnalysisResult {
         binary_path: args.binary.display().to_string(),
         is_dynamic: false,
         total_functions: func_vec.len(),
         total_code_size,
+        text_section_size,
         functions: func_vec,
     })
 }
@@ -254,12 +266,14 @@ fn analyze_dynamic(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysi
     filter_and_sort(&args, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
+    let text_section_size = get_text_section_size(elf);
 
     Ok(AnalysisResult {
         binary_path: args.binary.display().to_string(),
         is_dynamic: true,
         total_functions: func_vec.len(),
         total_code_size,
+        text_section_size,
         functions: func_vec,
     })
 }
@@ -458,10 +472,17 @@ fn output_result(args: &Args, result: &AnalysisResult) -> Result<()> {
             }
         }
         OutputFormat::Table => {
+            let coverage = if result.text_section_size > 0 {
+                (result.total_code_size as f64 / result.text_section_size as f64) * 100.0
+            } else {
+                0.0
+            };
+
             println!("Binary: {}", result.binary_path);
             println!("Type: {}", if result.is_dynamic { "dynamic" } else { "static" });
             println!("Functions: {}", result.total_functions);
-            println!("Total code size: {} bytes", result.total_code_size);
+            println!(".text size: {} bytes", result.text_section_size);
+            println!("Total code size: {} bytes ({:.1}% coverage)", result.total_code_size, coverage);
             println!();
             println!("{:<40} {:>10} {:>12} {:>8}", "FUNCTION", "SIZE", "ADDRESS", "REFS");
             println!("{}", "-".repeat(74));

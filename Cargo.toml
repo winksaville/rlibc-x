@@ -31,4 +31,4 @@ debug = 2
 debug-assertions = false
 overflow-checks = false
 incremental = false
-strip = true
+strip = false
