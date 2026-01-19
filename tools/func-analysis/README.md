@@ -111,6 +111,22 @@ malloc,108,0x205da0,0,local
 4. **Count references**: Identifies `call` instructions and maps targets to known functions
 5. **Report**: Aggregates and formats the results
 
+## Module Structure
+
+```
+src/
+├── main.rs        # CLI parsing and orchestration
+├── analyze.rs     # Static/dynamic binary analysis
+├── compare.rs     # Binary comparison functionality
+├── disasm.rs      # Disassembly and reference counting (capstone)
+├── elf_utils.rs   # ELF utilities (text size, PLT map, libc sizes)
+├── output.rs      # Output formatting (table, JSON, CSV)
+├── types.rs       # Core data types (FunctionInfo, AnalysisResult)
+└── test_utils.rs  # Shared test helpers
+```
+
+The disassembly logic is isolated in `disasm.rs`, making it straightforward to swap disassemblers (e.g., switch from capstone to iced-x86).
+
 ## Limitations
 
 - Indirect calls (`call *%rax`) cannot be resolved statically
