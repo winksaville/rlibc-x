@@ -21,7 +21,8 @@
       "Bash(git -C /home/wink/data/prgs/rust/rlibc-x diff --stat)",
       "Bash(cargo r-musl:*)",
       "Bash(cargo r-gnu:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(cargo test:*)"
     ]
   }
 }

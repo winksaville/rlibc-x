@@ -7,6 +7,7 @@
 //! and counts references through PLT stubs.
 
 mod disasm;
+mod elf_utils;
 #[cfg(test)]
 mod test_utils;
 mod types;
@@ -208,15 +209,6 @@ fn get_function_sizes(binary: &PathBuf) -> Result<HashMap<String, u64>> {
     Ok(sizes)
 }
 
-/// Get the size of the .text section
-fn get_text_section_size(elf: &Elf) -> u64 {
-    elf.section_headers
-        .iter()
-        .find(|sh| elf.shdr_strtab.get_at(sh.sh_name).unwrap_or("") == ".text")
-        .map(|sh| sh.sh_size)
-        .unwrap_or(0)
-}
-
 /// Analyze a statically linked binary
 fn analyze_static(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
     let mut functions: HashMap<u64, FunctionInfo> = HashMap::new();
@@ -278,7 +270,7 @@ fn analyze_static(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[
     filter_and_sort(&args, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
-    let text_section_size = get_text_section_size(elf);
+    let text_section_size = elf_utils::get_text_section_size(elf);
 
     Ok(AnalysisResult {
         binary_path: binary_path.display().to_string(),
@@ -299,11 +291,11 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
     // 2. PLT entries that reference them
 
     // Build a map of PLT entries to function names
-    let plt_map = build_plt_map(elf)?;
+    let plt_map = elf_utils::build_plt_map(elf)?;
 
     // Get sizes from libc if path provided
     let libc_sizes = if let Some(ref libc_path) = args.libc_path {
-        load_libc_sizes(libc_path)?
+        elf_utils::load_libc_sizes(libc_path)?
     } else {
         HashMap::new()
     };
@@ -346,7 +338,7 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
     filter_and_sort(&args, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
-    let text_section_size = get_text_section_size(elf);
+    let text_section_size = elf_utils::get_text_section_size(elf);
 
     Ok(AnalysisResult {
         binary_path: binary_path.display().to_string(),
@@ -356,60 +348,6 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
         text_section_size,
         functions: func_vec,
     })
-}
-
-/// Build a map of function names to their PLT addresses
-fn build_plt_map(elf: &Elf) -> Result<HashMap<String, u64>> {
-    let mut plt_map = HashMap::new();
-
-    // Find .rela.plt section for PLT relocations
-    for reloc in &elf.pltrelocs {
-        let sym_idx = reloc.r_sym;
-        if let Some(sym) = elf.dynsyms.get(sym_idx) {
-            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
-
-            // PLT entry address: typically the relocation target + PLT base
-            // This is simplified; real PLT layout varies
-            if let Some(plt_shdr) = elf.section_headers.iter()
-                .find(|sh| {
-                    elf.shdr_strtab.get_at(sh.sh_name).unwrap_or("") == ".plt"
-                })
-            {
-                // Each PLT entry is typically 16 bytes on x86_64
-                // First entry is resolver, real entries start at +16
-                let plt_entry_addr = plt_shdr.sh_addr + 16 + (plt_map.len() as u64 * 16);
-                plt_map.insert(name.to_string(), plt_entry_addr);
-            }
-        }
-    }
-
-    Ok(plt_map)
-}
-
-/// Load function sizes from a glibc shared library
-fn load_libc_sizes(libc_path: &PathBuf) -> Result<HashMap<String, u64>> {
-    let data = fs::read(libc_path)
-        .with_context(|| format!("Failed to read libc: {:?}", libc_path))?;
-
-    let elf = Elf::parse(&data)?;
-    let mut sizes = HashMap::new();
-
-    for sym in &elf.dynsyms {
-        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
-            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
-            sizes.insert(name.to_string(), sym.st_size);
-        }
-    }
-
-    // Also check regular symtab if available
-    for sym in &elf.syms {
-        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
-            let name = elf.strtab.get_at(sym.st_name).unwrap_or("???");
-            sizes.entry(name.to_string()).or_insert(sym.st_size);
-        }
-    }
-
-    Ok(sizes)
 }
 
 fn filter_and_sort(args: &Args, functions: &mut Vec<FunctionInfo>) {
