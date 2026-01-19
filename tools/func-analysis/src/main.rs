@@ -6,16 +6,18 @@
 //! For dynamically linked binaries (glibc): identifies imported libc functions
 //! and counts references through PLT stubs.
 
+mod types;
+
 use anyhow::{Context, Result};
 use capstone::prelude::*;
 use clap::{Parser, Subcommand, ValueEnum};
 use goblin::elf::Elf;
 use is_libc_used::is_libc_used_from_bytes;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use types::{AnalysisResult, FunctionInfo};
 
 #[derive(Parser, Debug)]
 #[command(name = "func-analysis")]
@@ -79,26 +81,6 @@ enum SortBy {
     Name,
     Size,
     Refs,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct FunctionInfo {
-    name: String,
-    size: u64,
-    address: u64,
-    references: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    source: Option<String>, // "local" or "glibc" etc.
-}
-
-#[derive(Debug, Serialize)]
-struct AnalysisResult {
-    binary_path: String,
-    is_dynamic: bool,
-    total_functions: usize,
-    total_code_size: u64,
-    text_section_size: u64,
-    functions: Vec<FunctionInfo>,
 }
 
 fn main() -> Result<()> {
