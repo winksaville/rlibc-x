@@ -107,7 +107,7 @@ malloc,108,0x205da0,0,local
 2. **Collect functions**:
    - Static: All FUNC symbols with size > 0 from both `.symtab` and `.dynsym`
    - Dynamic: UND (undefined) symbols that reference glibc
-3. **Disassemble**: Uses `capstone` to disassemble executable sections
+3. **Disassemble**: Uses `iced-x86` to disassemble executable sections
 4. **Count references**: Identifies `call` instructions and maps targets to known functions
 5. **Report**: Aggregates and formats the results
 
@@ -118,7 +118,7 @@ src/
 ├── main.rs        # CLI parsing and orchestration
 ├── analyze.rs     # Static/dynamic binary analysis
 ├── compare.rs     # Binary comparison functionality
-├── disasm.rs      # Disassembly and reference counting (capstone)
+├── disasm.rs      # Disassembly and reference counting (iced-x86)
 ├── elf_utils.rs   # ELF utilities (text size, PLT map, libc sizes)
 ├── output.rs      # Output formatting (table, JSON, CSV)
 ├── types.rs       # Core data types (FunctionInfo, AnalysisResult)
@@ -138,7 +138,7 @@ The disassembly logic is isolated in `disasm.rs`, making it straightforward to s
 ## Dependencies
 
 - `goblin` - ELF parsing
-- `capstone` - Disassembly
+- `iced-x86` - Disassembly (pure Rust, x86/x86-64)
 - `clap` - CLI argument parsing
 - `serde`/`serde_json` - JSON output
 - `anyhow` - Error handling

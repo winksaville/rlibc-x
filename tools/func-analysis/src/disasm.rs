@@ -1,9 +1,9 @@
-//! Disassembly and reference counting
+//! Disassembly and reference counting using iced-x86
 
 use crate::types::FunctionInfo;
 use anyhow::Result;
-use capstone::prelude::*;
 use goblin::elf::Elf;
+use iced_x86::{Decoder, DecoderOptions, FlowControl, Instruction};
 use std::collections::HashMap;
 
 /// Count call references to functions using disassembly
@@ -13,14 +13,6 @@ pub fn count_references(
     binary_data: &[u8],
     functions: &mut HashMap<u64, FunctionInfo>,
 ) -> Result<()> {
-    let cs = Capstone::new()
-        .x86()
-        .mode(arch::x86::ArchMode::Mode64)
-        .syntax(arch::x86::ArchSyntax::Att)
-        .detail(true)
-        .build()
-        .map_err(|e| anyhow::anyhow!("Failed to create Capstone: {}", e))?;
-
     // Find executable sections
     for shdr in &elf.section_headers {
         // Check if section is executable (SHF_EXECINSTR = 0x4)
@@ -45,23 +37,22 @@ pub fn count_references(
         let section_data = &binary_data[start..end];
         let section_addr = shdr.sh_addr;
 
-        let insns = cs
-            .disasm_all(section_data, section_addr)
-            .map_err(|e| anyhow::anyhow!("Disassembly failed: {}", e))?;
+        // Create decoder for x86-64
+        let mut decoder = Decoder::with_ip(64, section_data, section_addr, DecoderOptions::NONE);
 
-        for insn in insns.iter() {
-            let mnemonic = insn.mnemonic().unwrap_or("");
+        let mut instruction = Instruction::default();
+        while decoder.can_decode() {
+            decoder.decode_out(&mut instruction);
 
-            // Look for call instructions
-            if mnemonic == "call" || mnemonic == "callq" {
-                if let Some(target) = extract_call_target(&insn) {
+            // Check if this is a call instruction
+            if instruction.flow_control() == FlowControl::Call {
+                if let Some(target) = extract_call_target(&instruction) {
                     if let Some(func) = functions.get_mut(&target) {
                         func.references += 1;
                         if verbose {
                             eprintln!(
-                                "  0x{:x}: {} -> {} (0x{:x})",
-                                insn.address(),
-                                mnemonic,
+                                "  0x{:x}: call -> {} (0x{:x})",
+                                instruction.ip(),
                                 func.name,
                                 target
                             );
@@ -76,27 +67,18 @@ pub fn count_references(
 }
 
 /// Extract the target address from a call instruction
-fn extract_call_target(insn: &capstone::Insn) -> Option<u64> {
-    let op_str = insn.op_str()?;
-
-    // Direct call: "0x1234" or "symbol"
-    // We need the absolute address
-
-    // For relative calls, capstone gives us the computed target
-    // Check if it's a hex address
-    if op_str.starts_with("0x") || op_str.starts_with("0X") {
-        u64::from_str_radix(&op_str[2..], 16).ok()
-    } else if let Ok(addr) = op_str.parse::<u64>() {
-        Some(addr)
+fn extract_call_target(instruction: &Instruction) -> Option<u64> {
+    // For near relative calls (CALL rel32), get the computed target
+    if instruction.is_call_near_indirect() {
+        // Indirect calls like `call *%rax` - we can't resolve these statically
+        None
     } else {
-        // For PC-relative calls, we need to compute the target
-        // Format might be like "0x401234" after capstone processes it
-        // or it might be an indirect call like "*%rax" which we skip
-        if op_str.starts_with('*') {
-            None // indirect call
+        // Direct calls - iced-x86 computes the absolute target for us
+        let target = instruction.near_branch_target();
+        if target != 0 {
+            Some(target)
         } else {
-            // Try parsing as hex without prefix
-            u64::from_str_radix(op_str.trim(), 16).ok()
+            None
         }
     }
 }
