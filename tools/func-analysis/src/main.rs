@@ -8,14 +8,16 @@
 
 mod disasm;
 mod elf_utils;
+mod output;
 #[cfg(test)]
 mod test_utils;
 mod types;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use goblin::elf::Elf;
 use is_libc_used::is_libc_used_from_bytes;
+use output::{OutputFormat, SortBy};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -72,20 +74,6 @@ enum Command {
     },
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum OutputFormat {
-    Table,
-    Json,
-    Csv,
-}
-
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum SortBy {
-    Name,
-    Size,
-    Refs,
-}
-
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -115,7 +103,7 @@ fn main() -> Result<()> {
         analyze_static(&args, binary, &elf, &binary_data)?
     };
 
-    output_result(&args, &result)?;
+    output::output_result(args.format, &result)?;
 
     Ok(())
 }
@@ -267,7 +255,7 @@ fn analyze_static(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[
 
     // Convert to sorted vec
     let mut func_vec: Vec<_> = functions.into_values().collect();
-    filter_and_sort(&args, &mut func_vec);
+    output::filter_and_sort(args.min_refs, args.sort, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
     let text_section_size = elf_utils::get_text_section_size(elf);
@@ -335,7 +323,7 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
     disasm::count_references(args.verbose, elf, binary_data, &mut functions)?;
 
     let mut func_vec: Vec<_> = functions.into_values().collect();
-    filter_and_sort(&args, &mut func_vec);
+    output::filter_and_sort(args.min_refs, args.sort, &mut func_vec);
 
     let total_code_size = func_vec.iter().map(|f| f.size).sum();
     let text_section_size = elf_utils::get_text_section_size(elf);
@@ -350,71 +338,3 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
     })
 }
 
-fn filter_and_sort(args: &Args, functions: &mut Vec<FunctionInfo>) {
-    // Filter by min refs
-    functions.retain(|f| f.references >= args.min_refs);
-
-    // Sort
-    match args.sort {
-        SortBy::Name => functions.sort_by(|a, b| a.name.cmp(&b.name)),
-        SortBy::Size => functions.sort_by(|a, b| b.size.cmp(&a.size)),
-        SortBy::Refs => functions.sort_by(|a, b| b.references.cmp(&a.references)),
-    }
-}
-
-fn output_result(args: &Args, result: &AnalysisResult) -> Result<()> {
-    match args.format {
-        OutputFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(result)?);
-        }
-        OutputFormat::Csv => {
-            println!("name,size,address,references,source");
-            for f in &result.functions {
-                println!(
-                    "{},{},{:#x},{},{}",
-                    f.name,
-                    f.size,
-                    f.address,
-                    f.references,
-                    f.source.as_deref().unwrap_or("")
-                );
-            }
-        }
-        OutputFormat::Table => {
-            let coverage = if result.text_section_size > 0 {
-                (result.total_code_size as f64 / result.text_section_size as f64) * 100.0
-            } else {
-                0.0
-            };
-
-            println!("Binary: {}", result.binary_path);
-            println!("Type: {}", if result.is_dynamic { "dynamic" } else { "static" });
-            println!("Functions: {}", result.total_functions);
-            println!(".text size: {} bytes", result.text_section_size);
-            println!("Total code size: {} bytes ({:.1}% coverage)", result.total_code_size, coverage);
-            println!();
-            println!("{:<40} {:>10} {:>12} {:>8}", "FUNCTION", "SIZE", "ADDRESS", "REFS");
-            println!("{}", "-".repeat(74));
-
-            for f in &result.functions {
-                println!(
-                    "{:<40} {:>10} {:#12x} {:>8}",
-                    truncate(&f.name, 40),
-                    f.size,
-                    f.address,
-                    f.references
-                );
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn truncate(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
-        s.to_string()
-    } else {
-        format!("{}...", &s[..max_len - 3])
-    }
-}
