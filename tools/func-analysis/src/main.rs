@@ -39,10 +39,6 @@ struct Args {
     #[arg(short, long, default_value = "refs")]
     sort: SortBy,
 
-    /// Include all symbols (not just libc-related)
-    #[arg(short, long)]
-    all: bool,
-
     /// Verbose output (show disassembly details)
     #[arg(short, long)]
     verbose: bool,
@@ -135,11 +131,6 @@ fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysis
                 }
             }
 
-            // Skip internal rust/compiler symbols unless --all
-            if !args.all && is_internal_symbol(name) {
-                continue;
-            }
-
             functions.insert(sym.st_value, FunctionInfo {
                 name: name.to_string(),
                 size: sym.st_size,
@@ -165,11 +156,6 @@ fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysis
                 if !name.contains(filter) {
                     continue;
                 }
-            }
-
-            // Skip internal rust/compiler symbols unless --all
-            if !args.all && is_internal_symbol(name) {
-                continue;
             }
 
             functions.insert(sym.st_value, FunctionInfo {
@@ -224,14 +210,6 @@ fn analyze_dynamic(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysi
     for sym in &elf.dynsyms {
         if sym.st_type() == goblin::elf::sym::STT_FUNC {
             let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
-
-            // Check if it's a GLIBC symbol
-            let is_glibc = elf.dynstrtab.to_vec()?.iter()
-                .any(|s| s.contains("GLIBC"));
-
-            if !args.all && !is_glibc && sym.st_shndx != goblin::elf::section_header::SHN_UNDEF as usize {
-                continue;
-            }
 
             if sym.st_shndx == goblin::elf::section_header::SHN_UNDEF as usize {
                 // Skip if filtering and doesn't match
@@ -424,21 +402,6 @@ fn extract_call_target(insn: &capstone::Insn) -> Option<u64> {
             u64::from_str_radix(op_str.trim(), 16).ok()
         }
     }
-}
-
-/// Check if a symbol is internal (compiler/runtime generated)
-fn is_internal_symbol(name: &str) -> bool {
-    // Skip internal symbols unless user wants all
-    name.starts_with("_ZN") || // Rust mangled
-    name.starts_with("__rust") ||
-    name.starts_with(".L") ||
-    name.starts_with("GCC_except") ||
-    name.starts_with("__gcc") ||
-    name.starts_with("_GLOBAL") ||
-    name.contains("cgu") || // codegen unit
-    name == "_start" ||
-    name == "__libc_csu_init" ||
-    name == "__libc_csu_fini"
 }
 
 fn filter_and_sort(args: &Args, functions: &mut Vec<FunctionInfo>) {
