@@ -8,20 +8,21 @@
 
 use anyhow::{Context, Result};
 use capstone::prelude::*;
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use goblin::elf::Elf;
 use is_libc_used::is_libc_used_from_bytes;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "func-analysis")]
 #[command(about = "Analyze libc function sizes and reference counts in ELF binaries")]
 struct Args {
-    /// Path to the ELF binary to analyze
-    binary: PathBuf,
+    #[command(subcommand)]
+    command: Command,
 
     /// Output format
     #[arg(short, long, value_enum, default_value = "table")]
@@ -46,6 +47,24 @@ struct Args {
     /// Path to glibc library for size lookup (for dynamic binaries)
     #[arg(long)]
     libc_path: Option<PathBuf>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Analyze function sizes and references in a binary
+    Analyze {
+        /// Binary to analyze
+        binary: PathBuf,
+    },
+    /// Compare function sizes between two binaries
+    Compare {
+        /// File containing function names (one per line)
+        funcs_file: PathBuf,
+        /// First binary to analyze
+        binary1: PathBuf,
+        /// Second binary to analyze
+        binary2: PathBuf,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -85,8 +104,18 @@ struct AnalysisResult {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let binary_data = fs::read(&args.binary)
-        .with_context(|| format!("Failed to read binary: {:?}", args.binary))?;
+    // Handle subcommands
+    let binary: PathBuf = match &args.command {
+        Command::Compare { funcs_file, binary1, binary2 } => {
+            return run_compare(funcs_file, binary1, binary2);
+        }
+        Command::Analyze { binary } => binary.clone(),
+    };
+
+    // Analyze mode
+    let binary = &binary;
+    let binary_data = fs::read(binary)
+        .with_context(|| format!("Failed to read binary: {:?}", binary))?;
 
     let elf = Elf::parse(&binary_data)
         .with_context(|| "Failed to parse ELF binary")?;
@@ -96,14 +125,103 @@ fn main() -> Result<()> {
         .unwrap_or(false);
 
     let result = if is_dynamic {
-        analyze_dynamic(&args, &elf, &binary_data)?
+        analyze_dynamic(&args, binary, &elf, &binary_data)?
     } else {
-        analyze_static(&args, &elf, &binary_data)?
+        analyze_static(&args, binary, &elf, &binary_data)?
     };
 
     output_result(&args, &result)?;
 
     Ok(())
+}
+
+/// Run compare mode: compare function sizes between two binaries
+fn run_compare(funcs_file: &PathBuf, binary1: &PathBuf, binary2: &PathBuf) -> Result<()> {
+    // Read function names from file
+    let file = fs::File::open(funcs_file)
+        .with_context(|| format!("Failed to open functions file: {:?}", funcs_file))?;
+    let reader = BufReader::new(file);
+    let func_names: Vec<String> = reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty() && !s.starts_with('#'))
+        .collect();
+
+    // Get function sizes from both binaries
+    let sizes1 = get_function_sizes(binary1)?;
+    let sizes2 = get_function_sizes(binary2)?;
+
+    // Get binary names for header
+    let name1 = binary1.file_name().unwrap_or_default().to_string_lossy();
+    let name2 = binary2.file_name().unwrap_or_default().to_string_lossy();
+
+    // Print comparison table
+    println!("{:<40} {:>12} {:>12} {:>10}", "FUNCTION", name1, name2, "RATIO");
+    println!("{}", "-".repeat(76));
+
+    let mut total1: u64 = 0;
+    let mut total2: u64 = 0;
+    let mut compared = 0;
+
+    for func in &func_names {
+        let size1 = sizes1.get(func).copied();
+        let size2 = sizes2.get(func).copied();
+
+        let s1_str = size1.map(|s| s.to_string()).unwrap_or_else(|| "-".to_string());
+        let s2_str = size2.map(|s| s.to_string()).unwrap_or_else(|| "-".to_string());
+
+        let ratio_str = match (size1, size2) {
+            (Some(s1), Some(s2)) if s1 > 0 => {
+                total1 += s1;
+                total2 += s2;
+                compared += 1;
+                format!("{:.1}x", s2 as f64 / s1 as f64)
+            }
+            _ => "-".to_string(),
+        };
+
+        println!("{:<40} {:>12} {:>12} {:>10}", func, s1_str, s2_str, ratio_str);
+    }
+
+    println!("{}", "-".repeat(76));
+    println!("{:<40} {:>12} {:>12} {:>10}",
+        format!("TOTAL ({} functions)", compared),
+        total1,
+        total2,
+        if total1 > 0 { format!("{:.1}x", total2 as f64 / total1 as f64) } else { "-".to_string() }
+    );
+
+    Ok(())
+}
+
+/// Extract function name -> size map from a binary
+fn get_function_sizes(binary: &PathBuf) -> Result<HashMap<String, u64>> {
+    let binary_data = fs::read(binary)
+        .with_context(|| format!("Failed to read binary: {:?}", binary))?;
+
+    let elf = Elf::parse(&binary_data)
+        .with_context(|| format!("Failed to parse ELF: {:?}", binary))?;
+
+    let mut sizes = HashMap::new();
+
+    // Check .symtab
+    for sym in &elf.syms {
+        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
+            let name = elf.strtab.get_at(sym.st_name).unwrap_or("???");
+            sizes.insert(name.to_string(), sym.st_size);
+        }
+    }
+
+    // Check .dynsym
+    for sym in &elf.dynsyms {
+        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
+            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
+            sizes.entry(name.to_string()).or_insert(sym.st_size);
+        }
+    }
+
+    Ok(sizes)
 }
 
 /// Get the size of the .text section
@@ -116,7 +234,7 @@ fn get_text_section_size(elf: &Elf) -> u64 {
 }
 
 /// Analyze a statically linked binary
-fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
+fn analyze_static(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
     let mut functions: HashMap<u64, FunctionInfo> = HashMap::new();
 
     // Collect function symbols from .symtab
@@ -179,7 +297,7 @@ fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysis
     let text_section_size = get_text_section_size(elf);
 
     Ok(AnalysisResult {
-        binary_path: args.binary.display().to_string(),
+        binary_path: binary_path.display().to_string(),
         is_dynamic: false,
         total_functions: func_vec.len(),
         total_code_size,
@@ -189,7 +307,7 @@ fn analyze_static(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysis
 }
 
 /// Analyze a dynamically linked binary
-fn analyze_dynamic(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
+fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[u8]) -> Result<AnalysisResult> {
     let mut functions: HashMap<u64, FunctionInfo> = HashMap::new();
 
     // For dynamic binaries, we care about:
@@ -247,7 +365,7 @@ fn analyze_dynamic(args: &Args, elf: &Elf, binary_data: &[u8]) -> Result<Analysi
     let text_section_size = get_text_section_size(elf);
 
     Ok(AnalysisResult {
-        binary_path: args.binary.display().to_string(),
+        binary_path: binary_path.display().to_string(),
         is_dynamic: true,
         total_functions: func_vec.len(),
         total_code_size,
