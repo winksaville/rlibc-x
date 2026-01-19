@@ -6,10 +6,12 @@
 //! For dynamically linked binaries (glibc): identifies imported libc functions
 //! and counts references through PLT stubs.
 
+mod disasm;
+#[cfg(test)]
+mod test_utils;
 mod types;
 
 use anyhow::{Context, Result};
-use capstone::prelude::*;
 use clap::{Parser, Subcommand, ValueEnum};
 use goblin::elf::Elf;
 use is_libc_used::is_libc_used_from_bytes;
@@ -269,7 +271,7 @@ fn analyze_static(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &[
     }
 
     // Count references by disassembling
-    count_references(args, elf, binary_data, &mut functions)?;
+    disasm::count_references(args.verbose, elf, binary_data, &mut functions)?;
 
     // Convert to sorted vec
     let mut func_vec: Vec<_> = functions.into_values().collect();
@@ -338,7 +340,7 @@ fn analyze_dynamic(args: &Args, binary_path: &PathBuf, elf: &Elf, binary_data: &
     }
 
     // Count references to PLT stubs
-    count_references(args, elf, binary_data, &mut functions)?;
+    disasm::count_references(args.verbose, elf, binary_data, &mut functions)?;
 
     let mut func_vec: Vec<_> = functions.into_values().collect();
     filter_and_sort(&args, &mut func_vec);
@@ -408,100 +410,6 @@ fn load_libc_sizes(libc_path: &PathBuf) -> Result<HashMap<String, u64>> {
     }
 
     Ok(sizes)
-}
-
-/// Count call references to functions using disassembly
-fn count_references(
-    args: &Args,
-    elf: &Elf,
-    binary_data: &[u8],
-    functions: &mut HashMap<u64, FunctionInfo>,
-) -> Result<()> {
-    let cs = Capstone::new()
-        .x86()
-        .mode(arch::x86::ArchMode::Mode64)
-        .syntax(arch::x86::ArchSyntax::Att)
-        .detail(true)
-        .build()
-        .map_err(|e| anyhow::anyhow!("Failed to create Capstone: {}", e))?;
-
-    // Find executable sections
-    for shdr in &elf.section_headers {
-        // Check if section is executable (SHF_EXECINSTR = 0x4)
-        if shdr.sh_flags & 0x4 == 0 {
-            continue;
-        }
-
-        let section_name = elf.shdr_strtab.get_at(shdr.sh_name).unwrap_or("");
-
-        // Skip PLT itself to avoid double-counting
-        if section_name == ".plt" || section_name == ".plt.got" {
-            continue;
-        }
-
-        let start = shdr.sh_offset as usize;
-        let end = start + shdr.sh_size as usize;
-
-        if end > binary_data.len() {
-            continue;
-        }
-
-        let section_data = &binary_data[start..end];
-        let section_addr = shdr.sh_addr;
-
-        let insns = cs.disasm_all(section_data, section_addr)
-            .map_err(|e| anyhow::anyhow!("Disassembly failed: {}", e))?;
-
-        for insn in insns.iter() {
-            let mnemonic = insn.mnemonic().unwrap_or("");
-
-            // Look for call and jmp instructions
-            if mnemonic == "call" || mnemonic == "callq" {
-                if let Some(target) = extract_call_target(&insn) {
-                    if let Some(func) = functions.get_mut(&target) {
-                        func.references += 1;
-                        if args.verbose {
-                            eprintln!(
-                                "  0x{:x}: {} -> {} (0x{:x})",
-                                insn.address(),
-                                mnemonic,
-                                func.name,
-                                target
-                            );
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Extract the target address from a call instruction
-fn extract_call_target(insn: &capstone::Insn) -> Option<u64> {
-    let op_str = insn.op_str()?;
-
-    // Direct call: "0x1234" or "symbol"
-    // We need the absolute address
-
-    // For relative calls, capstone gives us the computed target
-    // Check if it's a hex address
-    if op_str.starts_with("0x") || op_str.starts_with("0X") {
-        u64::from_str_radix(&op_str[2..], 16).ok()
-    } else if let Ok(addr) = op_str.parse::<u64>() {
-        Some(addr)
-    } else {
-        // For PC-relative calls, we need to compute the target
-        // Format might be like "0x401234" after capstone processes it
-        // or it might be an indirect call like "*%rax" which we skip
-        if op_str.starts_with('*') {
-            None // indirect call
-        } else {
-            // Try parsing as hex without prefix
-            u64::from_str_radix(op_str.trim(), 16).ok()
-        }
-    }
 }
 
 fn filter_and_sort(args: &Args, functions: &mut Vec<FunctionInfo>) {
