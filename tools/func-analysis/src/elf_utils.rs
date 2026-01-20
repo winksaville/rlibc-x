@@ -15,27 +15,49 @@ pub fn get_text_section_size(elf: &Elf) -> u64 {
         .unwrap_or(0)
 }
 
-/// Build a map of function names to their PLT addresses
+/// Build a map of function names to their GOT/PLT addresses
+///
+/// Handles two linking styles:
+/// 1. Traditional PLT: .rela.plt with JUMP_SLOT relocations -> .plt stubs
+/// 2. PLT-less/GOT-direct: .rela.dyn with GLOB_DAT relocations -> .got entries
 pub fn build_plt_map(elf: &Elf) -> Result<HashMap<String, u64>> {
+    use goblin::elf::reloc::R_X86_64_GLOB_DAT;
+
     let mut plt_map = HashMap::new();
 
-    // Find .rela.plt section for PLT relocations
-    for reloc in &elf.pltrelocs {
-        let sym_idx = reloc.r_sym;
-        if let Some(sym) = elf.dynsyms.get(sym_idx) {
-            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
-
-            // PLT entry address: typically the relocation target + PLT base
-            // This is simplified; real PLT layout varies
-            if let Some(plt_shdr) = elf
-                .section_headers
-                .iter()
-                .find(|sh| elf.shdr_strtab.get_at(sh.sh_name).unwrap_or("") == ".plt")
-            {
+    // Method 1: Traditional PLT via .rela.plt
+    if let Some(plt_shdr) = elf
+        .section_headers
+        .iter()
+        .find(|sh| elf.shdr_strtab.get_at(sh.sh_name).unwrap_or("") == ".plt")
+    {
+        for reloc in &elf.pltrelocs {
+            let sym_idx = reloc.r_sym;
+            if let Some(sym) = elf.dynsyms.get(sym_idx) {
+                let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
                 // Each PLT entry is typically 16 bytes on x86_64
                 // First entry is resolver, real entries start at +16
                 let plt_entry_addr = plt_shdr.sh_addr + 16 + (plt_map.len() as u64 * 16);
                 plt_map.insert(name.to_string(), plt_entry_addr);
+            }
+        }
+    }
+
+    // Method 2: PLT-less linking via .rela.dyn GLOB_DAT relocations
+    // Modern linkers may use direct GOT calls instead of PLT stubs
+    if plt_map.is_empty() {
+        for reloc in &elf.dynrelas {
+            // Only handle GLOB_DAT relocations (direct GOT entries for functions)
+            if reloc.r_type == R_X86_64_GLOB_DAT {
+                let sym_idx = reloc.r_sym;
+                if let Some(sym) = elf.dynsyms.get(sym_idx) {
+                    // Only include function symbols
+                    if sym.st_type() == goblin::elf::sym::STT_FUNC {
+                        let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
+                        // Use the GOT entry address (reloc.r_offset) as the target
+                        plt_map.insert(name.to_string(), reloc.r_offset);
+                    }
+                }
             }
         }
     }

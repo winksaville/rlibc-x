@@ -44,8 +44,10 @@ pub fn count_references(
         while decoder.can_decode() {
             decoder.decode_out(&mut instruction);
 
-            // Check if this is a call instruction
-            if instruction.flow_control() == FlowControl::Call {
+            // Check if this is a call instruction (direct or indirect)
+            let is_call = instruction.flow_control() == FlowControl::Call
+                || instruction.flow_control() == FlowControl::IndirectCall;
+            if is_call {
                 if let Some(target) = extract_call_target(&instruction) {
                     if let Some(func) = functions.get_mut(&target) {
                         func.references += 1;
@@ -68,18 +70,21 @@ pub fn count_references(
 
 /// Extract the target address from a call instruction
 fn extract_call_target(instruction: &Instruction) -> Option<u64> {
-    // For near relative calls (CALL rel32), get the computed target
-    if instruction.is_call_near_indirect() {
-        // Indirect calls like `call *%rax` - we can't resolve these statically
-        None
+    use iced_x86::OpKind;
+
+    // Check if this is an indirect call with RIP-relative addressing
+    // This handles: call *offset(%rip) -> GOT entry address
+    if instruction.op0_kind() == OpKind::Memory && instruction.is_ip_rel_memory_operand() {
+        // iced-x86 computes the absolute address for us
+        return Some(instruction.ip_rel_memory_address());
+    }
+
+    // Direct calls - iced-x86 computes the absolute target
+    let target = instruction.near_branch_target();
+    if target != 0 {
+        Some(target)
     } else {
-        // Direct calls - iced-x86 computes the absolute target for us
-        let target = instruction.near_branch_target();
-        if target != 0 {
-            Some(target)
-        } else {
-            None
-        }
+        None
     }
 }
 
