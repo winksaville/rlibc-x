@@ -4,9 +4,10 @@ Analyze libc function sizes and reference counts in ELF binaries.
 
 ## Features
 
-- **Static binaries** (rlibc-x1/x2): Extracts function sizes from symbol table and counts call references via disassembly
-- **Dynamic binaries** (glibc): Identifies imported libc functions, counts PLT references, optionally looks up sizes from libc.so
+- **Static binaries** (musl, rlibc-x2): Shows both app functions and embedded libc functions with sizes and call counts
+- **Dynamic binaries** (glibc): Shows app functions + imported libc functions (sizes auto-detected from system libc)
 - **Compare mode**: Compare function sizes between two binaries (e.g., rlibc-x2 vs musl)
+- **Multiple formats**: Table (default), JSON, CSV
 
 ## Commands
 
@@ -52,22 +53,57 @@ write
 ...
 ```
 
-## Output Formats
+## Output Examples
 
-### Table (default)
+### Static binary (musl)
+
+Shows both Rust app functions and embedded musl libc functions:
+
 ```
-Binary: target/release/ex-x2
+Binary: target/x86_64-unknown-linux-musl/release/ex-musl
 Type: static
-Functions: 165
-.text size: 24541 bytes
-Total code size: 23867 bytes (97.3% coverage)
+Functions: 73
+Functions size: 9215 bytes
+.text size: 9357 bytes
+Coverage: 98.5%
 
 FUNCTION                                       SIZE      ADDRESS     REFS
 --------------------------------------------------------------------------
-__libc_start_main                               189     0x205fe4        1
-malloc                                          108     0x205da0        0
+__syscall_ret                                    48       0x21e5       17
+__errno_location                                 14       0x1f2d        6
+__syscall_cp                                      5       0x2d58        5
 ...
+write                                            46       0x2da1        0
+__stdio_close                                    35       0x32f9        0
+lseek                                            21       0x3427        0
 ```
+
+### Dynamic binary (glibc)
+
+Shows app functions (from `.symtab`) + imported libc functions (sizes from system libc):
+
+```
+Binary: target/x86_64-unknown-linux-gnu/release/ex-glibc
+Type: dynamic
+Functions: 38
+Functions size: 7284 bytes
+.text size: 2470 bytes
+Coverage: 294.9%
+
+FUNCTION                                       SIZE      ADDRESS     REFS
+--------------------------------------------------------------------------
+_RINvNtCslLel16OqMrf_4core3ptr13drop_...         88       0x1f29        3
+free                                            445       0x3a20        2
+_RNvMs0_NtNtNtCskm7OexE29z0_3std2io5e...         75       0x2300        2
+...
+pause                                            35       0x3aa0        0
+dup                                              37       0x3a60        0
+poll                                             32       0x3a50        0
+```
+
+Coverage >100% because "Functions size" includes libc function sizes (external), while ".text size" is local code only.
+
+See [notes/opt-notes.md](../../notes/opt-notes.md) for details on preserving symbols for analysis.
 
 ### Compare output
 ```
@@ -105,11 +141,14 @@ malloc,108,0x205da0,0,local
 
 1. **Parse ELF**: Uses `goblin` to parse the binary's symbol tables, section headers, and relocation entries
 2. **Collect functions**:
-   - Static: All FUNC symbols with size > 0 from both `.symtab` and `.dynsym`
-   - Dynamic: UND (undefined) symbols that reference glibc
+   - Static: All FUNC symbols with size > 0 from `.symtab` and `.dynsym`
+   - Dynamic: Local functions from `.symtab` + imported functions via PLT/GOT relocations
 3. **Disassemble**: Uses `iced-x86` to disassemble executable sections
-4. **Count references**: Identifies `call` instructions and maps targets to known functions
-5. **Report**: Aggregates and formats the results
+4. **Count references**: Identifies `call` instructions (direct and indirect) and maps targets to known functions
+5. **Libc sizes**: For dynamic binaries, auto-detects system libc via `ldd` and extracts function sizes
+6. **Report**: Aggregates and formats the results
+
+See [notes/plt-less-linking.md](../../notes/plt-less-linking.md) for details on how PLT vs GLOB_DAT relocations are handled.
 
 ## Module Structure
 
@@ -129,11 +168,10 @@ The disassembly logic is isolated in `disasm.rs`, making it straightforward to s
 
 ## Limitations
 
-- Indirect calls (`call *%rax`) cannot be resolved statically
-- Tail calls (`jmp` used as call) are not counted by default
-- PLT layout assumptions may not hold for all linkers
+- Indirect calls (`call *%rax`) cannot be resolved statically (except RIP-relative GOT calls)
+- Tail calls (`jmp` used as call) are not counted
 - Inlined functions won't appear in symbol table
-- Stripped binaries will have low coverage (only `.dynsym` symbols available)
+- Stripped binaries show only `.dynsym` symbols (use `cargo xtask build <app> -r -opt` without `-s` for full symbols)
 
 ## Dependencies
 
