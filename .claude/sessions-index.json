@@ -348,6 +348,18 @@
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "bc1b95cc-721b-4922-a056-7aee65c1981d",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/bc1b95cc-721b-4922-a056-7aee65c1981d.jsonl",
+      "fileMtime": 1768930643770,
+      "firstPrompt": "update yourself on rlibc-x",
+      "messageCount": 26,
+      "created": "2026-01-20T16:45:25.433Z",
+      "modified": "2026-01-20T17:37:23.606Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ]
 }

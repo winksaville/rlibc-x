@@ -6,22 +6,28 @@ Rust binaries using std can be dramatically reduced using nightly's `build-std` 
 
 | Target | Baseline | Optimized | Reduction |
 |--------|----------|-----------|-----------|
-| glibc (dynamic) | 298 KB | 9.3 KB | 97% |
-| musl (static) | 381 KB | 22.7 KB | 94% |
+| glibc (dynamic) | ~298 KB | ~9 KB | 97% |
+| musl (static) | ~381 KB | ~23 KB | 94% |
+| x2 (rlibc-x2) | ~41 KB | ~6 KB | 85% |
 
 **The bloat isn't libc - it's Rust's panic formatting machinery.**
 
 ## Size Comparison (stripped)
 
-| Binary | Size | Text |
-|--------|------|------|
-| ex-x1 (no_std, rlibc-x1) | 1.4 KB | 217 B |
-| ex-x2 (std, rlibc-x2, -opt) | 6.4 KB | 3.6 KB |
-| ex-glibc (dynamic, -opt) | 9.3 KB | 5.4 KB |
-| ex-musl (static, -opt) | 22.7 KB | 11 KB |
-| | | |
-| ex-glibc (dynamic, baseline) | 298 KB | 284 KB |
-| ex-musl (static, baseline) | 381 KB | 344 KB |
+All apps built with `cargo xtask build <app> -r -opt -s`:
+
+| App | Runtime | Stable | Nightly | Description |
+|-----|---------|-------:|--------:|-------------|
+| ex-x1 | rlibc-x1 | 1.4 KB | - | Exit-only (no_std) |
+| hw-x1 | rlibc-x1 | 1.6 KB | - | Hello world (no_std) |
+| ex-x2 | rlibc-x2 | 41 KB | 6.4 KB | Exit-only (std) |
+| hw-x2 | rlibc-x2 | 46 KB | 8.9 KB | Hello world (std) |
+| ex-glibc | glibc | 298 KB | 9.3 KB | Exit-only (dynamic) |
+| hw-glibc | glibc | 287 KB | 11.9 KB | Hello world (dynamic) |
+| ex-musl | musl | 381 KB | 22.7 KB | Exit-only (static) |
+| hw-musl | musl | 377 KB | 26.8 KB | Hello world (static) |
+
+The `-x1` apps don't benefit from `-opt` since they're already `no_std`.
 
 ## Why This Works
 
@@ -50,7 +56,22 @@ $ readelf -S exit.lo | grep .text
 
 This enables `--gc-sections` to remove unused functions, though LTO already handles most dead code elimination.
 
-## Optimization Commands
+## Using xtask
+
+The `-opt` flag in xtask enables these optimizations for x2, glibc, and musl crates:
+
+```bash
+cargo xtask build ex-x2 -r -opt -s     # rlibc-x2 based
+cargo xtask build ex-glibc -r -opt -s  # glibc (dynamic)
+cargo xtask build ex-musl -r -opt -s   # musl (static)
+cargo xtask build hw-glibc -r -opt -s  # hello world variants too
+```
+
+The `-x1` crates are already `no_std`, so `-opt` has no effect on them.
+
+## Manual Commands
+
+If not using xtask, here are the raw cargo commands:
 
 ### For glibc (dynamic linking)
 
@@ -59,6 +80,7 @@ RUSTFLAGS="-Z unstable-options -C panic=immediate-abort" \
   cargo +nightly build --release \
   --target x86_64-unknown-linux-gnu \
   -Z build-std=std,core,panic_abort
+strip target/x86_64-unknown-linux-gnu/release/<binary>
 ```
 
 ### For musl (static linking)
@@ -68,27 +90,7 @@ RUSTFLAGS="-Z unstable-options -C panic=immediate-abort" \
   cargo +nightly build --release \
   --target x86_64-unknown-linux-musl \
   -Z build-std=std,core,panic_abort
-```
-
-### Then strip
-
-```bash
-strip target/<target>/release/<binary>
-```
-
-## Using xtask
-
-The `-opt` flag in xtask enables these optimizations:
-
-```bash
-# For x2 crates (rlibc-x2 based)
-cargo xtask build ex-x2 -r -opt -s
-
-# For glibc crates
-cargo xtask build ex-glibc -r -opt -s
-
-# For musl crates
-cargo xtask build ex-musl -r -opt -s
+strip target/x86_64-unknown-linux-musl/release/<binary>
 ```
 
 ## API Change Note

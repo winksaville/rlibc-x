@@ -27,11 +27,9 @@ This is achieved through:
 - **`panic="abort"`** - No unwinding machinery
 - **Aggressive optimization** - `opt-level='z'`, LTO, single codegen unit, stripped symbols
 
-For comparison, rlibc-x2 (which supports `std`) produces:
-- **~41 KB** with stable Rust
-- **~6 KB** with nightly optimizations (`-x2` flag)
+For comparison, rlibc-x2 (which supports `std`) produces **~6 KB** with `-opt` (nightly).
 
-See [apps/](apps/README.md#size-comparison) for the full size comparison across rlibc-x1, rlibc-x2, glibc, and musl.
+See [apps/](apps/README.md#size-comparison) for the full size comparison.
 
 ## Workspace Structure
 
@@ -49,19 +47,17 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison across 
 
 **rlibc-x2** (std): App uses normal `fn main()` with Rust std. Replaces glibc while keeping std functionality.
 
-## Build Modes for rlibc-x2
+## Optimized Builds
 
-| Mode | Toolchain | Binary Size | Use Case |
-|------|-----------|-------------|----------|
-| Stable | `rustc` (stable) | ~41 KB | Compatibility, CI |
-| Optimized | `rustc` (nightly) | ~6 KB | Size-critical deployments |
-
-The optimized mode uses nightly features (`-Z build-std`, `-Z panic-immediate-abort`) and linker tricks to achieve much smaller binaries. Use the `-opt` flag with xtask:
+The `-opt` flag dramatically reduces binary sizes by eliminating Rust's panic formatting machinery:
 
 ```bash
-cargo xtask build ex-x2 -r -s        # stable: ~41KB
-cargo xtask build ex-x2 -r -opt -s   # nightly: ~6KB
+cargo xtask build ex-x2 -r -opt -s     # ~6 KB (vs ~41 KB)
+cargo xtask build ex-glibc -r -opt -s  # ~9 KB (vs ~298 KB)
+cargo xtask build ex-musl -r -opt -s   # ~23 KB (vs ~381 KB)
 ```
+
+See [notes/opt-notes.md](notes/opt-notes.md) for details.
 
 ## Quick Start
 

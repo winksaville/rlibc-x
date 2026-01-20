@@ -9,15 +9,15 @@ All sizes are release builds, stripped.
 | App | Runtime | Linking | Stable | Nightly | Description |
 |-----|---------|---------|-------:|--------:|-------------|
 | ex-x1 | rlibc-x1 | static | 1.4 KB | - | Minimal exit-only (no_std) |
-| ex-x2 | rlibc-x2 | static | 41 KB | 6 KB | Minimal exit-only (std) |
-| ex-glibc | glibc | dynamic | 284 KB | - | Minimal exit-only |
-| ex-musl | musl | static | 373 KB | - | Minimal exit-only |
-| hw-x1 | rlibc-x1 | static | 1.5 KB | - | Hello world |
-| hw-x2 | rlibc-x2 | static | 46 KB | 9 KB | Hello world |
-| hw-glibc | glibc | dynamic | 287 KB | - | Hello world |
-| hw-musl | musl | static | 377 KB | - | Hello world |
+| ex-x2 | rlibc-x2 | static | 41 KB | 6.4 KB | Minimal exit-only (std) |
+| ex-glibc | glibc | dynamic | 298 KB | 9.3 KB | Minimal exit-only |
+| ex-musl | musl | static | 381 KB | 22.7 KB | Minimal exit-only |
+| hw-x1 | rlibc-x1 | static | 1.6 KB | - | Hello world |
+| hw-x2 | rlibc-x2 | static | 46 KB | 8.9 KB | Hello world |
+| hw-glibc | glibc | dynamic | 287 KB | 11.9 KB | Hello world |
+| hw-musl | musl | static | 377 KB | 26.8 KB | Hello world |
 
-**Nightly** column shows sizes with `-opt` flag (nightly + build-std + panic-immediate-abort).
+**Nightly** column shows sizes with `-opt` flag. See [notes/opt-notes.md](../notes/opt-notes.md) for details.
 
 ## App Naming Convention
 
@@ -31,22 +31,9 @@ All sizes are release builds, stripped.
 ## Building and Running
 
 ```bash
-# Using xtask (recommended)
-cargo xtask build ex-x1        # debug build
-cargo xtask build ex-x1 -r     # release build
-cargo xtask build ex-x1 -r -s  # release + stripped
-cargo xtask run hw-x1          # build and run
-
-# Optimized x2 builds (nightly required)
-cargo xtask build ex-x2 -r -opt -s  # ~6KB instead of ~41KB
-
-# Direct cargo commands
-cargo build -p ex-x1 --release
-cargo run -p hw-x1 --release
-
-# glibc/musl targets (use aliases)
-cargo b-glibc -p ex-glibc --release
-cargo b-musl -p ex-musl --release
+cargo xtask build ex-x1 -r -s          # release + stripped
+cargo xtask build ex-glibc -r -opt -s  # optimized (nightly)
+cargo xtask run hw-x1                  # build and run
 ```
 
 ## Testing

@@ -26,13 +26,23 @@
 //!
 //! # Optimized Builds (-opt flag)
 //!
-//! The `-opt` or `--optimized` flag enables nightly optimizations for x2 crates:
+//! The `-opt` or `--optimized` flag enables nightly optimizations that dramatically
+//! reduce binary size by eliminating Rust's panic formatting machinery.
+//!
+//! Sizes for ex-* apps (minimal 3-byte exit code programs):
+//!
+//! | Target | Baseline | Optimized | Reduction |
+//! |--------|----------|-----------|-----------|
+//! | glibc  | ~298 KB  | ~9 KB     | 97%       |
+//! | musl   | ~381 KB  | ~23 KB    | 94%       |
+//! | x2     | ~40 KB   | ~6 KB     | 85%       |
+//!
+//! Works with: `-x2`, `-glibc`, and `-musl` crates (not `-x1` which is already no_std).
+//!
+//! Uses:
 //! - Nightly Rust toolchain
 //! - `-Z build-std=std,core,panic_abort` (rebuild std from source)
-//! - `-Z panic-immediate-abort` (minimal panic handling)
-//! - Custom target `x86_64-unknown-linux-rlibcx2.json`
-//!
-//! This produces significantly smaller binaries (~6KB stripped vs ~40KB).
+//! - `-C panic=immediate-abort` (skip panic formatting)
 
 use std::fs;
 use std::io::Write;
@@ -187,13 +197,23 @@ fn run_cargo_on_crate(
     config: &Config,
 ) -> TestResult {
     let is_musl = crate_name.contains("musl");
+    let is_glibc = crate_name.contains("glibc");
     let is_x2 = crate_name.ends_with("-x2");
-    let use_optimized = config.optimized && is_x2;
+    let is_x1 = crate_name.ends_with("-x1");
 
-    let target_info = if is_musl {
+    // -opt works for x2, glibc, and musl crates (not x1, which is already no_std)
+    let use_optimized = config.optimized && (is_x2 || is_glibc || is_musl) && !is_x1;
+
+    let target_info = if use_optimized {
+        if is_musl {
+            " (musl, optimized)"
+        } else if is_glibc {
+            " (glibc, optimized)"
+        } else {
+            " (optimized)"
+        }
+    } else if is_musl {
         " (musl)"
-    } else if use_optimized {
-        " (optimized)"
     } else {
         ""
     };
@@ -215,56 +235,75 @@ fn run_cargo_on_crate(
 
     cmd.args(["-p", crate_name]);
 
-    if is_musl {
-        cmd.args(["--target", "x86_64-unknown-linux-musl"]);
-    } else if use_optimized {
-        // Use custom target with build-std and panic-immediate-abort
+    if use_optimized {
+        // All optimized builds use build-std to rebuild std with panic=immediate-abort
         cmd.args(["-Z", "build-std=std,core,panic_abort"]);
-        cmd.args(["-Z", "panic-immediate-abort"]);
 
-        // WORKAROUND: Generate a linker "version config" file to make all symbols
-        // LOCAL except _start. This allows --gc-sections to remove unreferenced
-        // functions, reducing stripped binary size of something like ex-x2:
-        //    use std::process::ExitCode;
-        //
-        //    // Force rlibc-x2 to be linked
-        //    extern crate rlibc_x2;
-        //
-        //    fn main() -> ExitCode {
-        //        ExitCode::from(42)
-        //    }
-        // From ~13KB -> ~6KB.
-        //
-        // This is frustratingly complex. When building an executable (not a shared
-        // library), there's no good reason for internal symbols to be GLOBAL/exported.
-        // The only entry point is _start - nothing external can call our internal
-        // functions at runtime.
-        //
-        // The linker should have a simple flag like "--executable-hide-symbols" that
-        // automatically makes all symbols local except the entry point. This would:
-        // 1. Enable dead code elimination via --gc-sections
-        // 2. Improve security by hiding internal implementation details
-        // 3. Reduce binary size by eliminating .dynsym bloat
-        // Instead, we must create a "version script" file with arcane syntax!
-        // Another short term solution would be to accept the configuration directly:
-        //   link-arg=-Wl,--version-script="{ global: _start; local:*; }"
-        let target_dir = workspace_root.join("target");
-        let _ = fs::create_dir_all(&target_dir);
-        let version_config = target_dir.join("rlibcx2-version.config");
-        if let Ok(mut f) = fs::File::create(&version_config) {
-            let _ = writeln!(f, "{{ global: _start; local: *; }};");
+        if is_x2 {
+            // x2 crates: Use custom target with version script for maximum size reduction
+            cmd.args(["-Z", "panic-immediate-abort"]);
+
+            // WORKAROUND: Generate a linker "version config" file to make all symbols
+            // LOCAL except _start. This allows --gc-sections to remove unreferenced
+            // functions, reducing stripped binary size of something like ex-x2:
+            //    use std::process::ExitCode;
+            //
+            //    // Force rlibc-x2 to be linked
+            //    extern crate rlibc_x2;
+            //
+            //    fn main() -> ExitCode {
+            //        ExitCode::from(42)
+            //    }
+            // From ~13KB -> ~6KB.
+            //
+            // This is frustratingly complex. When building an executable (not a shared
+            // library), there's no good reason for internal symbols to be GLOBAL/exported.
+            // The only entry point is _start - nothing external can call our internal
+            // functions at runtime.
+            //
+            // The linker should have a simple flag like "--executable-hide-symbols" that
+            // automatically makes all symbols local except the entry point. This would:
+            // 1. Enable dead code elimination via --gc-sections
+            // 2. Improve security by hiding internal implementation details
+            // 3. Reduce binary size by eliminating .dynsym bloat
+            // Instead, we must create a "version script" file with arcane syntax!
+            // Another short term solution would be to accept the configuration directly:
+            //   link-arg=-Wl,--version-script="{ global: _start; local:*; }"
+            let target_dir = workspace_root.join("target");
+            let _ = fs::create_dir_all(&target_dir);
+            let version_config = target_dir.join("rlibcx2-version.config");
+            if let Ok(mut f) = fs::File::create(&version_config) {
+                let _ = writeln!(f, "{{ global: _start; local: *; }};");
+            }
+
+            cmd.env(
+                "RUSTFLAGS",
+                format!(
+                    "-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
+                    version_config.display()
+                ),
+            );
+            let target_json = workspace_root.join("x86_64-unknown-linux-rlibcx2.json");
+            cmd.arg("--target");
+            cmd.arg(&target_json);
+        } else if is_musl {
+            // musl crates: Use standard musl target with panic=immediate-abort
+            cmd.env(
+                "RUSTFLAGS",
+                "-C panic=immediate-abort -Z unstable-options",
+            );
+            cmd.args(["--target", "x86_64-unknown-linux-musl"]);
+        } else if is_glibc {
+            // glibc crates: Use standard gnu target with panic=immediate-abort
+            cmd.env(
+                "RUSTFLAGS",
+                "-C panic=immediate-abort -Z unstable-options",
+            );
+            cmd.args(["--target", "x86_64-unknown-linux-gnu"]);
         }
-
-        cmd.env(
-            "RUSTFLAGS",
-            format!(
-                "-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
-                version_config.display()
-            ),
-        );
-        let target_json = workspace_root.join("x86_64-unknown-linux-rlibcx2.json");
-        cmd.arg("--target");
-        cmd.arg(&target_json);
+    } else if is_musl {
+        // Non-optimized musl builds
+        cmd.args(["--target", "x86_64-unknown-linux-musl"]);
     }
 
     cmd.current_dir(workspace_root);
@@ -356,10 +395,18 @@ fn run_cargo_on_crate(
 /// Get the path to the built binary
 fn get_binary_path(crate_name: &str, workspace_root: &Path, config: &Config) -> std::path::PathBuf {
     let profile = if config.debug { "debug" } else { "release" };
-    let target_subdir = if crate_name.contains("musl") {
+    let is_musl = crate_name.contains("musl");
+    let is_glibc = crate_name.contains("glibc");
+    let is_x2 = crate_name.ends_with("-x2");
+    let is_x1 = crate_name.ends_with("-x1");
+    let use_optimized = config.optimized && (is_x2 || is_glibc || is_musl) && !is_x1;
+
+    let target_subdir = if is_musl {
         "x86_64-unknown-linux-musl"
-    } else if config.optimized && crate_name.ends_with("-x2") {
+    } else if use_optimized && is_x2 {
         "x86_64-unknown-linux-rlibcx2"
+    } else if use_optimized && is_glibc {
+        "x86_64-unknown-linux-gnu"
     } else {
         ""
     };
@@ -541,15 +588,16 @@ fn print_cmd_help(cmd: &str) {
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
-    println!("  -opt, --optimized Use nightly optimizations for x2 crates (smaller binaries)");
+    println!("  -opt, --optimized Use nightly optimizations (x2, glibc, musl crates)");
     println!("  -s, --strip       Strip debug symbols from binaries after building");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
-    println!("  cargo xtask {cmd}             # {cmd} all");
-    println!("  cargo xtask {cmd} .           # {cmd} crate in current directory");
-    println!("  cargo xtask {cmd} ex-x1       # {cmd} ex-x1 only");
-    println!("  cargo xtask {cmd} ex-x2 -opt  # {cmd} ex-x2 with nightly optimizations");
+    println!("  cargo xtask {cmd}               # {cmd} all");
+    println!("  cargo xtask {cmd} .             # {cmd} crate in current directory");
+    println!("  cargo xtask {cmd} ex-x1         # {cmd} ex-x1 only");
+    println!("  cargo xtask {cmd} ex-glibc -opt # {cmd} ex-glibc with nightly optimizations");
+    println!("  cargo xtask {cmd} ex-musl -opt  # {cmd} ex-musl with nightly optimizations");
 }
 
 fn print_test_help() {
@@ -569,17 +617,17 @@ fn print_test_help() {
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
-    println!("  -opt, --optimized Use nightly optimizations for x2 crates (smaller binaries)");
+    println!("  -opt, --optimized Use nightly optimizations (x2, glibc, musl crates)");
     println!("  -s, --strip       Strip debug symbols from binaries after building");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
-    println!("  cargo xtask test              # all tests");
-    println!("  cargo xtask test .            # test crate in current directory");
-    println!("  cargo xtask test ex-x1        # test ex-x1 only");
-    println!("  cargo xtask test ex-musl      # test ex-musl (musl target)");
-    println!("  cargo xtask test rlibc-x2     # test rlibc-x2 + rlibc-x2-tests");
-    println!("  cargo xtask test hw-x2 -opt   # test hw-x2 with nightly optimizations");
+    println!("  cargo xtask test               # all tests");
+    println!("  cargo xtask test .             # test crate in current directory");
+    println!("  cargo xtask test ex-x1         # test ex-x1 only");
+    println!("  cargo xtask test rlibc-x2      # test rlibc-x2 + rlibc-x2-tests");
+    println!("  cargo xtask test ex-glibc -opt # test ex-glibc with nightly optimizations");
+    println!("  cargo xtask test ex-musl -opt  # test ex-musl with nightly optimizations");
 }
 
 fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult> {

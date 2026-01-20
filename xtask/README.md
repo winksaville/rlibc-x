@@ -48,7 +48,7 @@ cargo xtask test rlibc-x2         # also runs rlibc-x2-tests binaries
 | `-f, --fail-fast` | Stop on first failure |
 | `-d, --debug` | Use debug builds (default) |
 | `-r, --release` | Use release builds |
-| `-opt, --optimized` | Use nightly optimizations for x2 crates (smaller binaries) |
+| `-opt, --optimized` | Use nightly optimizations (x2, glibc, musl) |
 | `-s, --strip` | Strip debug symbols after building |
 | `-h, --help` | Show help |
 
@@ -63,20 +63,12 @@ cargo xtask test rlibc-x2         # also runs rlibc-x2-tests binaries
 
 ## Optimized Builds
 
-The `-opt` flag enables nightly optimizations for x2 crates (those using rlibc-x2):
-
-- **Nightly toolchain** - Required for unstable features
-- **`-Z build-std`** - Rebuilds std from source for better optimization
-- **`-Z panic-immediate-abort`** - Eliminates panic formatting code
-- **Linker version script** - Enables dead code elimination via `--gc-sections`
-- **Custom target** - `x86_64-unknown-linux-rlibcx2.json`
+The `-opt` flag enables nightly optimizations for x2, glibc, and musl crates:
 
 ```bash
-# Stable build (larger, ~41KB stripped)
-cargo xtask build ex-x2 -r -s
-
-# Nightly optimized build (smaller, ~6KB stripped)
-cargo xtask build ex-x2 -r -opt -s
+cargo xtask build ex-x2 -r -opt -s     # ~6 KB (vs ~41 KB)
+cargo xtask build ex-glibc -r -opt -s  # ~9 KB (vs ~298 KB)
+cargo xtask build ex-musl -r -opt -s   # ~23 KB (vs ~381 KB)
 ```
 
-Without `-opt`, x2 crates build with the stable toolchain, producing larger but more portable binaries.
+See [notes/opt-notes.md](../notes/opt-notes.md) for details on how this works.
