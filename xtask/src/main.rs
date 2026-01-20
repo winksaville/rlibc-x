@@ -8,6 +8,7 @@
 //! ```text
 //! cargo xtask build                 # build all crates
 //! cargo xtask build ex-x1 -r        # build specific crate (release)
+//! cargo xtask build ex-x2 -opt -r   # build ex-x2 with nightly optimizations
 //!
 //! cargo xtask run hw-x1             # run specific crate (shows exit code)
 //! cargo xtask run .                 # run crate in current directory
@@ -22,8 +23,19 @@
 //! - `build` - Build crates (one at a time)
 //! - `run` - Build and run crates (shows exit code)
 //! - `test` - Run tests (with summary)
+//!
+//! # Optimized Builds (-opt flag)
+//!
+//! The `-opt` or `--optimized` flag enables nightly optimizations for x2 crates:
+//! - Nightly Rust toolchain
+//! - `-Z build-std=std,core,panic_abort` (rebuild std from source)
+//! - `-Z panic-immediate-abort` (minimal panic handling)
+//! - Custom target `x86_64-unknown-linux-rlibcx2.json`
+//!
+//! This produces significantly smaller binaries (~6KB stripped vs ~40KB).
 
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::process::{Command, ExitCode, Stdio};
 
@@ -38,6 +50,8 @@ struct Config {
     quiet: bool,
     fail_fast: bool,
     debug: bool,
+    optimized: bool, // Use nightly + build-std + panic-immediate-abort for x2 crates
+    strip: bool,   // Strip debug symbols from binaries after building
     crates: Vec<String>, // Empty means all crates
 }
 
@@ -173,11 +187,26 @@ fn run_cargo_on_crate(
     config: &Config,
 ) -> TestResult {
     let is_musl = crate_name.contains("musl");
-    let target_info = if is_musl { " (musl)" } else { "" };
+    let is_x2 = crate_name.ends_with("-x2");
+    let use_optimized = config.optimized && is_x2;
+
+    let target_info = if is_musl {
+        " (musl)"
+    } else if use_optimized {
+        " (optimized)"
+    } else {
+        ""
+    };
 
     println!("=== {crate_name}{target_info} ===");
 
     let mut cmd = Command::new("cargo");
+
+    // Use nightly toolchain for optimized builds
+    if use_optimized {
+        cmd.arg("+nightly");
+    }
+
     cmd.arg(cmd_name);
 
     if !config.debug {
@@ -188,9 +217,61 @@ fn run_cargo_on_crate(
 
     if is_musl {
         cmd.args(["--target", "x86_64-unknown-linux-musl"]);
+    } else if use_optimized {
+        // Use custom target with build-std and panic-immediate-abort
+        cmd.args(["-Z", "build-std=std,core,panic_abort"]);
+        cmd.args(["-Z", "panic-immediate-abort"]);
+
+        // WORKAROUND: Generate a linker "version config" file to make all symbols
+        // LOCAL except _start. This allows --gc-sections to remove unreferenced
+        // functions, reducing stripped binary size of something like ex-x2:
+        //    use std::process::ExitCode;
+        //
+        //    // Force rlibc-x2 to be linked
+        //    extern crate rlibc_x2;
+        //
+        //    fn main() -> ExitCode {
+        //        ExitCode::from(42)
+        //    }
+        // From ~13KB -> ~6KB.
+        //
+        // This is frustratingly complex. When building an executable (not a shared
+        // library), there's no good reason for internal symbols to be GLOBAL/exported.
+        // The only entry point is _start - nothing external can call our internal
+        // functions at runtime.
+        //
+        // The linker should have a simple flag like "--executable-hide-symbols" that
+        // automatically makes all symbols local except the entry point. This would:
+        // 1. Enable dead code elimination via --gc-sections
+        // 2. Improve security by hiding internal implementation details
+        // 3. Reduce binary size by eliminating .dynsym bloat
+        // Instead, we must create a "version script" file with arcane syntax!
+        // Another short term solution would be to accept the configuration directly:
+        //   link-arg=-Wl,--version-script="{ global: _start; local:*; }"
+        let target_dir = workspace_root.join("target");
+        let _ = fs::create_dir_all(&target_dir);
+        let version_config = target_dir.join("rlibcx2-version.config");
+        if let Ok(mut f) = fs::File::create(&version_config) {
+            let _ = writeln!(f, "{{ global: _start; local: *; }};");
+        }
+
+        cmd.env(
+            "RUSTFLAGS",
+            format!(
+                "-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
+                version_config.display()
+            ),
+        );
+        let target_json = workspace_root.join("x86_64-unknown-linux-rlibcx2.json");
+        cmd.arg("--target");
+        cmd.arg(&target_json);
     }
 
     cmd.current_dir(workspace_root);
+
+    // Capture mtime before build for strip decision on run command
+    let binary_path = get_binary_path(crate_name, workspace_root, config);
+    let mtime_before = get_mtime(&binary_path);
 
     if config.quiet {
         cmd.stdout(Stdio::piped());
@@ -204,9 +285,21 @@ fn run_cargo_on_crate(
 
                 if cmd_name == "run" {
                     println!("  exit code: {exit_code}");
+                    // Only strip if binary was rebuilt (mtime changed)
+                    let mtime_after = get_mtime(&binary_path);
+                    let was_rebuilt = mtime_after > mtime_before;
+                    if config.strip && was_rebuilt {
+                        strip_binary(crate_name, workspace_root, config);
+                    }
                 } else if passed {
-                    println!("  ok");
-                } else {
+                    if cmd_name == "build" {
+                        println!("  {}", binary_path.display());
+                    }
+                    if config.strip {
+                        strip_binary(crate_name, workspace_root, config);
+                    }
+                }
+                if !passed && cmd_name != "run" {
                     println!("  FAILED");
                     eprintln!("{stderr}");
                 }
@@ -236,6 +329,19 @@ fn run_cargo_on_crate(
 
         if cmd_name == "run" {
             println!("  exit code: {exit_code}");
+            // Only strip if binary was rebuilt (mtime changed)
+            let mtime_after = get_mtime(&binary_path);
+            let was_rebuilt = mtime_after > mtime_before;
+            if config.strip && was_rebuilt {
+                strip_binary(crate_name, workspace_root, config);
+            }
+        } else if passed {
+            if cmd_name == "build" {
+                println!("  {}", binary_path.display());
+            }
+            if config.strip {
+                strip_binary(crate_name, workspace_root, config);
+            }
         }
         println!();
 
@@ -243,6 +349,50 @@ fn run_cargo_on_crate(
             name: crate_name.to_string(),
             passed,
             output: String::new(),
+        }
+    }
+}
+
+/// Get the path to the built binary
+fn get_binary_path(crate_name: &str, workspace_root: &Path, config: &Config) -> std::path::PathBuf {
+    let profile = if config.debug { "debug" } else { "release" };
+    let target_subdir = if crate_name.contains("musl") {
+        "x86_64-unknown-linux-musl"
+    } else if config.optimized && crate_name.ends_with("-x2") {
+        "x86_64-unknown-linux-rlibcx2"
+    } else {
+        ""
+    };
+
+    if target_subdir.is_empty() {
+        workspace_root.join(format!("target/{profile}/{crate_name}"))
+    } else {
+        workspace_root.join(format!("target/{target_subdir}/{profile}/{crate_name}"))
+    }
+}
+
+/// Get the mtime of a file, if it exists
+fn get_mtime(path: &Path) -> Option<std::time::SystemTime> {
+    fs::metadata(path).ok().and_then(|m| m.modified().ok())
+}
+
+/// Strip debug symbols from the built binary
+fn strip_binary(crate_name: &str, workspace_root: &Path, config: &Config) {
+    let binary_path = get_binary_path(crate_name, workspace_root, config);
+
+    if binary_path.exists() {
+        let status = Command::new("strip").arg(&binary_path).status();
+        match status {
+            Ok(s) if s.success() => {
+                if !config.quiet {
+                    if let Ok(meta) = fs::metadata(&binary_path) {
+                        println!("  stripped: {} bytes", meta.len());
+                    }
+                }
+            }
+            _ => {
+                eprintln!("  warning: failed to strip {}", binary_path.display());
+            }
         }
     }
 }
@@ -276,6 +426,8 @@ fn parse_args() -> Config {
         quiet: false,
         fail_fast: false,
         debug: true, // Default to debug for faster iteration; use -r for release
+        optimized: false,
+        strip: false,
         crates: Vec::new(),
     };
 
@@ -286,6 +438,8 @@ fn parse_args() -> Config {
             "-f" | "--fail-fast" | "--fail" => config.fail_fast = true,
             "-r" | "--release" => config.debug = false,
             "-d" | "--debug" => config.debug = true,
+            "-opt" | "--optimized" => config.optimized = true,
+            "-s" | "--strip" => config.strip = true,
             "-h" | "--help" => {
                 match config.subcommand {
                     Subcommand::Build => print_cmd_help("build"),
@@ -387,12 +541,15 @@ fn print_cmd_help(cmd: &str) {
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
+    println!("  -opt, --optimized Use nightly optimizations for x2 crates (smaller binaries)");
+    println!("  -s, --strip       Strip debug symbols from binaries after building");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
     println!("  cargo xtask {cmd}             # {cmd} all");
     println!("  cargo xtask {cmd} .           # {cmd} crate in current directory");
     println!("  cargo xtask {cmd} ex-x1       # {cmd} ex-x1 only");
+    println!("  cargo xtask {cmd} ex-x2 -opt  # {cmd} ex-x2 with nightly optimizations");
 }
 
 fn print_test_help() {
@@ -412,6 +569,8 @@ fn print_test_help() {
     println!("  -f, --fail-fast   Stop on first failure");
     println!("  -d, --debug       Use debug builds (default)");
     println!("  -r, --release     Use release builds");
+    println!("  -opt, --optimized Use nightly optimizations for x2 crates (smaller binaries)");
+    println!("  -s, --strip       Strip debug symbols from binaries after building");
     println!("  -h, --help        Show this help");
     println!();
     println!("Examples:");
@@ -420,6 +579,7 @@ fn print_test_help() {
     println!("  cargo xtask test ex-x1        # test ex-x1 only");
     println!("  cargo xtask test ex-musl      # test ex-musl (musl target)");
     println!("  cargo xtask test rlibc-x2     # test rlibc-x2 + rlibc-x2-tests");
+    println!("  cargo xtask test hw-x2 -opt   # test hw-x2 with nightly optimizations");
 }
 
 fn run_rlibc_x2_tests(workspace_root: &Path, config: &Config) -> Vec<TestResult> {

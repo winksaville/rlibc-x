@@ -22,7 +22,8 @@
       "Bash(cargo r-musl:*)",
       "Bash(cargo r-gnu:*)",
       "Bash(git mv:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)"
     ]
   }
 }

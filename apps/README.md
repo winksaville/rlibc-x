@@ -4,16 +4,20 @@ Binary size comparison across different runtimes.
 
 ## Size Comparison
 
-| App | Runtime | Linking | Size | Description |
-|-----|---------|---------|-----:|-------------|
-| ex-x1 | rlibc-x1 | static | 1.4 KB | Minimal exit-only (no_std + no_main) |
-| ex-x2 | rlibc-x2 | static | 41.4 KB | Minimal exit-only (std with custom libc) |
-| ex-glibc | glibc | dynamic | 283.7 KB | Minimal exit-only |
-| ex-musl | musl | static | 372.6 KB | Minimal exit-only |
-| hw-x1 | rlibc-x1 | static | 1.5 KB | Hello world |
-| hw-x2 | rlibc-x2 | static | 45.8 KB | Hello world |
-| hw-glibc | glibc | dynamic | 286.7 KB | Hello world |
-| hw-musl | musl | static | 376.6 KB | Hello world |
+All sizes are release builds, stripped.
+
+| App | Runtime | Linking | Stable | Nightly | Description |
+|-----|---------|---------|-------:|--------:|-------------|
+| ex-x1 | rlibc-x1 | static | 1.4 KB | - | Minimal exit-only (no_std) |
+| ex-x2 | rlibc-x2 | static | 41 KB | 6 KB | Minimal exit-only (std) |
+| ex-glibc | glibc | dynamic | 284 KB | - | Minimal exit-only |
+| ex-musl | musl | static | 373 KB | - | Minimal exit-only |
+| hw-x1 | rlibc-x1 | static | 1.5 KB | - | Hello world |
+| hw-x2 | rlibc-x2 | static | 46 KB | 9 KB | Hello world |
+| hw-glibc | glibc | dynamic | 287 KB | - | Hello world |
+| hw-musl | musl | static | 377 KB | - | Hello world |
+
+**Nightly** column shows sizes with `-opt` flag (nightly + build-std + panic-immediate-abort).
 
 ## App Naming Convention
 
@@ -30,7 +34,11 @@ Binary size comparison across different runtimes.
 # Using xtask (recommended)
 cargo xtask build ex-x1        # debug build
 cargo xtask build ex-x1 -r     # release build
+cargo xtask build ex-x1 -r -s  # release + stripped
 cargo xtask run hw-x1          # build and run
+
+# Optimized x2 builds (nightly required)
+cargo xtask build ex-x2 -r -opt -s  # ~6KB instead of ~41KB
 
 # Direct cargo commands
 cargo build -p ex-x1 --release

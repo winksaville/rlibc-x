@@ -2,7 +2,9 @@
 
 A libc replacement that allows using Rust's standard library without linking to glibc.
 
-Produces statically-linked binaries (~41 KB) that use `std` but make no glibc calls.
+Produces statically-linked binaries that use `std` but make no glibc calls:
+- **~41 KB** with stable Rust
+- **~6 KB** with nightly optimizations
 
 ## How It Works
 
@@ -71,6 +73,30 @@ Tests are in `tests/` and built as separate binaries:
 ```bash
 cargo xtask test rlibc-x2    # runs rlibc-x2-tests binaries
 ```
+
+## Build Modes
+
+### Stable (default)
+
+Works with stable Rust, produces ~41 KB binaries:
+
+```bash
+cargo xtask build ex-x2 -r -s
+```
+
+### Optimized (nightly)
+
+Uses nightly features for ~6 KB binaries:
+
+```bash
+cargo xtask build ex-x2 -r -opt -s
+```
+
+The `-opt` flag enables:
+- `-Z build-std` - Rebuild std from source for better LTO
+- `-Z panic-immediate-abort` - Eliminate panic formatting code
+- Linker version script - Enable dead code elimination
+- Custom target - `x86_64-unknown-linux-rlibcx2.json`
 
 ## Example
 

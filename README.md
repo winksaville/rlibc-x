@@ -27,7 +27,9 @@ This is achieved through:
 - **`panic="abort"`** - No unwinding machinery
 - **Aggressive optimization** - `opt-level='z'`, LTO, single codegen unit, stripped symbols
 
-For comparison, rlibc-x2 (which supports `std`) produces ~41KB binaries.
+For comparison, rlibc-x2 (which supports `std`) produces:
+- **~41 KB** with stable Rust
+- **~6 KB** with nightly optimizations (`-x2` flag)
 
 See [apps/](apps/README.md#size-comparison) for the full size comparison across rlibc-x1, rlibc-x2, glibc, and musl.
 
@@ -36,7 +38,7 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison across 
 | Directory | Description |
 |-----------|-------------|
 | [rlibc-x1/](rlibc-x1/) | `#![no_std]` runtime (~1.4 KB binaries) |
-| [rlibc-x2/](rlibc-x2/) | `std`-compatible libc replacement (~41 KB binaries) |
+| [rlibc-x2/](rlibc-x2/) | `std`-compatible libc replacement (~6-41 KB binaries) |
 | [apps/](apps/) | Example and comparison apps |
 | [tools/](tools/) | Development tools (`is-libc-used`) |
 | [xtask/](xtask/) | Project automation |
@@ -46,6 +48,20 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison across 
 **rlibc-x1** (no_std): App uses `#![no_std]` and `#![no_main]`. Minimal, but requires explicit annotations.
 
 **rlibc-x2** (std): App uses normal `fn main()` with Rust std. Replaces glibc while keeping std functionality.
+
+## Build Modes for rlibc-x2
+
+| Mode | Toolchain | Binary Size | Use Case |
+|------|-----------|-------------|----------|
+| Stable | `rustc` (stable) | ~41 KB | Compatibility, CI |
+| Optimized | `rustc` (nightly) | ~6 KB | Size-critical deployments |
+
+The optimized mode uses nightly features (`-Z build-std`, `-Z panic-immediate-abort`) and linker tricks to achieve much smaller binaries. Use the `-opt` flag with xtask:
+
+```bash
+cargo xtask build ex-x2 -r -s        # stable: ~41KB
+cargo xtask build ex-x2 -r -opt -s   # nightly: ~6KB
+```
 
 ## Quick Start
 

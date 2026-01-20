@@ -48,6 +48,8 @@ cargo xtask test rlibc-x2         # also runs rlibc-x2-tests binaries
 | `-f, --fail-fast` | Stop on first failure |
 | `-d, --debug` | Use debug builds (default) |
 | `-r, --release` | Use release builds |
+| `-opt, --optimized` | Use nightly optimizations for x2 crates (smaller binaries) |
+| `-s, --strip` | Strip debug symbols after building |
 | `-h, --help` | Show help |
 
 ## Features
@@ -56,3 +58,25 @@ cargo xtask test rlibc-x2         # also runs rlibc-x2-tests binaries
 - **Musl auto-detection**: Crates with "musl" in the name use `--target x86_64-unknown-linux-musl`
 - **Current directory**: Use `.` to operate on the crate in the current directory
 - **Exit codes**: The `run` command shows exit codes for each binary
+- **Binary path**: The `build` command shows the path to the built binary
+- **Smart stripping**: With `-s`, `run` only strips if the binary was rebuilt (uses mtime)
+
+## Optimized Builds
+
+The `-opt` flag enables nightly optimizations for x2 crates (those using rlibc-x2):
+
+- **Nightly toolchain** - Required for unstable features
+- **`-Z build-std`** - Rebuilds std from source for better optimization
+- **`-Z panic-immediate-abort`** - Eliminates panic formatting code
+- **Linker version script** - Enables dead code elimination via `--gc-sections`
+- **Custom target** - `x86_64-unknown-linux-rlibcx2.json`
+
+```bash
+# Stable build (larger, ~41KB stripped)
+cargo xtask build ex-x2 -r -s
+
+# Nightly optimized build (smaller, ~6KB stripped)
+cargo xtask build ex-x2 -r -opt -s
+```
+
+Without `-opt`, x2 crates build with the stable toolchain, producing larger but more portable binaries.

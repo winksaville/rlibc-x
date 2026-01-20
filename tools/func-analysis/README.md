@@ -36,13 +36,13 @@ cargo run -p func-analysis -- -v analyze target/release/ex-x2
 Compare function sizes between two binaries using a list of function names.
 
 ```bash
-# Compare rlibc-x2 vs musl
+# Compare rlibc-x2 vs musl (rlibc-funcs.txt is at workspace root)
 cargo run -p func-analysis -- compare rlibc-funcs.txt \
     target/release/ex-x2 \
     target/x86_64-unknown-linux-musl/release/ex-musl
 ```
 
-The `rlibc-funcs.txt` file contains function names (one per line):
+The function list file (e.g., `rlibc-funcs.txt` at workspace root) contains function names (one per line):
 ```
 abort
 calloc
