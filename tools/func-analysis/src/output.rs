@@ -65,11 +65,9 @@ pub fn output_result(format: OutputFormat, result: &AnalysisResult) -> Result<()
                 if result.is_dynamic { "dynamic" } else { "static" }
             );
             println!("Functions: {}", result.total_functions);
+            println!("Functions size: {} bytes", result.total_code_size);
             println!(".text size: {} bytes", result.text_section_size);
-            println!(
-                "Total code size: {} bytes ({:.1}% coverage)",
-                result.total_code_size, coverage
-            );
+            println!("Coverage: {:.1}%", coverage);
             println!();
             println!(
                 "{:<40} {:>10} {:>12} {:>8}",

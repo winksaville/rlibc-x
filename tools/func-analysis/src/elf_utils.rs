@@ -65,6 +65,34 @@ pub fn build_plt_map(elf: &Elf) -> Result<HashMap<String, u64>> {
     Ok(plt_map)
 }
 
+/// Auto-detect the system libc path using ldd
+pub fn detect_system_libc() -> Option<std::path::PathBuf> {
+    use std::process::Command;
+
+    // Use ldd on a known binary to find libc
+    let output = Command::new("ldd").arg("/bin/sh").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        // Look for: libc.so.6 => /usr/lib/libc.so.6 (0x...)
+        if line.contains("libc.so") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 3 && parts[1] == "=>" {
+                let path = std::path::PathBuf::from(parts[2]);
+                if path.exists() {
+                    return Some(path);
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Load function sizes from a glibc shared library
 pub fn load_libc_sizes(libc_path: &Path) -> Result<HashMap<String, u64>> {
     let data = fs::read(libc_path)

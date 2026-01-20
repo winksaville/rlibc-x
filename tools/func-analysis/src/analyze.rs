@@ -109,20 +109,84 @@ pub fn analyze_dynamic(
     let mut functions: HashMap<u64, FunctionInfo> = HashMap::new();
 
     // For dynamic binaries, we care about:
-    // 1. Imported symbols (from .dynsym with UND section)
-    // 2. PLT entries that reference them
+    // 1. Local functions defined in the binary (from .symtab)
+    // 2. Imported symbols (from .dynsym with UND section)
+    // 3. PLT/GOT entries that reference imported functions
 
-    // Build a map of PLT entries to function names
+    // First, collect LOCAL functions from .symtab (app's own functions)
+    for sym in &elf.syms {
+        if sym.st_type() == goblin::elf::sym::STT_FUNC && sym.st_size > 0 {
+            let name = elf.strtab.get_at(sym.st_name).unwrap_or("???");
+
+            // Skip if filtering and doesn't match
+            if let Some(f) = filter {
+                if !name.contains(f) {
+                    continue;
+                }
+            }
+
+            functions.insert(
+                sym.st_value,
+                FunctionInfo {
+                    name: name.to_string(),
+                    size: sym.st_size,
+                    address: sym.st_value,
+                    references: 0,
+                    source: Some("local".to_string()),
+                },
+            );
+        }
+    }
+
+    // Also check .dynsym for defined (non-UND) functions with size
+    for sym in &elf.dynsyms {
+        if sym.st_type() == goblin::elf::sym::STT_FUNC
+            && sym.st_size > 0
+            && sym.st_shndx != goblin::elf::section_header::SHN_UNDEF as usize
+        {
+            // Skip if we already have this address from symtab
+            if functions.contains_key(&sym.st_value) {
+                continue;
+            }
+
+            let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
+
+            // Skip if filtering and doesn't match
+            if let Some(f) = filter {
+                if !name.contains(f) {
+                    continue;
+                }
+            }
+
+            functions.insert(
+                sym.st_value,
+                FunctionInfo {
+                    name: name.to_string(),
+                    size: sym.st_size,
+                    address: sym.st_value,
+                    references: 0,
+                    source: Some("local".to_string()),
+                },
+            );
+        }
+    }
+
+    // Build a map of PLT/GOT entries to function names for imported functions
     let plt_map = elf_utils::build_plt_map(elf)?;
 
-    // Get sizes from libc if path provided
+    // Get sizes from libc - use provided path or auto-detect
     let libc_sizes = if let Some(path) = libc_path {
         elf_utils::load_libc_sizes(path)?
+    } else if let Some(detected) = elf_utils::detect_system_libc() {
+        if verbose {
+            eprintln!("Auto-detected libc: {:?}", detected);
+        }
+        elf_utils::load_libc_sizes(&detected).unwrap_or_default()
     } else {
         HashMap::new()
     };
 
-    // Collect imported libc functions
+    // Collect IMPORTED libc functions (UND symbols)
     for sym in &elf.dynsyms {
         if sym.st_type() == goblin::elf::sym::STT_FUNC {
             let name = elf.dynstrtab.get_at(sym.st_name).unwrap_or("???");
@@ -135,7 +199,7 @@ pub fn analyze_dynamic(
                     }
                 }
 
-                // Find PLT address for this symbol
+                // Find PLT/GOT address for this symbol
                 let plt_addr = plt_map.get(name).copied();
 
                 let size = libc_sizes.get(name).copied().unwrap_or(0);

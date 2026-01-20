@@ -123,3 +123,61 @@ cargo xtask build hw-glibc -r -opt -s  # hello world variants too
 ```
 
 The `-x1` crates are already `no_std`, so `-opt` has no effect on them.
+
+## 20260120 - Preserving Symbols for Analysis
+
+### The Problem
+
+When using `-Z build-std`, the `.symtab` section was being stripped even with `strip = false` in Cargo.toml. This made `func-analysis` unable to show app function sizes for optimized builds.
+
+### The Solution
+
+Use the explicit string form `strip = "none"` in Cargo.toml:
+
+```toml
+[profile.release]
+strip = "none"    # Preserves .symtab for analysis
+```
+
+This ensures symbols survive the build-std + LTO pipeline.
+
+### Workflow
+
+Two build modes for different purposes:
+
+```bash
+# For analysis - preserves symbols
+cargo xtask build ex-musl -r -opt
+func-analysis analyze target/x86_64-unknown-linux-musl/release/ex-musl
+
+# For production - strips symbols, smallest size
+cargo xtask build ex-musl -r -opt -s
+```
+
+### func-analysis Output
+
+With symbols preserved, `func-analysis` shows both app and library functions:
+
+**Static binaries (musl, x2):** Shows local Rust functions + embedded libc functions
+```
+Functions: 73
+Functions size: 9215 bytes
+.text size: 9357 bytes
+Coverage: 98.5%
+```
+
+**Dynamic binaries (glibc):** Shows local Rust functions + imported libc functions (sizes from system libc)
+```
+Functions: 38
+Functions size: 7284 bytes
+.text size: 2470 bytes
+Coverage: 294.9%   # >100% because libc sizes are external
+```
+
+### Why Coverage Can Exceed 100%
+
+For dynamic binaries, "Functions size" sums both:
+- Local function sizes (from the binary's `.symtab`)
+- Imported libc function sizes (from system's `libc.so.6`)
+
+But `.text size` only measures local code, so coverage exceeds 100% when libc function sizes are included.
