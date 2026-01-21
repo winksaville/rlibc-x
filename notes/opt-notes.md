@@ -233,3 +233,45 @@ For minimal apps (ex-*), the version script provides significant savings. For la
 | `cargo build --release && strip` | 886 KB |
 | `cargo xtask build -r -opt -s` | 683 KB |
 | **Reduction** | **23%** |
+
+## 20260120 - Does using -no-pie reduce of a binary
+
+### I tried adding `profile.release-no-pie`
+
+```
+[profile.release-no-pie]
+inherits = "release"
+strip = "symbols"
+link-args = ["-no-pie"]
+```
+
+The using that didn't change the size
+
+### Modified xtask/src/main.rs
+
+Talked with Claude
+[claude on no-pie](https://claude.ai/share/508cfeb9-d1bb-4592-97ad-ec468f827f93)
+
+Added `-C link-args=-no-pie` to rustflags:
+        let rustflags = format!(
+            "-C panic=immediate-abort -Z unstable-options -C link-args=-no-pie -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
+            //"-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
+            version_config.display()
+        );
+
+built twice without one with -no-pie and once without, both times using:
+```
+cargo clean ; cargo xtask build -vc -r -opt -s  func-analysis`
+```
+And copied them to `fa-r-opt-s` and `fa-r-opt-s-no-pie` see below:
+```
+wink@3900x 26-01-21T02:38:24.386Z:~/data/prgs/rust/rlibc-x (main)
+$ ls -l fa-r*
+-rwxr-xr-x 1 wink users 698656 Jan 20 18:24 fa-r-opt-s
+-rwxr-xr-x 1 wink users 688080 Jan 20 18:24 fa-r-opt-s-no-pie
+wink@3900x 26-01-21T02:38:28.232Z:~/data/prgs/rust/rlibc-x (main)
+```
+
+### Result 1.5% for this app
+
+Difference is 10,576 or 1.5% savings off 689,656
