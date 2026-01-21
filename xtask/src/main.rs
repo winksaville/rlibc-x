@@ -60,9 +60,10 @@ struct Config {
     quiet: bool,
     fail_fast: bool,
     debug: bool,
-    optimized: bool, // Use nightly + build-std + panic-immediate-abort for x2 crates
-    strip: bool,   // Strip debug symbols from binaries after building
-    crates: Vec<String>, // Empty means all crates
+    optimized: bool,      // Use nightly + build-std + panic-immediate-abort
+    strip: bool,          // Strip debug symbols from binaries after building
+    verbose_compile: bool, // Show compiler/linker command lines
+    crates: Vec<String>,  // Empty means all crates
 }
 
 struct TestResult {
@@ -201,16 +202,18 @@ fn run_cargo_on_crate(
     let is_x2 = crate_name.ends_with("-x2");
     let is_x1 = crate_name.ends_with("-x1");
 
-    // -opt works for x2, glibc, and musl crates (not x1, which is already no_std)
-    let use_optimized = config.optimized && (is_x2 || is_glibc || is_musl) && !is_x1;
+    // -opt works for any crate except x1 (which is already no_std)
+    let use_optimized = config.optimized && !is_x1;
 
     let target_info = if use_optimized {
         if is_musl {
             " (musl, optimized)"
         } else if is_glibc {
             " (glibc, optimized)"
-        } else {
+        } else if is_x2 {
             " (optimized)"
+        } else {
+            " (gnu, optimized)"
         }
     } else if is_musl {
         " (musl)"
@@ -233,72 +236,45 @@ fn run_cargo_on_crate(
         cmd.arg("--release");
     }
 
+    if config.verbose_compile {
+        cmd.arg("-v");
+    }
+
     cmd.args(["-p", crate_name]);
 
     if use_optimized {
         // All optimized builds use build-std to rebuild std with panic=immediate-abort
         cmd.args(["-Z", "build-std=std,core,panic_abort"]);
 
+        // Generate a linker "version script" to make all symbols LOCAL except _start.
+        // This allows --gc-sections to remove more unreferenced functions.
+        //
+        // The linker should have a simple flag like "--executable-hide-symbols" that
+        // automatically makes all symbols local except the entry point. Instead, we
+        // must create a "version script" file with arcane syntax.
+        let target_dir = workspace_root.join("target");
+        let _ = fs::create_dir_all(&target_dir);
+        let version_config = target_dir.join("opt-version.config");
+        if let Ok(mut f) = fs::File::create(&version_config) {
+            let _ = writeln!(f, "{{ global: _start; local: *; }};");
+        }
+
+        let rustflags = format!(
+            "-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
+            version_config.display()
+        );
+        cmd.env("RUSTFLAGS", &rustflags);
+
+        // Select target based on crate type
         if is_x2 {
-            // x2 crates: Use custom target with version script for maximum size reduction
             cmd.args(["-Z", "panic-immediate-abort"]);
-
-            // WORKAROUND: Generate a linker "version config" file to make all symbols
-            // LOCAL except _start. This allows --gc-sections to remove unreferenced
-            // functions, reducing stripped binary size of something like ex-x2:
-            //    use std::process::ExitCode;
-            //
-            //    // Force rlibc-x2 to be linked
-            //    extern crate rlibc_x2;
-            //
-            //    fn main() -> ExitCode {
-            //        ExitCode::from(42)
-            //    }
-            // From ~13KB -> ~6KB.
-            //
-            // This is frustratingly complex. When building an executable (not a shared
-            // library), there's no good reason for internal symbols to be GLOBAL/exported.
-            // The only entry point is _start - nothing external can call our internal
-            // functions at runtime.
-            //
-            // The linker should have a simple flag like "--executable-hide-symbols" that
-            // automatically makes all symbols local except the entry point. This would:
-            // 1. Enable dead code elimination via --gc-sections
-            // 2. Improve security by hiding internal implementation details
-            // 3. Reduce binary size by eliminating .dynsym bloat
-            // Instead, we must create a "version script" file with arcane syntax!
-            // Another short term solution would be to accept the configuration directly:
-            //   link-arg=-Wl,--version-script="{ global: _start; local:*; }"
-            let target_dir = workspace_root.join("target");
-            let _ = fs::create_dir_all(&target_dir);
-            let version_config = target_dir.join("rlibcx2-version.config");
-            if let Ok(mut f) = fs::File::create(&version_config) {
-                let _ = writeln!(f, "{{ global: _start; local: *; }};");
-            }
-
-            cmd.env(
-                "RUSTFLAGS",
-                format!(
-                    "-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
-                    version_config.display()
-                ),
-            );
             let target_json = workspace_root.join("x86_64-unknown-linux-rlibcx2.json");
             cmd.arg("--target");
             cmd.arg(&target_json);
         } else if is_musl {
-            // musl crates: Use standard musl target with panic=immediate-abort
-            cmd.env(
-                "RUSTFLAGS",
-                "-C panic=immediate-abort -Z unstable-options",
-            );
             cmd.args(["--target", "x86_64-unknown-linux-musl"]);
-        } else if is_glibc {
-            // glibc crates: Use standard gnu target with panic=immediate-abort
-            cmd.env(
-                "RUSTFLAGS",
-                "-C panic=immediate-abort -Z unstable-options",
-            );
+        } else {
+            // glibc and other crates use gnu target
             cmd.args(["--target", "x86_64-unknown-linux-gnu"]);
         }
     } else if is_musl {
@@ -396,16 +372,16 @@ fn run_cargo_on_crate(
 fn get_binary_path(crate_name: &str, workspace_root: &Path, config: &Config) -> std::path::PathBuf {
     let profile = if config.debug { "debug" } else { "release" };
     let is_musl = crate_name.contains("musl");
-    let is_glibc = crate_name.contains("glibc");
     let is_x2 = crate_name.ends_with("-x2");
     let is_x1 = crate_name.ends_with("-x1");
-    let use_optimized = config.optimized && (is_x2 || is_glibc || is_musl) && !is_x1;
+    let use_optimized = config.optimized && !is_x1;
 
     let target_subdir = if is_musl {
         "x86_64-unknown-linux-musl"
     } else if use_optimized && is_x2 {
         "x86_64-unknown-linux-rlibcx2"
-    } else if use_optimized && is_glibc {
+    } else if use_optimized {
+        // glibc, tools, and other optimized crates use gnu target
         "x86_64-unknown-linux-gnu"
     } else {
         ""
@@ -475,6 +451,7 @@ fn parse_args() -> Config {
         debug: true, // Default to debug for faster iteration; use -r for release
         optimized: false,
         strip: false,
+        verbose_compile: false,
         crates: Vec::new(),
     };
 
@@ -487,6 +464,7 @@ fn parse_args() -> Config {
             "-d" | "--debug" => config.debug = true,
             "-opt" | "--optimized" => config.optimized = true,
             "-s" | "--strip" => config.strip = true,
+            "-vc" | "--verbose-compile" => config.verbose_compile = true,
             "-h" | "--help" => {
                 match config.subcommand {
                     Subcommand::Build => print_cmd_help("build"),

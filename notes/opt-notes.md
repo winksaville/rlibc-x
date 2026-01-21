@@ -181,3 +181,55 @@ For dynamic binaries, "Functions size" sums both:
 - Imported libc function sizes (from system's `libc.so.6`)
 
 But `.text size` only measures local code, so coverage exceeds 100% when libc function sizes are included.
+
+## 20260120 - Version Scripts and Dead Code Elimination
+
+### The Problem
+
+When building an executable (not a shared library), there's no good reason for internal symbols to be GLOBAL/exported. The only entry point is `_start` - nothing external can call internal functions at runtime. However, the linker keeps GLOBAL symbols by default, preventing `--gc-sections` from removing unreferenced code.
+
+### The Solution: Version Scripts
+
+We use a linker "version script" to make all symbols LOCAL except `_start`:
+
+```
+{ global: _start; local: *; };
+```
+
+Combined with `--gc-sections`, this allows the linker to remove unreferenced functions. For ex-x2, this reduced the stripped binary from ~13KB to ~6KB.
+
+### Why This Is Frustrating
+
+The linker should have a simple flag like `--executable-hide-symbols` that automatically makes all symbols local except the entry point. This would:
+
+1. Enable dead code elimination via `--gc-sections`
+2. Improve security by hiding internal implementation details
+3. Reduce binary size by eliminating `.dynsym` bloat
+
+Instead, we must create a version script file with arcane syntax. A short-term improvement would be accepting the configuration directly:
+
+```bash
+-Wl,--version-script="{ global: _start; local: *; }"
+```
+
+But this doesn't work - the linker requires an actual file.
+
+### Current Implementation
+
+The `-opt` flag in xtask generates `target/opt-version.config` and passes it to the linker:
+
+```bash
+RUSTFLAGS="-C panic=immediate-abort -Z unstable-options \
+  -C link-arg=-Wl,--gc-sections \
+  -C link-arg=-Wl,--version-script=target/opt-version.config"
+```
+
+### Impact on Real Applications
+
+For minimal apps (ex-*), the version script provides significant savings. For larger applications like func-analysis, LTO already handles most dead code elimination, so the version script has minimal additional impact:
+
+| Build | Stripped Size |
+|-------|---:|
+| `cargo build --release && strip` | 886 KB |
+| `cargo xtask build -r -opt -s` | 683 KB |
+| **Reduction** | **23%** |

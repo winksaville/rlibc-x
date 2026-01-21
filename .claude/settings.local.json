@@ -23,7 +23,8 @@
       "Bash(cargo r-gnu:*)",
       "Bash(git mv:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(__NEW_LINE_f48168cdd55bd92f__ echo \"\")"
     ]
   }
 }
