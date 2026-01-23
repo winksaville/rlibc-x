@@ -1,10 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-mod cli;
-mod types;
-
-use cli::{Cli, Commands, SpecCommands};
+use xt::cli::{Cli, Commands, SpecCommands};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

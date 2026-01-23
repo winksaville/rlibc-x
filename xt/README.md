@@ -34,28 +34,30 @@ cargo test -p xt -- --nocapture  # see println output
 cargo test -p xt spec_default    # run specific test
 ```
 
-Tests live alongside code in each module using `#[cfg(test)]` blocks.
+- Unit tests live alongside code in each module using `#[cfg(test)]` blocks
+- Integration tests in `tests/` use fixtures from `tests/data/`
 
 ## Development Plan
 
 ### Next Steps
 
-1. Create `types.rs` - Spec parameter enums (Profile, OptLevel, CargoParam, RustcParam, LinkerParam)
-2. Create `tspec.rs` - Loading and resolving specs from TOML
+1. ~~Create `types.rs` - Spec parameter enums~~ Done
+2. ~~Create `tspec.rs` - Loading and resolving specs from TOML~~ Done
 3. Create `tspec/rlibc-x1.toml` - Minimal global spec for rlibc-x1
 4. Implement build command - Get `cargo xt build rlibc-x1 -t rlibc-x1` working
 
-### File Structure (planned)
+### File Structure
 
 ```
-xt/src/
-  main.rs           # Entry point, dispatch
-  cli.rs            # Clap CLI definitions
-  types.rs          # Spec parameter types
-  tspec.rs          # Spec loading/resolution
-  commands/
-    build.rs
-    run.rs
-    compat.rs
-    spec.rs
+xt/
+  src/
+    lib.rs          # Library root, exposes modules
+    main.rs         # Entry point, dispatch
+    cli.rs          # Clap CLI definitions
+    types.rs        # Spec parameter types
+    tspec.rs        # Spec loading/resolution
+    commands/       # (planned)
+  tests/
+    data/           # Test fixtures (TOML specs)
+    tspec_test.rs   # Integration tests
 ```
