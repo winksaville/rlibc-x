@@ -314,19 +314,6 @@
       "isSidechain": false
     },
     {
-      "sessionId": "fd4d3c2c-b202-4849-b218-fdda6d613598",
-      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/fd4d3c2c-b202-4849-b218-fdda6d613598.jsonl",
-      "fileMtime": 1769192996034,
-      "firstPrompt": "I want to explore generalizing xtask, so I can compare different target triples and compile & linker commands across multiple apps, your thoughts?",
-      "summary": "xt design & rlibc reorganization",
-      "messageCount": 57,
-      "created": "2026-01-21T17:54:15.451Z",
-      "modified": "2026-01-23T18:29:25.876Z",
-      "gitBranch": "main",
-      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
-      "isSidechain": false
-    },
-    {
       "sessionId": "745b32f8-ca9f-490f-b167-f865418c73dd",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/745b32f8-ca9f-490f-b167-f865418c73dd.jsonl",
       "fileMtime": 1769192996796,
@@ -392,10 +379,24 @@
       "isSidechain": false
     },
     {
+      "sessionId": "fd4d3c2c-b202-4849-b218-fdda6d613598",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/fd4d3c2c-b202-4849-b218-fdda6d613598.jsonl",
+      "fileMtime": 1769209842281,
+      "firstPrompt": "[Request interrupted by user for tool use]",
+      "summary": "xt CLI skeleton + types design, on branch",
+      "messageCount": 32,
+      "created": "2026-01-23T22:24:44.356Z",
+      "modified": "2026-01-23T22:48:25.729Z",
+      "gitBranch": "xt-dev",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
       "sessionId": "8e6a7b42-8cea-438d-bf44-8e7febfe00db",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/8e6a7b42-8cea-438d-bf44-8e7febfe00db.jsonl",
-      "fileMtime": 1769018001450,
+      "fileMtime": 1769209843172,
       "firstPrompt": ".",
+      "summary": "Implement init/fini/rtld_fini callbacks in __libc_start_main",
       "messageCount": 26,
       "created": "2026-01-08T01:58:05.287Z",
       "modified": "2026-01-08T03:28:14.790Z",
@@ -406,8 +407,9 @@
     {
       "sessionId": "39bfb6c7-6a1d-4a87-aea7-23ed53c2dd1d",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/39bfb6c7-6a1d-4a87-aea7-23ed53c2dd1d.jsonl",
-      "fileMtime": 1769018001419,
+      "fileMtime": 1769209844015,
       "firstPrompt": ".",
+      "summary": "Added std_env tests to verify script",
       "messageCount": 11,
       "created": "2026-01-08T06:33:48.538Z",
       "modified": "2026-01-08T06:44:34.776Z",

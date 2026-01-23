@@ -26,6 +26,16 @@ Key concepts:
 - **Local tspec/config.toml** - Per-crate compat/incompat lists and local modifications
 - **Target dir** - `target/{spec-name}-{hash}/` for isolation and reproducibility
 
+## Testing
+
+```bash
+cargo test -p xt              # run all xt tests
+cargo test -p xt -- --nocapture  # see println output
+cargo test -p xt spec_default    # run specific test
+```
+
+Tests live alongside code in each module using `#[cfg(test)]` blocks.
+
 ## Development Plan
 
 ### Next Steps
