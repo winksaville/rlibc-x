@@ -66,15 +66,13 @@ mod tests {
             total_functions: 2,
             total_code_size: 192,
             text_section_size: 1024,
-            functions: vec![
-                FunctionInfo {
-                    name: "main".to_string(),
-                    size: 100,
-                    address: 0x401000,
-                    references: 1,
-                    source: None,
-                },
-            ],
+            functions: vec![FunctionInfo {
+                name: "main".to_string(),
+                size: 100,
+                address: 0x401000,
+                references: 1,
+                source: None,
+            }],
         };
 
         let json = serde_json::to_string(&result).unwrap();

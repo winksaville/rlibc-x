@@ -62,7 +62,11 @@ pub fn output_result(format: OutputFormat, result: &AnalysisResult) -> Result<()
             println!("Binary: {}", result.binary_path);
             println!(
                 "Type: {}",
-                if result.is_dynamic { "dynamic" } else { "static" }
+                if result.is_dynamic {
+                    "dynamic"
+                } else {
+                    "static"
+                }
             );
             println!("Functions: {}", result.total_functions);
             println!("Functions size: {} bytes", result.total_code_size);

@@ -60,10 +60,10 @@ struct Config {
     quiet: bool,
     fail_fast: bool,
     debug: bool,
-    optimized: bool,      // Use nightly + build-std + panic-immediate-abort
-    strip: bool,          // Strip debug symbols from binaries after building
+    optimized: bool,       // Use nightly + build-std + panic-immediate-abort
+    strip: bool,           // Strip debug symbols from binaries after building
     verbose_compile: bool, // Show compiler/linker command lines
-    crates: Vec<String>,  // Empty means all crates
+    crates: Vec<String>,   // Empty means all crates
 }
 
 struct TestResult {
@@ -407,10 +407,10 @@ fn strip_binary(crate_name: &str, workspace_root: &Path, config: &Config) {
         let status = Command::new("strip").arg(&binary_path).status();
         match status {
             Ok(s) if s.success() => {
-                if !config.quiet {
-                    if let Ok(meta) = fs::metadata(&binary_path) {
-                        println!("  stripped: {} bytes", meta.len());
-                    }
+                if !config.quiet
+                    && let Ok(meta) = fs::metadata(&binary_path)
+                {
+                    println!("  stripped: {} bytes", meta.len());
                 }
             }
             _ => {

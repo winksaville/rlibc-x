@@ -31,7 +31,7 @@ The allocator is a simple bump allocator using `brk()`. Memory is never freed.
 1. Add dependency:
    ```toml
    [dependencies]
-   rlibc-x1 = { path = "../rlibc-x1" }
+   rlibc-x1 = { path = "../../libs/rlibc-x1" }
    ```
 
 2. Configure your app:
@@ -55,4 +55,4 @@ The allocator is a simple bump allocator using `brk()`. Memory is never freed.
 
 ## Example
 
-See [apps/ex-x1](../apps/ex-x1) and [apps/hw-x1](../apps/hw-x1) for complete examples.
+See [apps/ex-x1](../../apps/ex-x1) and [apps/hw-x1](../../apps/hw-x1) for complete examples.

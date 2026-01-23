@@ -96,6 +96,7 @@ pub fn analyze_static(
 }
 
 /// Analyze a dynamically linked binary
+#[allow(clippy::too_many_arguments)]
 pub fn analyze_dynamic(
     binary_path: &Path,
     elf: &Elf,

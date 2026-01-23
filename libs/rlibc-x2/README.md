@@ -33,7 +33,7 @@ _start (asm) → __libc_start_main() → Rust's main → user's main()
 1. Add dependency:
    ```toml
    [dependencies]
-   rlibc-x2 = { path = "../rlibc-x2" }
+   rlibc-x2 = { path = "../../libs/rlibc-x2" }
    ```
 
 2. Force linking in your app:
@@ -100,4 +100,4 @@ The `-opt` flag enables:
 
 ## Example
 
-See [apps/ex-x2](../apps/ex-x2) and [apps/hw-x2](../apps/hw-x2) for complete examples.
+See [apps/ex-x2](../../apps/ex-x2) and [apps/hw-x2](../../apps/hw-x2) for complete examples.

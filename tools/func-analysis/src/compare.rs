@@ -15,7 +15,7 @@ pub fn run_compare(funcs_file: &Path, binary1: &Path, binary2: &Path) -> Result<
     let reader = BufReader::new(file);
     let func_names: Vec<String> = reader
         .lines()
-        .filter_map(|line| line.ok())
+        .map_while(Result::ok)
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty() && !s.starts_with('#'))
         .collect();
@@ -25,14 +25,8 @@ pub fn run_compare(funcs_file: &Path, binary1: &Path, binary2: &Path) -> Result<
     let sizes2 = get_function_sizes(binary2)?;
 
     // Get binary names for header
-    let name1 = binary1
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy();
-    let name2 = binary2
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy();
+    let name1 = binary1.file_name().unwrap_or_default().to_string_lossy();
+    let name2 = binary2.file_name().unwrap_or_default().to_string_lossy();
 
     // Print comparison table
     println!(
@@ -93,8 +87,8 @@ pub fn get_function_sizes(binary: &Path) -> Result<HashMap<String, u64>> {
     let binary_data =
         fs::read(binary).with_context(|| format!("Failed to read binary: {:?}", binary))?;
 
-    let elf = Elf::parse(&binary_data)
-        .with_context(|| format!("Failed to parse ELF: {:?}", binary))?;
+    let elf =
+        Elf::parse(&binary_data).with_context(|| format!("Failed to parse ELF: {:?}", binary))?;
 
     let mut sizes = HashMap::new();
 

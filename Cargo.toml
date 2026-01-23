@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "rlibc-x1",
-    "rlibc-x2",
-    "rlibc-x2/tests",
+    "libs/rlibc-x1",
+    "libs/rlibc-x2",
+    "libs/rlibc-x2/tests",
     "apps/ex-x1",
     "apps/ex-x2",
     "apps/ex-glibc",

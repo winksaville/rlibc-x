@@ -35,8 +35,7 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 
 | Directory | Description |
 |-----------|-------------|
-| [rlibc-x1/](rlibc-x1/) | `#![no_std]` runtime (~1.4 KB binaries) |
-| [rlibc-x2/](rlibc-x2/) | `std`-compatible libc replacement (~6-41 KB binaries) |
+| [libs/](libs/) | Runtime libraries ([rlibc-x1](libs/rlibc-x1/), [rlibc-x2](libs/rlibc-x2/)) |
 | [apps/](apps/) | Example and comparison apps |
 | [tools/](tools/) | Development tools (`is-libc-used`, `func-analysis`) |
 | [notes/](notes/) | Technical notes and findings |

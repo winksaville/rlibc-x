@@ -5,7 +5,7 @@ edition = "2024"
 description = "Minimal exit-only binary using rlibc-x1 (no_std + no_main)"
 
 [dependencies]
-rlibc-x1 = { path = "../../rlibc-x1" }
+rlibc-x1 = { path = "../../libs/rlibc-x1" }
 
 [dev-dependencies]
 is-libc-used = { path = "../../tools/is-libc-used" }

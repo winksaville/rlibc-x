@@ -78,7 +78,11 @@ fn main() -> Result<()> {
 
     // Handle subcommands
     let binary: PathBuf = match &args.command {
-        Command::Compare { funcs_file, binary1, binary2 } => {
+        Command::Compare {
+            funcs_file,
+            binary1,
+            binary2,
+        } => {
             return compare::run_compare(funcs_file, binary1, binary2);
         }
         Command::Analyze { binary } => binary.clone(),
@@ -86,11 +90,10 @@ fn main() -> Result<()> {
 
     // Analyze mode
     let binary = &binary;
-    let binary_data = fs::read(binary)
-        .with_context(|| format!("Failed to read binary: {:?}", binary))?;
+    let binary_data =
+        fs::read(binary).with_context(|| format!("Failed to read binary: {:?}", binary))?;
 
-    let elf = Elf::parse(&binary_data)
-        .with_context(|| "Failed to parse ELF binary")?;
+    let elf = Elf::parse(&binary_data).with_context(|| "Failed to parse ELF binary")?;
 
     let is_dynamic = is_libc_used_from_bytes(&binary_data)
         .map(|r| r.uses_libc)

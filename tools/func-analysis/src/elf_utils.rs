@@ -95,8 +95,8 @@ pub fn detect_system_libc() -> Option<std::path::PathBuf> {
 
 /// Load function sizes from a glibc shared library
 pub fn load_libc_sizes(libc_path: &Path) -> Result<HashMap<String, u64>> {
-    let data = fs::read(libc_path)
-        .with_context(|| format!("Failed to read libc: {:?}", libc_path))?;
+    let data =
+        fs::read(libc_path).with_context(|| format!("Failed to read libc: {:?}", libc_path))?;
 
     let elf = Elf::parse(&data)?;
     let mut sizes = HashMap::new();
@@ -144,6 +144,9 @@ mod tests {
         let plt_map = build_plt_map(&elf).expect("build_plt_map should succeed");
         // Static binary (ex-x2) should have empty or minimal PLT
         // This is more of a smoke test
-        assert!(plt_map.len() < 100, "Static binary shouldn't have many PLT entries");
+        assert!(
+            plt_map.len() < 100,
+            "Static binary shouldn't have many PLT entries"
+        );
     }
 }
