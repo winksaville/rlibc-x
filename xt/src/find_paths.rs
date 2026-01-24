@@ -31,30 +31,28 @@ pub fn find_crate_dir(workspace: &Path, crate_name: &str) -> Result<PathBuf> {
 }
 
 /// Find the tspec for a crate - either explicit path or default tspec.toml
-pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<PathBuf> {
+/// Returns None if no tspec exists (plain cargo build will be used)
+pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<PathBuf>> {
     match explicit {
         Some(path) => {
             // Try as absolute or relative path
             let p = PathBuf::from(path);
             if p.exists() {
-                return Ok(p);
+                return Ok(Some(p));
             }
             // Try relative to crate directory (e.g., -t tspec-expr.toml)
             let in_crate = crate_dir.join(path);
             if in_crate.exists() {
-                return Ok(in_crate);
+                return Ok(Some(in_crate));
             }
             bail!("tspec not found: {}", path);
         }
         None => {
             let default = crate_dir.join("tspec.toml");
             if default.exists() {
-                Ok(default)
+                Ok(Some(default))
             } else {
-                bail!(
-                    "no tspec.toml found in {} (use -t to specify)",
-                    crate_dir.display()
-                );
+                Ok(None) // No tspec = plain cargo build
             }
         }
     }

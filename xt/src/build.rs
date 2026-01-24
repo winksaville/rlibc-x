@@ -11,16 +11,22 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
-    let spec = load_spec(&tspec_path)?;
-    println!("Building {} with spec {}", crate_name, tspec_path.display());
-
     let mut cmd = Command::new("cargo");
     cmd.arg("build");
     cmd.arg("-p").arg(crate_name);
     cmd.current_dir(&workspace);
 
-    // Apply spec parameters
-    apply_spec_to_command(&mut cmd, &spec, release)?;
+    // Apply spec if present, otherwise plain cargo build
+    if let Some(path) = &tspec_path {
+        let spec = load_spec(path)?;
+        println!("Building {} with spec {}", crate_name, path.display());
+        apply_spec_to_command(&mut cmd, &spec, release)?;
+    } else {
+        println!("Building {} (no tspec)", crate_name);
+        if release {
+            cmd.arg("--release");
+        }
+    }
 
     let status = cmd.status().context("failed to run cargo")?;
     if !status.success() {

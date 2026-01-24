@@ -27,12 +27,9 @@ Key concepts:
 
 ### Quirks and Notes
 
-**Duplicate tspec.toml files**: Libraries and apps using them often have identical
-tspec.toml content. This is intentional:
-- `libs/rlibc-x1/tspec.toml` enables `cargo xt build rlibc-x1` for library development
-- `apps/ex-x1-xt/tspec.toml` enables `cargo xt build ex-x1-xt` for app builds
-- When building an app, RUSTFLAGS apply to both the app and its dependencies,
-  so they need compatible flags
+**tspec.toml is optional**: Crates without a tspec.toml get a plain `cargo build`.
+This is useful for libraries that don't need special linker flags. Apps that need
+flags (like `-static`, `-nostartfiles`) should have their own tspec.toml.
 
 **No build.rs for xt apps**: Apps built with xt (like `ex-x1-xt`) should NOT have
 a `build.rs` that sets linker flags. RUSTFLAGS applies to all compilations including

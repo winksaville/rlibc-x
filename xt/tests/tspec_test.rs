@@ -36,16 +36,16 @@ fn loaded_spec_hash_is_stable() {
     assert_eq!(hash1, hash2);
 }
 
-fn lib_tspec(lib_name: &str) -> PathBuf {
+fn app_tspec(app_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../libs")
-        .join(lib_name)
+        .join("../apps")
+        .join(app_name)
         .join("tspec.toml")
 }
 
 #[test]
-fn load_rlibc_x1_spec() {
-    let spec = load_spec(&lib_tspec("rlibc-x1")).unwrap();
+fn load_ex_x1_xt_spec() {
+    let spec = load_spec(&app_tspec("ex-x1-xt")).unwrap();
 
     assert!(spec.cargo.is_empty());
     assert!(spec.rustc.is_empty());

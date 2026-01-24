@@ -12,14 +12,17 @@ pub fn run_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
-    let spec = load_spec(&tspec_path)?;
-
     // Determine profile for binary path
-    let is_release = release
-        || spec
-            .cargo
-            .iter()
-            .any(|p| matches!(p, CargoParam::Profile(Profile::Release)));
+    let is_release = if let Some(path) = &tspec_path {
+        let spec = load_spec(path)?;
+        release
+            || spec
+                .cargo
+                .iter()
+                .any(|p| matches!(p, CargoParam::Profile(Profile::Release)))
+    } else {
+        release
+    };
 
     // Build first
     crate::build::build_crate(crate_name, tspec, release)?;

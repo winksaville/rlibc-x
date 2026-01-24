@@ -1,5 +1,0 @@
-# rlibc-x1 spec - minimal no_std runtime
-# Apps must use #![no_std] and #![no_main]
-
-[[linker]]
-args = ["-static", "-nostartfiles"]
