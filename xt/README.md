@@ -55,7 +55,7 @@ cargo test -p xt spec_default    # run specific test
 
 1. ~~Create `types.rs` - Spec parameter enums~~ Done
 2. ~~Create `tspec.rs` - Loading and resolving specs from TOML~~ Done
-3. Create `tspec/rlibc-x1.toml` - Minimal global spec for rlibc-x1
+3. ~~Create `tspec/rlibc-x1.toml` - Minimal global spec for rlibc-x1~~ Done
 4. Implement build command - Get `cargo xt build rlibc-x1 -t rlibc-x1` working
 
 ### File Structure
