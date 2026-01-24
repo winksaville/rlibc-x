@@ -3,6 +3,7 @@ use clap::Parser;
 
 use xt::build::build_crate;
 use xt::cli::{Cli, Commands, SpecCommands};
+use xt::run::run_crate;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -20,8 +21,7 @@ fn main() -> Result<()> {
             tspec,
             release,
         } => {
-            // TODO: build then run
-            println!("run: crate={crate_name} tspec={tspec:?} release={release}");
+            run_crate(&crate_name, tspec.as_deref(), release)?;
         }
         Commands::Compat { crate_name, spec } => {
             match spec {

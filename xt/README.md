@@ -9,6 +9,7 @@ A tspec-based build system for comparing target triples and compile/linker comma
 ```bash
 cargo xt build ex-x1-xt                     # Build with crate's tspec.toml
 cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with experimental spec
+cargo xt run ex-x1-xt                       # Build and run
 cargo xt build rlibc-x1                     # Build library for development
 ```
 
@@ -80,7 +81,9 @@ xt/
     cli.rs          # Clap CLI definitions
     types.rs        # Spec parameter types
     tspec.rs        # Spec loading/saving/hashing
-    commands/       # (planned)
+    find_paths.rs   # Workspace/crate/tspec discovery
+    build.rs        # Build command implementation
+    run.rs          # Run command implementation
   tests/
     data/           # Test fixtures (TOML specs)
     tspec_test.rs   # Integration tests
