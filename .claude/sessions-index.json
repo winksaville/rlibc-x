@@ -416,6 +416,19 @@
       "gitBranch": "add-tests",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "b4c6dc74-4eba-4c50-87fd-997774cd0067",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/b4c6dc74-4eba-4c50-87fd-997774cd0067.jsonl",
+      "fileMtime": 1769277459100,
+      "firstPrompt": "check state of repo",
+      "summary": "xt CLI: types, specs, lib structure",
+      "messageCount": 51,
+      "created": "2026-01-23T23:10:41.138Z",
+      "modified": "2026-01-23T23:44:28.655Z",
+      "gitBranch": "xt-dev",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"

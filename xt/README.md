@@ -26,6 +26,18 @@ Key concepts:
 - **Local tspec/config.toml** - Per-crate compat/incompat lists and local modifications
 - **Target dir** - `target/{spec-name}-{hash}/` for isolation and reproducibility
 
+### Spec Saving
+
+Two save formats support different workflows:
+
+- **`save_spec(spec, path)`** - Canonical specs with simple names (`rlibc-x1.toml`)
+- **`save_spec_snapshot(spec, name, dir)`** - Iteration snapshots as `{name}-{seq:03}-{hash}.toml`
+
+Snapshots allow quick experimentation with automatic breadcrumbs. Instead of
+disciplined git commits to preserve each iteration, snapshots accumulate as
+`rlibc-x1-001-abc123de.toml`, `rlibc-x1-002-def456gh.toml`, etc. The sequence
+number enables chronological sorting; the hash identifies content.
+
 ## Testing
 
 ```bash
@@ -55,7 +67,7 @@ xt/
     main.rs         # Entry point, dispatch
     cli.rs          # Clap CLI definitions
     types.rs        # Spec parameter types
-    tspec.rs        # Spec loading/resolution
+    tspec.rs        # Spec loading/saving/hashing
     commands/       # (planned)
   tests/
     data/           # Test fixtures (TOML specs)
