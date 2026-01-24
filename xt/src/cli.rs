@@ -14,9 +14,9 @@ pub enum Commands {
     Build {
         /// Crate to build
         crate_name: String,
-        /// Translation spec to use
+        /// Translation spec to use (defaults to crate's tspec.toml)
         #[arg(short = 't', long = "tspec")]
-        tspec: String,
+        tspec: Option<String>,
         /// Release build
         #[arg(short, long)]
         release: bool,
@@ -25,9 +25,9 @@ pub enum Commands {
     Run {
         /// Crate to run
         crate_name: String,
-        /// Translation spec to use
+        /// Translation spec to use (defaults to crate's tspec.toml)
         #[arg(short = 't', long = "tspec")]
-        tspec: String,
+        tspec: Option<String>,
         /// Release build
         #[arg(short, long)]
         release: bool,

@@ -7,24 +7,36 @@ A tspec-based build system for comparing target triples and compile/linker comma
 ## Usage
 
 ```bash
-cargo xt build rlibc-x1 -t rlibc-x1     # Build with spec
-cargo xt build rlibc-x1 -t all          # All compatible specs
-cargo xt run hw-x1 -t rlibc-x1          # Build and run
-cargo xt compat hw-x1                   # Show compat state
-cargo xt compat hw-x1 rlibc-x1          # Add to compat list
-cargo xt incompat hw-x1 glibc-dynamic   # Add to incompat list
-cargo xt spec list                      # List global specs
-cargo xt spec show rlibc-x1             # Show spec details
+cargo xt build ex-x1-xt                     # Build with crate's tspec.toml
+cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with experimental spec
+cargo xt build rlibc-x1                     # Build library for development
 ```
+
+The `-t` flag is for experimentation - pointing to alternative spec files.
+Future: use `save_spec_snapshot` to create `tspec-001-abc123de.toml` variants.
 
 ## Design
 
 See [notes/xt-design.md](../notes/xt-design.md) for full design documentation.
 
 Key concepts:
-- **Library specs** - Each library defines its build requirements in `libs/<lib>/tspec.toml`
-- **App config** - Per-app compat/incompat lists (planned: `apps/<app>/tspec.toml`)
+- **Library specs** - Libraries define build requirements in `libs/<lib>/tspec.toml`
+- **App specs** - Apps define their own in `apps/<app>/tspec.toml`
 - **Target dir** - `target/{spec-name}-{hash}/` for isolation and reproducibility
+
+### Quirks and Notes
+
+**Duplicate tspec.toml files**: Libraries and apps using them often have identical
+tspec.toml content. This is intentional:
+- `libs/rlibc-x1/tspec.toml` enables `cargo xt build rlibc-x1` for library development
+- `apps/ex-x1-xt/tspec.toml` enables `cargo xt build ex-x1-xt` for app builds
+- When building an app, RUSTFLAGS apply to both the app and its dependencies,
+  so they need compatible flags
+
+**No build.rs for xt apps**: Apps built with xt (like `ex-x1-xt`) should NOT have
+a `build.rs` that sets linker flags. RUSTFLAGS applies to all compilations including
+build scripts, causing crashes if `-nostartfiles` is passed to a build script.
+Use tspec.toml instead.
 
 ### Spec Saving
 
@@ -56,7 +68,7 @@ cargo test -p xt spec_default    # run specific test
 1. ~~Create `types.rs` - Spec parameter enums~~ Done
 2. ~~Create `tspec.rs` - Loading and resolving specs from TOML~~ Done
 3. ~~Create `libs/rlibc-x1/tspec.toml` - Spec for rlibc-x1~~ Done
-4. Implement build command - Get `cargo xt build rlibc-x1 -t rlibc-x1` working
+4. ~~Implement build command~~ Done - `cargo xt build ex-x1-xt -t rlibc-x1`
 
 ### File Structure
 

@@ -1,0 +1,12 @@
+[package]
+name = "ex-x1-xt"
+version = "0.1.0"
+edition = "2024"
+description = "Minimal exit-only binary for xt testing (no build.rs, uses tspec)"
+
+[dependencies]
+rlibc-x1 = { path = "../../libs/rlibc-x1" }
+
+[[bin]]
+name = "ex-x1-xt"
+test = false
