@@ -36,22 +36,22 @@ fn loaded_spec_hash_is_stable() {
     assert_eq!(hash1, hash2);
 }
 
-fn global_tspec(name: &str) -> PathBuf {
+fn lib_tspec(lib_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../tspec")
-        .join(name)
+        .join("../libs")
+        .join(lib_name)
+        .join("tspec.toml")
 }
 
 #[test]
 fn load_rlibc_x1_spec() {
-    let spec = load_spec(&global_tspec("rlibc-x1.toml")).unwrap();
+    let spec = load_spec(&lib_tspec("rlibc-x1")).unwrap();
 
     assert!(spec.cargo.is_empty());
     assert!(spec.rustc.is_empty());
-    assert_eq!(spec.linker.len(), 2);
-    assert_eq!(spec.linker[0], LinkerParam::Arg("-static".to_string()));
+    assert_eq!(spec.linker.len(), 1);
     assert_eq!(
-        spec.linker[1],
-        LinkerParam::Arg("-nostartfiles".to_string())
+        spec.linker[0],
+        LinkerParam::Args(vec!["-static".to_string(), "-nostartfiles".to_string()])
     );
 }

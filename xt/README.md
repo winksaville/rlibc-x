@@ -22,8 +22,8 @@ cargo xt spec show rlibc-x1             # Show spec details
 See [notes/xt-design.md](../notes/xt-design.md) for full design documentation.
 
 Key concepts:
-- **Global tspec/** - Translation specs defining compilation strategies
-- **Local tspec/config.toml** - Per-crate compat/incompat lists and local modifications
+- **Library specs** - Each library defines its build requirements in `libs/<lib>/tspec.toml`
+- **App config** - Per-app compat/incompat lists (planned: `apps/<app>/tspec.toml`)
 - **Target dir** - `target/{spec-name}-{hash}/` for isolation and reproducibility
 
 ### Spec Saving
@@ -55,7 +55,7 @@ cargo test -p xt spec_default    # run specific test
 
 1. ~~Create `types.rs` - Spec parameter enums~~ Done
 2. ~~Create `tspec.rs` - Loading and resolving specs from TOML~~ Done
-3. ~~Create `tspec/rlibc-x1.toml` - Minimal global spec for rlibc-x1~~ Done
+3. ~~Create `libs/rlibc-x1/tspec.toml` - Spec for rlibc-x1~~ Done
 4. Implement build command - Get `cargo xt build rlibc-x1 -t rlibc-x1` working
 
 ### File Structure

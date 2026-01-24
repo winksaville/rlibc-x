@@ -65,8 +65,8 @@ pub enum LinkerParam {
     NoStdlib,
     Entry(String),
     GcSections,
-    /// Raw argument passed through
-    Arg(String),
+    /// Raw arguments passed through
+    Args(Vec<String>),
 }
 
 /// A translation spec - ordered parameter lists
