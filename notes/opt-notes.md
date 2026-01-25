@@ -92,6 +92,64 @@ RUSTFLAGS="-Z unstable-options -C panic=immediate-abort"
 - `rust-src` component: `rustup component add rust-src --toolchain nightly`
 - For musl: `rustup target add x86_64-unknown-linux-musl`
 
+### Limitation: -opt is Incompatible with Tests
+
+**`cargo xtask test <app> -opt` does not work.** This is a fundamental limitation, not a bug.
+
+#### What Works
+
+| Command | Works? | Notes |
+|---------|--------|-------|
+| `cargo xtask build X -opt` | ✓ | Build optimized binary |
+| `cargo xtask run X -opt` | ✓ | Build and run optimized binary |
+| `cargo xtask test X` | ✓ | Test with standard toolchain |
+| `cargo xtask test X --release` | ✓ | Test with release profile |
+| `cargo xtask test X -opt` | ✗ | Always fails |
+
+#### Why It Fails
+
+The `-opt` flag uses `-Z build-std=std,core,panic_abort` to rebuild the standard library with `panic=immediate-abort`. This creates a custom-built `core` crate.
+
+When running tests, cargo also needs the `test` crate (Rust's test harness), which depends on the **toolchain's prebuilt** `core`. Now there are two versions of `core`:
+
+```
+test -opt build:
+  ├── Your binary
+  │    └── rebuilt core (from -Z build-std)
+  │
+  └── Test harness
+       └── test crate
+            └── prebuilt core (from toolchain)
+
+Error: duplicate lang item `sized` in crate `core`
+```
+
+The linker sees two different `core` crates and fails with "duplicate lang item" errors.
+
+#### This Affects ALL Targets
+
+The failure is not specific to rlibc-x2. It happens with glibc, musl, and any target:
+
+```bash
+cargo xtask test hw-x2 -opt     # fails - duplicate core
+cargo xtask test hw-musl -opt   # fails - duplicate core
+cargo xtask test hw-glibc -opt  # fails - duplicate core
+```
+
+#### Workaround
+
+Test without `-opt`, then build the final optimized binary:
+
+```bash
+# Run tests (standard toolchain)
+cargo xtask test hw-x2
+
+# Build optimized binary (no tests)
+cargo xtask build hw-x2 -r -opt -s
+```
+
+The assumption is: if tests pass with the standard build, the optimized build will behave correctly. The `-opt` flag only changes panic handling and binary size, not program logic.
+
 ## 20260120 - Extended -opt to all apps
 
 ### Size Comparison
