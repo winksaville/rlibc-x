@@ -12,16 +12,22 @@ pub fn run_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
-    // Determine profile for binary path
-    let is_release = if let Some(path) = &tspec_path {
+    // Determine profile and target for binary path
+    let (is_release, target) = if let Some(path) = &tspec_path {
         let spec = load_spec(path)?;
-        release
+        let is_rel = release
             || spec
                 .cargo
                 .iter()
-                .any(|p| matches!(p, CargoParam::Profile(Profile::Release)))
+                .any(|p| matches!(p, CargoParam::Profile(Profile::Release)));
+        let tgt = spec.cargo.iter().find_map(|p| match p {
+            CargoParam::TargetTriple(t) => Some(t.clone()),
+            CargoParam::TargetJson(p) => p.file_stem().map(|s| s.to_string_lossy().to_string()),
+            _ => None,
+        });
+        (is_rel, tgt)
     } else {
-        release
+        (release, None)
     };
 
     // Build first
@@ -29,7 +35,14 @@ pub fn run_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result
 
     // Find and run binary
     let profile_dir = if is_release { "release" } else { "debug" };
-    let binary: PathBuf = workspace.join("target").join(profile_dir).join(crate_name);
+    let binary: PathBuf = match &target {
+        Some(t) => workspace
+            .join("target")
+            .join(t)
+            .join(profile_dir)
+            .join(crate_name),
+        None => workspace.join("target").join(profile_dir).join(crate_name),
+    };
 
     println!("Running {}", binary.display());
     let status = Command::new(&binary)
