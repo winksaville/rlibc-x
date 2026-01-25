@@ -28,10 +28,12 @@ pub enum OptLevel {
 
 /// Panic strategy - mutually exclusive
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum PanicStrategy {
     Abort,
     Unwind,
+    /// Nightly only: -C panic=immediate-abort (eliminates panic formatting)
+    ImmediateAbort,
 }
 
 /// Cargo-specific parameters
@@ -41,6 +43,8 @@ pub enum CargoParam {
     Profile(Profile),
     TargetTriple(String),
     TargetJson(PathBuf),
+    /// Nightly-only -Z flag (e.g., "panic-immediate-abort")
+    Unstable(String),
 }
 
 /// Rustc codegen and compilation parameters
@@ -57,12 +61,28 @@ pub enum RustcParam {
     Flag(String),
 }
 
+/// Version script configuration for symbol visibility
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VersionScript {
+    /// Symbols to keep global (e.g., ["_start"])
+    pub global: Vec<String>,
+    /// Pattern for local symbols (typically "*")
+    #[serde(default = "default_local")]
+    pub local: String,
+}
+
+fn default_local() -> String {
+    "*".to_string()
+}
+
 /// Linker parameters
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkerParam {
     /// Linker arguments from tspec.toml
     Args(Vec<String>),
+    /// Version script for symbol visibility (enables --gc-sections optimization)
+    VersionScript(VersionScript),
 }
 
 /// A translation spec - ordered parameter lists

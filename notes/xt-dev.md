@@ -143,6 +143,9 @@ causing the conflict.
 
 ## Future Work
 
-1. **build_std support** - Add to tspec.toml for maximal optimization
+1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
 2. **Spec comparison** - Compare build outputs between different specs
-3. **Eventually replace xtask** - Once xt has feature parity
+3. **Interactive tspec management** - CLI for modifying specs without manual TOML editing
+4. **Eventually replace xtask** - Once xt has feature parity (after spec comparison)
+
+See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design thoughts.

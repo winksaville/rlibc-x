@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -13,34 +14,42 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
-    let mut cmd = Command::new("cargo");
-    cmd.arg("build");
-    cmd.arg("-p").arg(crate_name);
-    cmd.current_dir(&workspace);
-
     // Track if we generated a build.rs
     let build_rs_path = crate_dir.join("build.rs");
     let had_build_rs = build_rs_path.exists();
 
     // Apply spec if present, otherwise plain cargo build
-    if let Some(path) = &tspec_path {
+    let status = if let Some(path) = &tspec_path {
         let spec = load_spec(path)?;
         println!("Building {} with spec {}", crate_name, path.display());
 
         // Generate temporary build.rs for linker flags if needed
-        if !spec.linker.is_empty() && !had_build_rs {
+        let has_linker_args = spec
+            .linker
+            .iter()
+            .any(|p| matches!(p, LinkerParam::Args(_)));
+        if has_linker_args && !had_build_rs {
             generate_build_rs(&build_rs_path, crate_name, &spec)?;
         }
 
-        apply_spec_to_command(&mut cmd, &spec, release)?;
+        let mut cmd = build_cargo_command(&spec, &workspace)?;
+        cmd.arg("build");
+        cmd.arg("-p").arg(crate_name);
+        cmd.current_dir(&workspace);
+
+        apply_spec_to_command(&mut cmd, &spec, &workspace, release)?;
+        cmd.status().context("failed to run cargo")?
     } else {
         println!("Building {} (no tspec)", crate_name);
+        let mut cmd = Command::new("cargo");
+        cmd.arg("build");
+        cmd.arg("-p").arg(crate_name);
+        cmd.current_dir(&workspace);
         if release {
             cmd.arg("--release");
         }
-    }
-
-    let status = cmd.status().context("failed to run cargo")?;
+        cmd.status().context("failed to run cargo")?
+    };
 
     // Clean up generated build.rs (only if we created it)
     if !had_build_rs && build_rs_path.exists() {
@@ -62,12 +71,13 @@ pub fn generate_build_rs(path: &Path, crate_name: &str, spec: &Spec) -> Result<(
     ];
 
     for param in &spec.linker {
-        let LinkerParam::Args(args) = param;
-        for arg in args {
-            lines.push(format!(
-                "    println!(\"cargo:rustc-link-arg-bin={}={}\");",
-                crate_name, arg
-            ));
+        if let LinkerParam::Args(args) = param {
+            for arg in args {
+                lines.push(format!(
+                    "    println!(\"cargo:rustc-link-arg-bin={}={}\");",
+                    crate_name, arg
+                ));
+            }
         }
     }
 
@@ -76,8 +86,41 @@ pub fn generate_build_rs(path: &Path, crate_name: &str, spec: &Spec) -> Result<(
     Ok(())
 }
 
+/// Check if spec requires nightly toolchain
+fn requires_nightly(spec: &Spec) -> bool {
+    // BuildStd requires nightly
+    let has_build_std = spec
+        .rustc
+        .iter()
+        .any(|p| matches!(p, RustcParam::BuildStd(_)));
+
+    // Unstable cargo flags require nightly
+    let has_unstable = spec
+        .cargo
+        .iter()
+        .any(|p| matches!(p, CargoParam::Unstable(_)));
+
+    has_build_std || has_unstable
+}
+
+/// Build the base cargo command (with toolchain if needed)
+fn build_cargo_command(spec: &Spec, _workspace: &Path) -> Result<Command> {
+    let mut cmd = Command::new("cargo");
+
+    if requires_nightly(spec) {
+        cmd.arg("+nightly");
+    }
+
+    Ok(cmd)
+}
+
 /// Apply spec parameters to a cargo command
-pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> Result<()> {
+pub fn apply_spec_to_command(
+    cmd: &mut Command,
+    spec: &Spec,
+    workspace: &Path,
+    release: bool,
+) -> Result<()> {
     // Handle cargo params
     let mut has_profile = false;
     for param in &spec.cargo {
@@ -99,6 +142,9 @@ pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> R
             CargoParam::TargetJson(path) => {
                 cmd.arg("--target").arg(path);
             }
+            CargoParam::Unstable(flag) => {
+                cmd.arg("-Z").arg(flag);
+            }
         }
     }
 
@@ -109,6 +155,8 @@ pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> R
 
     // Collect rustc flags
     let mut rustc_flags: Vec<String> = Vec::new();
+
+    // Handle rustc params
     for param in &spec.rustc {
         match param {
             RustcParam::OptLevel(level) => {
@@ -126,6 +174,7 @@ pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> R
                 let s = match strategy {
                     crate::types::PanicStrategy::Abort => "abort",
                     crate::types::PanicStrategy::Unwind => "unwind",
+                    crate::types::PanicStrategy::ImmediateAbort => "immediate-abort",
                 };
                 rustc_flags.push(format!("-C panic={}", s));
             }
@@ -137,8 +186,10 @@ pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> R
             RustcParam::CodegenUnits(n) => {
                 rustc_flags.push(format!("-C codegen-units={}", n));
             }
-            RustcParam::BuildStd(_crates) => {
-                // TODO: handle -Z build-std (requires nightly)
+            RustcParam::BuildStd(crates) => {
+                // -Z build-std is a cargo flag, not rustc
+                let crates_str = crates.join(",");
+                cmd.arg("-Z").arg(format!("build-std={}", crates_str));
             }
             RustcParam::Flag(flag) => {
                 rustc_flags.push(flag.clone());
@@ -146,7 +197,29 @@ pub fn apply_spec_to_command(cmd: &mut Command, spec: &Spec, release: bool) -> R
         }
     }
 
-    // Apply rustc flags (linker flags handled by generated build.rs)
+    // Handle version script (generates file and adds linker arg)
+    for param in &spec.linker {
+        if let LinkerParam::VersionScript(vs) = param {
+            let target_dir = workspace.join("target");
+            let _ = fs::create_dir_all(&target_dir);
+            let version_script_path = target_dir.join("xt-version.script");
+
+            // Generate version script: { global: sym1; sym2; local: *; };
+            let globals = vs.global.join("; ");
+            let content = format!("{{ global: {}; local: {}; }};", globals, vs.local);
+
+            let mut f = fs::File::create(&version_script_path)
+                .context("failed to create version script")?;
+            writeln!(f, "{}", content)?;
+
+            rustc_flags.push(format!(
+                "-C link-arg=-Wl,--version-script={}",
+                version_script_path.display()
+            ));
+        }
+    }
+
+    // Apply rustc flags (linker args from Args handled by generated build.rs)
     if !rustc_flags.is_empty() {
         cmd.env("RUSTFLAGS", rustc_flags.join(" "));
     }

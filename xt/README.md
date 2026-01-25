@@ -9,6 +9,7 @@ A tspec-based build system for comparing target triples and compile/linker comma
 ```bash
 cargo xt build ex-x1-xt                     # Build with crate's tspec.toml
 cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with experimental spec
+cargo xt build ex-x2-xt -t tspec-opt.toml -r  # Build with optimized spec (nightly)
 cargo xt run ex-x1-xt                       # Build and run
 cargo xt test ex-x2-xt                      # Build and test
 cargo xt build ex-glibc                     # Works without tspec.toml too
@@ -80,11 +81,41 @@ cargo test -p xt spec_default    # run specific test
 5. ~~Implement test command~~ Done
 6. ~~Generated build.rs for scoped linker flags~~ Done
 7. ~~Support target_triple in tspec.toml~~ Done
+8. ~~Support `build_std` for nightly optimized builds~~ Done
+9. ~~Support `version_script` for symbol visibility~~ Done
+10. ~~Support `panic = "immediate-abort"` (nightly)~~ Done
 
-### Next Steps
+### Phase 1: Spec Comparison (feature parity with xtask)
 
-1. Support `build_std` in tspec.toml for maximal optimization
-2. Spec comparison tooling
+Add comparison tooling to complete the "compare configurations" goal:
+
+```bash
+cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml
+```
+
+Output: binary sizes, symbol counts, flag differences.
+
+### Phase 2: Merge to Main
+
+1. Create `xtask` branch from current main (preservation)
+2. Merge `xt-dev` to main
+3. Remove xtask crate
+4. Update CLAUDE.md with new commands
+
+### Phase 3: Interactive tspec Management
+
+Enable fast iteration without manual TOML editing:
+
+```bash
+cargo xt tspec list                          # List all tspec files
+cargo xt tspec show ex-x2-xt                 # Show resolved spec
+cargo xt tspec new myapp                     # Create minimal tspec.toml
+cargo xt tspec add myapp --rustc build_std=std,core,panic_abort
+cargo xt tspec remove myapp --rustc panic
+cargo xt tspec diff tspec.toml tspec-opt.toml
+```
+
+See [notes/interactive-tspec.md](../notes/interactive-tspec.md) for design details.
 
 ### File Structure
 

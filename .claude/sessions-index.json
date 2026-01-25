@@ -379,9 +379,22 @@
       "isSidechain": false
     },
     {
+      "sessionId": "aa88a356-47e1-4750-a373-16df7eedb45b",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/aa88a356-47e1-4750-a373-16df7eedb45b.jsonl",
+      "fileMtime": 1769322806960,
+      "firstPrompt": "for now let's use permanenbt build, don't like it, but we'll see where we go,",
+      "summary": "xt CLI: Build, test, scoped linker flags",
+      "messageCount": 72,
+      "created": "2026-01-25T01:05:18.389Z",
+      "modified": "2026-01-25T06:27:48.508Z",
+      "gitBranch": "xt-dev",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
       "sessionId": "fd4d3c2c-b202-4849-b218-fdda6d613598",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/fd4d3c2c-b202-4849-b218-fdda6d613598.jsonl",
-      "fileMtime": 1769209842281,
+      "fileMtime": 1769305844191,
       "firstPrompt": "[Request interrupted by user for tool use]",
       "summary": "xt CLI skeleton + types design, on branch",
       "messageCount": 32,
@@ -394,7 +407,7 @@
     {
       "sessionId": "8e6a7b42-8cea-438d-bf44-8e7febfe00db",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/8e6a7b42-8cea-438d-bf44-8e7febfe00db.jsonl",
-      "fileMtime": 1769209843172,
+      "fileMtime": 1769305844175,
       "firstPrompt": ".",
       "summary": "Implement init/fini/rtld_fini callbacks in __libc_start_main",
       "messageCount": 26,
@@ -405,9 +418,22 @@
       "isSidechain": false
     },
     {
+      "sessionId": "b4c6dc74-4eba-4c50-87fd-997774cd0067",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/b4c6dc74-4eba-4c50-87fd-997774cd0067.jsonl",
+      "fileMtime": 1769305844180,
+      "firstPrompt": "check state of repo",
+      "summary": "xt CLI: types, specs, lib structure",
+      "messageCount": 51,
+      "created": "2026-01-23T23:10:41.138Z",
+      "modified": "2026-01-23T23:44:28.655Z",
+      "gitBranch": "xt-dev",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
       "sessionId": "39bfb6c7-6a1d-4a87-aea7-23ed53c2dd1d",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/39bfb6c7-6a1d-4a87-aea7-23ed53c2dd1d.jsonl",
-      "fileMtime": 1769209844015,
+      "fileMtime": 1769305844175,
       "firstPrompt": ".",
       "summary": "Added std_env tests to verify script",
       "messageCount": 11,
@@ -418,14 +444,14 @@
       "isSidechain": false
     },
     {
-      "sessionId": "b4c6dc74-4eba-4c50-87fd-997774cd0067",
-      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/b4c6dc74-4eba-4c50-87fd-997774cd0067.jsonl",
-      "fileMtime": 1769277459100,
-      "firstPrompt": "check state of repo",
-      "summary": "xt CLI: types, specs, lib structure",
-      "messageCount": 51,
-      "created": "2026-01-23T23:10:41.138Z",
-      "modified": "2026-01-23T23:44:28.655Z",
+      "sessionId": "be4b5153-b9c0-4bff-965e-df8e1d3e19a8",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/be4b5153-b9c0-4bff-965e-df8e1d3e19a8.jsonl",
+      "fileMtime": 1769354410808,
+      "firstPrompt": "acquaint yourself with repo",
+      "summary": "Rust Minimal Libc Implementation Repository Exploration",
+      "messageCount": 3,
+      "created": "2026-01-25T06:33:26.235Z",
+      "modified": "2026-01-25T06:34:51.958Z",
       "gitBranch": "xt-dev",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
