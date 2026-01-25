@@ -1,0 +1,15 @@
+[package]
+name = "ex-x2-xt"
+version = "0.1.0"
+edition = "2024"
+description = "Minimal exit-only binary for xt testing (rlibc-x2, tspec.toml driven)"
+
+[dependencies]
+rlibc-x2 = { path = "../../libs/rlibc-x2" }
+
+[dev-dependencies]
+is-libc-used = { path = "../../tools/is-libc-used" }
+
+[[bin]]
+name = "ex-x2-xt"
+test = false

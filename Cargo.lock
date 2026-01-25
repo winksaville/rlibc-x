@@ -208,6 +208,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ex-x2-xt"
+version = "0.1.0"
+dependencies = [
+ "is-libc-used",
+ "rlibc-x2",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

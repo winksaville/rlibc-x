@@ -6,6 +6,7 @@ members = [
     "apps/ex-x1",
     "apps/ex-x1-xt",
     "apps/ex-x2",
+    "apps/ex-x2-xt",
     "apps/ex-glibc",
     "apps/ex-musl",
     "apps/hw-x1",

@@ -118,7 +118,7 @@ mod tests {
         let spec = Spec {
             cargo: vec![CargoParam::Profile(Profile::Release)],
             rustc: vec![RustcParam::Lto(true)],
-            linker: vec![LinkerParam::Static],
+            linker: vec![LinkerParam::Args(vec!["-static".to_string()])],
         };
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.toml");

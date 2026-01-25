@@ -61,11 +61,7 @@ pub enum RustcParam {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkerParam {
-    Static,
-    NoStdlib,
-    Entry(String),
-    GcSections,
-    /// Raw arguments passed through
+    /// Linker arguments from tspec.toml
     Args(Vec<String>),
 }
 

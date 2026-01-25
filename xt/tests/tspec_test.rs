@@ -55,3 +55,23 @@ fn load_ex_x1_xt_spec() {
         LinkerParam::Args(vec!["-static".to_string(), "-nostartfiles".to_string()])
     );
 }
+
+#[test]
+fn load_ex_x2_xt_spec() {
+    let spec = load_spec(&app_tspec("ex-x2-xt")).unwrap();
+
+    assert!(spec.cargo.is_empty());
+    assert!(spec.rustc.is_empty());
+    assert_eq!(spec.linker.len(), 1);
+    assert_eq!(
+        spec.linker[0],
+        LinkerParam::Args(vec![
+            "-static".to_string(),
+            "-nostdlib".to_string(),
+            "-nodefaultlibs".to_string(),
+            "-e_start".to_string(),
+            "-Wl,--undefined=_start".to_string(),
+            "-Wl,--undefined=__libc_start_main".to_string(),
+        ])
+    );
+}
