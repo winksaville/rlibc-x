@@ -32,6 +32,17 @@ pub enum Commands {
         #[arg(short, long)]
         release: bool,
     },
+    /// Test a crate with a translation spec
+    Test {
+        /// Crate to test
+        crate_name: String,
+        /// Translation spec to use (defaults to crate's tspec.toml)
+        #[arg(short = 't', long = "tspec")]
+        tspec: Option<String>,
+        /// Release build
+        #[arg(short, long)]
+        release: bool,
+    },
     /// Manage crate compatibility with specs
     Compat {
         /// Crate name
