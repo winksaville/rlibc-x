@@ -1,7 +1,37 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
 use crate::types::{CargoParam, Profile, Spec};
+
+/// Extract crate name from Cargo.toml
+pub fn get_crate_name(crate_dir: &Path) -> Result<String> {
+    let cargo_toml = crate_dir.join("Cargo.toml");
+    let content = std::fs::read_to_string(&cargo_toml)
+        .with_context(|| format!("failed to read {}", cargo_toml.display()))?;
+
+    // Simple parsing - look for name = "..." in [package] section
+    let mut in_package = false;
+    for line in content.lines() {
+        let line = line.trim();
+        if line == "[package]" {
+            in_package = true;
+            continue;
+        }
+        if line.starts_with('[') {
+            in_package = false;
+            continue;
+        }
+        if in_package
+            && line.starts_with("name")
+            && let Some(eq_pos) = line.find('=')
+        {
+            let value = line[eq_pos + 1..].trim();
+            let value = value.trim_matches('"').trim_matches('\'');
+            return Ok(value.to_string());
+        }
+    }
+    bail!("could not find package name in {}", cargo_toml.display());
+}
 
 /// Find the workspace root by looking for Cargo.toml with [workspace]
 pub fn find_workspace_root() -> Result<PathBuf> {
@@ -20,34 +50,42 @@ pub fn find_workspace_root() -> Result<PathBuf> {
     }
 }
 
-/// Find a crate's directory by name, searching libs/ and apps/
-pub fn find_crate_dir(workspace: &Path, crate_name: &str) -> Result<PathBuf> {
-    // Check libs/ first, then apps/
+/// Find a crate's directory - tries as path first, then searches libs/ and apps/
+pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
+    // Try as path first (relative or absolute)
+    let as_path = PathBuf::from(name);
+    if as_path.join("Cargo.toml").exists() {
+        return Ok(as_path.canonicalize().unwrap_or(as_path));
+    }
+
+    // Fallback: search libs/ and apps/
     for prefix in ["libs", "apps"] {
-        let path = workspace.join(prefix).join(crate_name);
+        let path = workspace.join(prefix).join(name);
         if path.join("Cargo.toml").exists() {
             return Ok(path);
         }
     }
-    bail!("crate '{}' not found in libs/ or apps/", crate_name);
+    bail!("crate '{}' not found", name);
 }
 
-/// Find the tspec for a crate - either explicit path or default tspec.toml
+/// Find the tspec for a crate - tries as path first, then relative to crate_dir
 /// Returns None if no tspec exists (plain cargo build will be used)
 pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<PathBuf>> {
     match explicit {
-        Some(path) => {
-            // Try as absolute or relative path
-            let p = PathBuf::from(path);
-            if p.exists() {
-                return Ok(Some(p));
+        Some(name) => {
+            // Try as path first (relative to cwd or absolute)
+            let as_path = PathBuf::from(name);
+            if as_path.exists() {
+                return Ok(Some(as_path.canonicalize().unwrap_or(as_path)));
             }
-            // Try relative to crate directory (e.g., -t tspec-expr.toml)
-            let in_crate = crate_dir.join(path);
+
+            // Fallback: relative to crate directory
+            let in_crate = crate_dir.join(name);
             if in_crate.exists() {
                 return Ok(Some(in_crate));
             }
-            bail!("tspec not found: {}", path);
+
+            bail!("tspec not found: {}", name);
         }
         None => {
             let default = crate_dir.join("tspec.toml");
@@ -95,7 +133,219 @@ pub fn get_binary_path_simple(workspace: &Path, crate_name: &str, release: bool)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    // ==================== get_crate_name tests ====================
+
+    #[test]
+    fn get_crate_name_valid() {
+        let tmp = TempDir::new().unwrap();
+        let cargo_toml = tmp.path().join("Cargo.toml");
+        fs::write(
+            &cargo_toml,
+            r#"[package]
+name = "my-test-crate"
+version = "0.1.0"
+"#,
+        )
+        .unwrap();
+
+        let name = get_crate_name(tmp.path()).unwrap();
+        assert_eq!(name, "my-test-crate");
+    }
+
+    #[test]
+    fn get_crate_name_with_single_quotes() {
+        let tmp = TempDir::new().unwrap();
+        let cargo_toml = tmp.path().join("Cargo.toml");
+        fs::write(
+            &cargo_toml,
+            "[package]\nname = 'single-quoted'\nversion = '0.1.0'\n",
+        )
+        .unwrap();
+
+        let name = get_crate_name(tmp.path()).unwrap();
+        assert_eq!(name, "single-quoted");
+    }
+
+    #[test]
+    fn get_crate_name_missing_name() {
+        let tmp = TempDir::new().unwrap();
+        let cargo_toml = tmp.path().join("Cargo.toml");
+        fs::write(&cargo_toml, "[package]\nversion = \"0.1.0\"\n").unwrap();
+
+        let result = get_crate_name(tmp.path());
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("could not find package name")
+        );
+    }
+
+    #[test]
+    fn get_crate_name_missing_file() {
+        let tmp = TempDir::new().unwrap();
+        let result = get_crate_name(tmp.path());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("failed to read"));
+    }
+
+    #[test]
+    fn get_crate_name_name_in_other_section_ignored() {
+        let tmp = TempDir::new().unwrap();
+        let cargo_toml = tmp.path().join("Cargo.toml");
+        fs::write(
+            &cargo_toml,
+            r#"[dependencies]
+name = "wrong-section"
+
+[package]
+name = "correct-name"
+version = "0.1.0"
+"#,
+        )
+        .unwrap();
+
+        let name = get_crate_name(tmp.path()).unwrap();
+        assert_eq!(name, "correct-name");
+    }
+
+    // ==================== find_crate_dir tests ====================
+
+    #[test]
+    fn find_crate_dir_as_path() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("my-crate");
+        fs::create_dir(&crate_dir).unwrap();
+        fs::write(crate_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+
+        // Pass path directly
+        let found = find_crate_dir(tmp.path(), crate_dir.to_str().unwrap()).unwrap();
+        assert_eq!(found.file_name().unwrap(), "my-crate");
+    }
+
+    #[test]
+    fn find_crate_dir_in_libs() {
+        let tmp = TempDir::new().unwrap();
+        let libs_dir = tmp.path().join("libs").join("my-lib");
+        fs::create_dir_all(&libs_dir).unwrap();
+        fs::write(libs_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+
+        let found = find_crate_dir(tmp.path(), "my-lib").unwrap();
+        assert_eq!(found, libs_dir);
+    }
+
+    #[test]
+    fn find_crate_dir_in_apps() {
+        let tmp = TempDir::new().unwrap();
+        let apps_dir = tmp.path().join("apps").join("my-app");
+        fs::create_dir_all(&apps_dir).unwrap();
+        fs::write(apps_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+
+        let found = find_crate_dir(tmp.path(), "my-app").unwrap();
+        assert_eq!(found, apps_dir);
+    }
+
+    #[test]
+    fn find_crate_dir_libs_preferred_over_apps() {
+        let tmp = TempDir::new().unwrap();
+        // Create both libs/foo and apps/foo
+        let libs_foo = tmp.path().join("libs").join("foo");
+        let apps_foo = tmp.path().join("apps").join("foo");
+        fs::create_dir_all(&libs_foo).unwrap();
+        fs::create_dir_all(&apps_foo).unwrap();
+        fs::write(libs_foo.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+        fs::write(apps_foo.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
+
+        // libs/ is checked first
+        let found = find_crate_dir(tmp.path(), "foo").unwrap();
+        assert_eq!(found, libs_foo);
+    }
+
+    #[test]
+    fn find_crate_dir_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let result = find_crate_dir(tmp.path(), "nonexistent");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    // ==================== find_tspec tests ====================
+
+    #[test]
+    fn find_tspec_explicit_path() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        let spec_dir = tmp.path().join("specs");
+        fs::create_dir(&crate_dir).unwrap();
+        fs::create_dir(&spec_dir).unwrap();
+
+        let tspec_path = spec_dir.join("custom.toml");
+        fs::write(&tspec_path, "# spec").unwrap();
+
+        // Explicit path should be found
+        let found = find_tspec(&crate_dir, Some(tspec_path.to_str().unwrap())).unwrap();
+        assert!(found.is_some());
+        assert!(found.unwrap().to_string_lossy().contains("custom.toml"));
+    }
+
+    #[test]
+    fn find_tspec_explicit_relative_to_crate() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        let tspec_path = crate_dir.join("my-spec.toml");
+        fs::write(&tspec_path, "# spec").unwrap();
+
+        // Name without path, found in crate_dir
+        let found = find_tspec(&crate_dir, Some("my-spec.toml")).unwrap();
+        assert!(found.is_some());
+        assert!(found.unwrap().to_string_lossy().contains("my-spec.toml"));
+    }
+
+    #[test]
+    fn find_tspec_default_exists() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        let tspec_path = crate_dir.join("tspec.toml");
+        fs::write(&tspec_path, "# default spec").unwrap();
+
+        // No explicit name, should find default
+        let found = find_tspec(&crate_dir, None).unwrap();
+        assert!(found.is_some());
+        assert!(found.unwrap().to_string_lossy().contains("tspec.toml"));
+    }
+
+    #[test]
+    fn find_tspec_default_not_exists() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        // No tspec.toml, should return None (plain cargo build)
+        let found = find_tspec(&crate_dir, None).unwrap();
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn find_tspec_explicit_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        let result = find_tspec(&crate_dir, Some("nonexistent.toml"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    // ==================== get_binary_path tests ====================
 
     #[test]
     fn get_binary_path_simple_debug() {

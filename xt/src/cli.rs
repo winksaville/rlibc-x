@@ -49,6 +49,18 @@ pub enum Commands {
         #[arg(short, long)]
         release: bool,
     },
+    /// Compare two specs for a crate (size and behavior)
+    Compare {
+        /// Crate to compare
+        crate_name: String,
+        /// First spec file
+        spec_a: String,
+        /// Second spec file
+        spec_b: String,
+        /// Release build
+        #[arg(short, long)]
+        release: bool,
+    },
     /// Manage crate compatibility with specs
     Compat {
         /// Crate name

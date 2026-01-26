@@ -1,6 +1,7 @@
 pub mod binary;
 pub mod build;
 pub mod cli;
+pub mod compare;
 pub mod find_paths;
 pub mod run;
 pub mod testing;

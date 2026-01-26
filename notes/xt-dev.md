@@ -2,6 +2,41 @@
 
 Development notes for the `xt-dev` branch - building a translation spec based build system.
 
+## 20260125 - Compare Command and Path Resolution
+
+Completed Phase 1 (spec comparison) with the `compare` command:
+
+```bash
+cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r
+```
+
+Output shows size difference and verifies behavior:
+```
+Comparing ex-x2-xt builds:
+
+  tspec.toml:
+    size: 42.2K bytes
+    exit: 42
+
+  tspec-opt.toml:
+    size: 6.4K bytes
+    exit: 42
+
+  Size: tspec-opt.toml is 35.8K smaller (84.8%)
+  Behavior: identical (exit 42)
+```
+
+Also added path-first resolution for crates and tspec files:
+- `cargo xt build apps/ex-x2-xt` - path to crate directory
+- `cargo xt build ex-x2-xt -t /full/path/to/spec.toml` - absolute tspec path
+- `cargo xt build ex-x2-xt -t ../other/spec.toml` - relative tspec path
+
+The resolution order:
+1. Try name as path (check for Cargo.toml or file existence)
+2. Fall back to libs/ then apps/ (for crates) or crate_dir (for tspec)
+
+Added 36 unit tests covering binary operations and path resolution.
+
 ## The Goal
 
 Create a tool (`xt`) that:
@@ -144,8 +179,41 @@ causing the conflict.
 ## Future Work
 
 1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
-2. **Spec comparison** - Compare build outputs between different specs
+2. ~~**Spec comparison**~~ Done - `cargo xt compare` (see 20260125 section)
 3. **Interactive tspec management** - CLI for modifying specs without manual TOML editing
-4. **Eventually replace xtask** - Once xt has feature parity (after spec comparison)
+4. **Merge to main** - xt now has feature parity with xtask
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design thoughts.
+
+## 20260125 - Compare Command and Path Resolution
+
+Completed Phase 1 (spec comparison) with the `compare` command:
+
+```bash
+cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r
+```
+
+Output shows size difference and verifies behavior:
+```
+Comparing ex-x2-xt builds:
+
+  tspec.toml:
+    size: 42.2K bytes
+    exit: 42
+
+  tspec-opt.toml:
+    size: 6.4K bytes
+    exit: 42
+
+  Size: tspec-opt.toml is 35.8K smaller (84.8%)
+  Behavior: identical (exit 42)
+```
+
+Also added flexible path resolution for crates and tspec files:
+- `cargo xt build apps/ex-x2-xt` - path to crate directory
+- `cargo xt build ex-x2-xt -t /full/path/to/spec.toml` - absolute tspec path
+- `cargo xt build ex-x2-xt -t ../other/spec.toml` - relative tspec path
+
+Resolution order: try name as path first (Cargo.toml or file exists), then fall back to libs/apps or crate_dir.
+
+Added 36 unit tests covering binary operations and path resolution.

@@ -4,6 +4,7 @@ use clap::Parser;
 use xt::binary::strip_binary;
 use xt::build::build_crate;
 use xt::cli::{Cli, Commands, SpecCommands};
+use xt::compare::compare_specs;
 use xt::run::run_binary;
 use xt::testing::test_crate;
 
@@ -42,6 +43,14 @@ fn main() -> Result<()> {
             release,
         } => {
             test_crate(&crate_name, tspec.as_deref(), release)?;
+        }
+        Commands::Compare {
+            crate_name,
+            spec_a,
+            spec_b,
+            release,
+        } => {
+            compare_specs(&crate_name, &spec_a, &spec_b, release)?;
         }
         Commands::Compat { crate_name, spec } => {
             match spec {

@@ -6,6 +6,7 @@ use std::process::Command;
 
 use crate::find_paths::{
     find_crate_dir, find_tspec, find_workspace_root, get_binary_path, get_binary_path_simple,
+    get_crate_name,
 };
 use crate::tspec::load_spec;
 use crate::types::{CargoParam, LinkerParam, Profile, RustcParam, Spec};
@@ -21,6 +22,9 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
+    // Get actual package name from Cargo.toml (needed when crate_name is a path)
+    let pkg_name = get_crate_name(&crate_dir)?;
+
     // Track if we generated a build.rs
     let build_rs_path = crate_dir.join("build.rs");
     let had_build_rs = build_rs_path.exists();
@@ -28,15 +32,15 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
     // Determine binary path based on spec
     let binary_path = if let Some(path) = &tspec_path {
         let spec = load_spec(path)?;
-        get_binary_path(&workspace, crate_name, &spec, release)
+        get_binary_path(&workspace, &pkg_name, &spec, release)
     } else {
-        get_binary_path_simple(&workspace, crate_name, release)
+        get_binary_path_simple(&workspace, &pkg_name, release)
     };
 
     // Apply spec if present, otherwise plain cargo build
     let status = if let Some(path) = &tspec_path {
         let spec = load_spec(path)?;
-        println!("Building {} with spec {}", crate_name, path.display());
+        println!("Building {} with spec {}", pkg_name, path.display());
 
         // Generate temporary build.rs for linker flags if needed
         let has_linker_args = spec
@@ -44,21 +48,21 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
             .iter()
             .any(|p| matches!(p, LinkerParam::Args(_)));
         if has_linker_args && !had_build_rs {
-            generate_build_rs(&build_rs_path, crate_name, &spec)?;
+            generate_build_rs(&build_rs_path, &pkg_name, &spec)?;
         }
 
         let mut cmd = build_cargo_command(&spec)?;
         cmd.arg("build");
-        cmd.arg("-p").arg(crate_name);
+        cmd.arg("-p").arg(&pkg_name);
         cmd.current_dir(&workspace);
 
         apply_spec_to_command(&mut cmd, &spec, &workspace, release)?;
         cmd.status().context("failed to run cargo")?
     } else {
-        println!("Building {} (no tspec)", crate_name);
+        println!("Building {} (no tspec)", pkg_name);
         let mut cmd = Command::new("cargo");
         cmd.arg("build");
-        cmd.arg("-p").arg(crate_name);
+        cmd.arg("-p").arg(&pkg_name);
         cmd.current_dir(&workspace);
         if release {
             cmd.arg("--release");

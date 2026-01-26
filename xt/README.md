@@ -8,15 +8,16 @@ A tspec-based build system for comparing target triples and compile/linker comma
 
 ```bash
 cargo xt build ex-x1-xt                     # Build with crate's tspec.toml
-cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with experimental spec
-cargo xt build ex-x2-xt -t tspec-opt.toml -r  # Build with optimized spec (nightly)
+cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with alternative spec
+cargo xt build ex-x2-xt -t tspec-opt.toml -r -s  # Build optimized, strip
 cargo xt run ex-x1-xt                       # Build and run
 cargo xt test ex-x2-xt                      # Build and test
 cargo xt build ex-glibc                     # Works without tspec.toml too
-cargo xt test ex-musl                       # Musl target via tspec.toml
+cargo xt build apps/ex-x2-xt                # Path to crate directory
+cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r  # Compare two specs
 ```
 
-The `-t` flag is for experimentation - pointing to alternative spec files.
+The `-t` flag is optional - use it to try alternative spec files without modifying `tspec.toml`.
 Future: use `save_spec_snapshot` to create `tspec-001-abc123de.toml` variants.
 
 ## Design
@@ -84,16 +85,19 @@ cargo test -p xt spec_default    # run specific test
 8. ~~Support `build_std` for nightly optimized builds~~ Done
 9. ~~Support `version_script` for symbol visibility~~ Done
 10. ~~Support `panic = "immediate-abort"` (nightly)~~ Done
+11. ~~Strip flag (`-s`) for build and run commands~~ Done
+12. ~~Compare command for spec comparison~~ Done
+13. ~~Path resolution for crates and tspec files~~ Done
 
-### Phase 1: Spec Comparison (feature parity with xtask)
+### Phase 1: Spec Comparison (feature parity with xtask) - Done
 
-Add comparison tooling to complete the "compare configurations" goal:
+Compare two specs to see size difference and verify behavior:
 
 ```bash
-cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml
+cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r
 ```
 
-Output: binary sizes, symbol counts, flag differences.
+Output shows which spec produces smaller binary and verifies identical exit codes.
 
 ### Phase 2: Merge to Main
 
@@ -127,10 +131,12 @@ xt/
     cli.rs          # Clap CLI definitions
     types.rs        # Spec parameter types
     tspec.rs        # Spec loading/saving/hashing
-    find_paths.rs   # Workspace/crate/tspec discovery
+    find_paths.rs   # Workspace/crate/tspec/binary path discovery
     build.rs        # Build command + generated build.rs
     run.rs          # Run command implementation
     testing.rs      # Test command implementation
+    compare.rs      # Compare command (size + behavior)
+    binary.rs       # Binary operations (strip, size)
   tests/
     data/           # Test fixtures (TOML specs)
     tspec_test.rs   # Integration tests
