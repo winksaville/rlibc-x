@@ -20,6 +20,9 @@ pub enum Commands {
         /// Release build
         #[arg(short, long)]
         release: bool,
+        /// Strip symbols from binary after build
+        #[arg(short, long)]
+        strip: bool,
     },
     /// Build and run a crate with a translation spec
     Run {
@@ -31,6 +34,9 @@ pub enum Commands {
         /// Release build
         #[arg(short, long)]
         release: bool,
+        /// Strip symbols from binary before running
+        #[arg(short, long)]
+        strip: bool,
     },
     /// Test a crate with a translation spec
     Test {

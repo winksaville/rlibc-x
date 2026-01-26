@@ -1,6 +1,8 @@
 use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 
+use crate::types::{CargoParam, Profile, Spec};
+
 /// Find the workspace root by looking for Cargo.toml with [workspace]
 pub fn find_workspace_root() -> Result<PathBuf> {
     let mut dir = std::env::current_dir()?;
@@ -55,5 +57,145 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
                 Ok(None) // No tspec = plain cargo build
             }
         }
+    }
+}
+
+/// Get binary path for a build with a spec
+pub fn get_binary_path(workspace: &Path, crate_name: &str, spec: &Spec, release: bool) -> PathBuf {
+    let is_release = release
+        || spec
+            .cargo
+            .iter()
+            .any(|p| matches!(p, CargoParam::Profile(Profile::Release)));
+
+    let target = spec.cargo.iter().find_map(|p| match p {
+        CargoParam::TargetTriple(t) => Some(t.clone()),
+        CargoParam::TargetJson(p) => p.file_stem().map(|s| s.to_string_lossy().to_string()),
+        _ => None,
+    });
+
+    let profile_dir = if is_release { "release" } else { "debug" };
+
+    match target {
+        Some(t) => workspace
+            .join("target")
+            .join(t)
+            .join(profile_dir)
+            .join(crate_name),
+        None => workspace.join("target").join(profile_dir).join(crate_name),
+    }
+}
+
+/// Get binary path for a simple build (no spec)
+pub fn get_binary_path_simple(workspace: &Path, crate_name: &str, release: bool) -> PathBuf {
+    let profile_dir = if release { "release" } else { "debug" };
+    workspace.join("target").join(profile_dir).join(crate_name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn get_binary_path_simple_debug() {
+        let workspace = Path::new("/workspace");
+        let path = get_binary_path_simple(workspace, "myapp", false);
+        assert_eq!(path, PathBuf::from("/workspace/target/debug/myapp"));
+    }
+
+    #[test]
+    fn get_binary_path_simple_release() {
+        let workspace = Path::new("/workspace");
+        let path = get_binary_path_simple(workspace, "myapp", true);
+        assert_eq!(path, PathBuf::from("/workspace/target/release/myapp"));
+    }
+
+    #[test]
+    fn get_binary_path_empty_spec_debug() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec::default();
+        let path = get_binary_path(workspace, "myapp", &spec, false);
+        assert_eq!(path, PathBuf::from("/workspace/target/debug/myapp"));
+    }
+
+    #[test]
+    fn get_binary_path_empty_spec_release_flag() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec::default();
+        let path = get_binary_path(workspace, "myapp", &spec, true);
+        assert_eq!(path, PathBuf::from("/workspace/target/release/myapp"));
+    }
+
+    #[test]
+    fn get_binary_path_release_from_spec_profile() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec {
+            cargo: vec![CargoParam::Profile(Profile::Release)],
+            ..Default::default()
+        };
+        // release=false but spec says Release
+        let path = get_binary_path(workspace, "myapp", &spec, false);
+        assert_eq!(path, PathBuf::from("/workspace/target/release/myapp"));
+    }
+
+    #[test]
+    fn get_binary_path_with_target_triple() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec {
+            cargo: vec![CargoParam::TargetTriple(
+                "x86_64-unknown-linux-musl".to_string(),
+            )],
+            ..Default::default()
+        };
+        let path = get_binary_path(workspace, "myapp", &spec, true);
+        assert_eq!(
+            path,
+            PathBuf::from("/workspace/target/x86_64-unknown-linux-musl/release/myapp")
+        );
+    }
+
+    #[test]
+    fn get_binary_path_with_target_json() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec {
+            cargo: vec![CargoParam::TargetJson(PathBuf::from(
+                "x86_64-unknown-linux-rlibcx2.json",
+            ))],
+            ..Default::default()
+        };
+        let path = get_binary_path(workspace, "myapp", &spec, true);
+        assert_eq!(
+            path,
+            PathBuf::from("/workspace/target/x86_64-unknown-linux-rlibcx2/release/myapp")
+        );
+    }
+
+    #[test]
+    fn get_binary_path_target_triple_debug() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec {
+            cargo: vec![CargoParam::TargetTriple(
+                "x86_64-unknown-linux-musl".to_string(),
+            )],
+            ..Default::default()
+        };
+        let path = get_binary_path(workspace, "myapp", &spec, false);
+        assert_eq!(
+            path,
+            PathBuf::from("/workspace/target/x86_64-unknown-linux-musl/debug/myapp")
+        );
+    }
+
+    #[test]
+    fn get_binary_path_release_flag_with_debug_spec() {
+        let workspace = Path::new("/workspace");
+        let spec = Spec {
+            cargo: vec![CargoParam::Profile(Profile::Debug)],
+            ..Default::default()
+        };
+        // release=true overrides spec's Debug profile
+        let path = get_binary_path(workspace, "myapp", &spec, true);
+        assert_eq!(path, PathBuf::from("/workspace/target/release/myapp"));
     }
 }

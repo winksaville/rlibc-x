@@ -1,3 +1,4 @@
+pub mod binary;
 pub mod build;
 pub mod cli;
 pub mod find_paths;

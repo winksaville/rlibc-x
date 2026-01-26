@@ -1,15 +1,22 @@
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
+use crate::find_paths::{
+    find_crate_dir, find_tspec, find_workspace_root, get_binary_path, get_binary_path_simple,
+};
 use crate::tspec::load_spec;
 use crate::types::{CargoParam, LinkerParam, Profile, RustcParam, Spec};
 
-/// Build a crate with a spec
-pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result<()> {
+/// Result of a successful build
+pub struct BuildResult {
+    pub binary_path: PathBuf,
+}
+
+/// Build a crate with a spec, returns the binary path on success
+pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result<BuildResult> {
     let workspace = find_workspace_root()?;
     let crate_dir = find_crate_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
@@ -17,6 +24,14 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
     // Track if we generated a build.rs
     let build_rs_path = crate_dir.join("build.rs");
     let had_build_rs = build_rs_path.exists();
+
+    // Determine binary path based on spec
+    let binary_path = if let Some(path) = &tspec_path {
+        let spec = load_spec(path)?;
+        get_binary_path(&workspace, crate_name, &spec, release)
+    } else {
+        get_binary_path_simple(&workspace, crate_name, release)
+    };
 
     // Apply spec if present, otherwise plain cargo build
     let status = if let Some(path) = &tspec_path {
@@ -32,7 +47,7 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
             generate_build_rs(&build_rs_path, crate_name, &spec)?;
         }
 
-        let mut cmd = build_cargo_command(&spec, &workspace)?;
+        let mut cmd = build_cargo_command(&spec)?;
         cmd.arg("build");
         cmd.arg("-p").arg(crate_name);
         cmd.current_dir(&workspace);
@@ -60,7 +75,8 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
         bail!("cargo build failed");
     }
 
-    Ok(())
+    println!("  {}", binary_path.display());
+    Ok(BuildResult { binary_path })
 }
 
 /// Generate a temporary build.rs with scoped linker flags from tspec.toml
@@ -104,7 +120,7 @@ fn requires_nightly(spec: &Spec) -> bool {
 }
 
 /// Build the base cargo command (with toolchain if needed)
-fn build_cargo_command(spec: &Spec, _workspace: &Path) -> Result<Command> {
+fn build_cargo_command(spec: &Spec) -> Result<Command> {
     let mut cmd = Command::new("cargo");
 
     if requires_nightly(spec) {

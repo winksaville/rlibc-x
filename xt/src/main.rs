@@ -1,9 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
 
+use xt::binary::strip_binary;
 use xt::build::build_crate;
 use xt::cli::{Cli, Commands, SpecCommands};
-use xt::run::run_crate;
+use xt::run::run_binary;
 use xt::testing::test_crate;
 
 fn main() -> Result<()> {
@@ -14,15 +15,26 @@ fn main() -> Result<()> {
             crate_name,
             tspec,
             release,
+            strip,
         } => {
-            build_crate(&crate_name, tspec.as_deref(), release)?;
+            let result = build_crate(&crate_name, tspec.as_deref(), release)?;
+            if strip {
+                strip_binary(&result.binary_path)?;
+            }
         }
         Commands::Run {
             crate_name,
             tspec,
             release,
+            strip,
         } => {
-            run_crate(&crate_name, tspec.as_deref(), release)?;
+            // Build, optionally strip, then run
+            let result = build_crate(&crate_name, tspec.as_deref(), release)?;
+            if strip {
+                strip_binary(&result.binary_path)?;
+            }
+            let exit_code = run_binary(&result.binary_path)?;
+            std::process::exit(exit_code);
         }
         Commands::Test {
             crate_name,
