@@ -220,14 +220,6 @@ dependencies = [
 name = "ex-x1"
 version = "0.1.0"
 dependencies = [
- "is-libc-used",
- "rlibc-x1",
-]
-
-[[package]]
-name = "ex-x1-xt"
-version = "0.1.0"
-dependencies = [
  "rlibc-x1",
 ]
 
