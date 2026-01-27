@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::process::ExitCode;
 
-use xt::all::{build_all, print_summary, run_all, test_all};
+use xt::all::{build_all, print_run_summary, print_summary, print_test_summary, run_all, test_all};
 use xt::binary::strip_binary;
 use xt::build::build_crate;
 use xt::cli::{Cli, Commands, SpecCommands};
@@ -55,7 +55,7 @@ fn run() -> Result<ExitCode> {
                 // Run all apps
                 let workspace = WorkspaceInfo::discover()?;
                 let results = run_all(&workspace, tspec.as_deref(), release, strip);
-                return Ok(print_summary(&results));
+                return Ok(print_run_summary(&results));
             }
             Some(name) => {
                 // Build, optionally strip, then run
@@ -77,7 +77,7 @@ fn run() -> Result<ExitCode> {
                 // Test all crates
                 let workspace = WorkspaceInfo::discover()?;
                 let results = test_all(&workspace, tspec.as_deref(), release, fail_fast);
-                return Ok(print_summary(&results));
+                return Ok(print_test_summary(&results));
             }
             Some(name) => {
                 test_crate(&name, tspec.as_deref(), release)?;
@@ -88,8 +88,9 @@ fn run() -> Result<ExitCode> {
             spec_a,
             spec_b,
             release,
+            strip,
         } => {
-            compare_specs(&crate_name, &spec_a, &spec_b, release)?;
+            compare_specs(&crate_name, &spec_a, &spec_b, release, strip)?;
         }
         Commands::Compat { crate_name, spec } => {
             match spec {

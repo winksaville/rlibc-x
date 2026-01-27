@@ -235,11 +235,11 @@ pub fn test_all(
     results
 }
 
-/// Print a summary of operation results
-pub fn print_summary(results: &[OpResult]) -> ExitCode {
+/// Print a summary of operation results (for tests)
+pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
     println!();
     println!("========================================");
-    println!("               SUMMARY");
+    println!("            TEST SUMMARY");
     println!("========================================");
     println!();
 
@@ -258,11 +258,81 @@ pub fn print_summary(results: &[OpResult]) -> ExitCode {
     }
 
     println!();
-    println!("  Total: {} passed, {} failed", passed, failed);
+    println!("  Test: {} passed, {} failed", passed, failed);
     println!("========================================");
     println!();
 
     if failed > 0 {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// Print a summary for build operations (OK/FAILED)
+pub fn print_summary(results: &[OpResult]) -> ExitCode {
+    println!();
+    println!("========================================");
+    println!("            BUILD SUMMARY");
+    println!("========================================");
+    println!();
+
+    let mut ok_count = 0;
+    let mut failed_count = 0;
+
+    for result in results {
+        let status = if result.success {
+            ok_count += 1;
+            " OK "
+        } else {
+            failed_count += 1;
+            "FAIL"
+        };
+        println!("  [{status}] {}", result.name);
+    }
+
+    println!();
+    println!("  Build: {} ok, {} failed", ok_count, failed_count);
+    println!("========================================");
+    println!();
+
+    if failed_count > 0 {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// Print a summary for run operations (shows exit codes, not pass/fail)
+pub fn print_run_summary(results: &[OpResult]) -> ExitCode {
+    println!();
+    println!("========================================");
+    println!("             RUN SUMMARY");
+    println!("========================================");
+    println!();
+
+    let mut error_count = 0;
+    let max_name_len = results.iter().map(|r| r.name.len()).max().unwrap_or(0);
+
+    for result in results {
+        if result.success {
+            // Extract exit code number from message "exit code: X"
+            let code = result.message.strip_prefix("exit code: ").unwrap_or(&result.message);
+            println!("  {:width$}  exit code: {:>3}", result.name, code, width = max_name_len);
+        } else {
+            error_count += 1;
+            println!("  {:width$}  ERROR: {}", result.name, result.message, width = max_name_len);
+        }
+    }
+
+    println!();
+    if error_count > 0 {
+        println!("  Run: {} error(s)", error_count);
+    }
+    println!("========================================");
+    println!();
+
+    if error_count > 0 {
         ExitCode::from(1)
     } else {
         ExitCode::SUCCESS

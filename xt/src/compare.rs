@@ -11,16 +11,22 @@ struct SpecResult {
 }
 
 /// Compare two specs for a crate
-pub fn compare_specs(crate_name: &str, spec_a: &str, spec_b: &str, release: bool) -> Result<()> {
-    println!("Comparing {} builds:\n", crate_name);
+pub fn compare_specs(
+    crate_name: &str,
+    spec_a: &str,
+    spec_b: &str,
+    release: bool,
+    strip: bool,
+) -> Result<()> {
+    println!("Comparing {} builds{}:\n", crate_name, if strip { " (stripped)" } else { "" });
 
-    // Build, strip, and run spec A
-    let result_a = build_and_run(crate_name, spec_a, release)?;
+    // Build, optionally strip, and run spec A
+    let result_a = build_and_run(crate_name, spec_a, release, strip)?;
 
     println!();
 
-    // Build, strip, and run spec B
-    let result_b = build_and_run(crate_name, spec_b, release)?;
+    // Build, optionally strip, and run spec B
+    let result_b = build_and_run(crate_name, spec_b, release, strip)?;
 
     // Print comparison
     println!();
@@ -29,14 +35,16 @@ pub fn compare_specs(crate_name: &str, spec_a: &str, spec_b: &str, release: bool
     Ok(())
 }
 
-fn build_and_run(crate_name: &str, spec: &str, release: bool) -> Result<SpecResult> {
+fn build_and_run(crate_name: &str, spec: &str, release: bool, strip: bool) -> Result<SpecResult> {
     println!("  {}:", spec);
 
     // Build
     let build_result = build_crate(crate_name, Some(spec), release)?;
 
-    // Strip
-    strip_binary(&build_result.binary_path)?;
+    // Optionally strip
+    if strip {
+        strip_binary(&build_result.binary_path)?;
+    }
 
     // Get size
     let size = binary_size(&build_result.binary_path)?;

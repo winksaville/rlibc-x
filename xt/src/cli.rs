@@ -66,6 +66,9 @@ pub enum Commands {
         /// Release build
         #[arg(short, long)]
         release: bool,
+        /// Strip symbols before comparing sizes
+        #[arg(short, long)]
+        strip: bool,
     },
     /// Manage crate compatibility with specs
     Compat {
