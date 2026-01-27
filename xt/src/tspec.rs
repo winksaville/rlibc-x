@@ -54,8 +54,8 @@ pub fn save_spec_snapshot(spec: &Spec, name: &str, dir: &Path) -> Result<PathBuf
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
             let filename = entry.file_name().to_string_lossy().into_owned();
-            if filename.starts_with(&prefix) && filename.ends_with(".toml") {
-                // Extract sequence number: {name}-{seq:03}-{hash}.toml
+            if filename.starts_with(&prefix) && filename.ends_with(".xt.toml") {
+                // Extract sequence number: {name}-{seq:03}-{hash}.xt.toml
                 let rest = filename.strip_prefix(&prefix)?;
                 let seq_str = rest.split('-').next()?;
                 seq_str.parse::<u32>().ok()
@@ -68,7 +68,7 @@ pub fn save_spec_snapshot(spec: &Spec, name: &str, dir: &Path) -> Result<PathBuf
         .unwrap_or(1);
 
     let hash = hash_spec(spec)?;
-    let filename = format!("{}-{:03}-{}.toml", name, next_seq, hash);
+    let filename = format!("{}-{:03}-{}.xt.toml", name, next_seq, hash);
     let path = dir.join(&filename);
 
     let content = serialize_spec(spec)?;
@@ -158,13 +158,22 @@ mod tests {
         let name2 = path2.file_name().unwrap().to_string_lossy();
         let name3 = path3.file_name().unwrap().to_string_lossy();
 
-        assert!(name1.starts_with("test-001-"));
-        assert!(name2.starts_with("test-002-"));
-        assert!(name3.starts_with("test-003-"));
+        assert!(name1.starts_with("test-001-"), "got: {}", name1);
+        assert!(name2.starts_with("test-002-"), "got: {}", name2);
+        assert!(name3.starts_with("test-003-"), "got: {}", name3);
+        assert!(name1.ends_with(".xt.toml"), "got: {}", name1);
 
-        // Same content = same hash suffix
-        let hash1 = name1.strip_prefix("test-001-").unwrap();
-        let hash3 = name3.strip_prefix("test-003-").unwrap();
+        // Same content = same hash suffix (strip prefix and .xt.toml suffix)
+        let hash1 = name1
+            .strip_prefix("test-001-")
+            .unwrap()
+            .strip_suffix(".xt.toml")
+            .unwrap();
+        let hash3 = name3
+            .strip_prefix("test-003-")
+            .unwrap()
+            .strip_suffix(".xt.toml")
+            .unwrap();
         assert_eq!(hash1, hash3);
     }
 }

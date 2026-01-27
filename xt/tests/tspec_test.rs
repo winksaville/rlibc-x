@@ -40,7 +40,7 @@ fn app_tspec(app_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../apps")
         .join(app_name)
-        .join("tspec.toml")
+        .join("tspec.xt.toml")
 }
 
 #[test]

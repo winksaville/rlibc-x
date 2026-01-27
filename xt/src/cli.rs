@@ -10,11 +10,11 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Build a crate with a translation spec
+    /// Build crate(s) with a translation spec
     Build {
-        /// Crate to build
-        crate_name: String,
-        /// Translation spec to use (defaults to crate's tspec.toml)
+        /// Crate to build (omit for all workspace members)
+        crate_name: Option<String>,
+        /// Translation spec to use (defaults to crate's tspec.xt.toml)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -23,12 +23,15 @@ pub enum Commands {
         /// Strip symbols from binary after build
         #[arg(short, long)]
         strip: bool,
+        /// Stop on first failure (for all-crates mode)
+        #[arg(short, long)]
+        fail_fast: bool,
     },
-    /// Build and run a crate with a translation spec
+    /// Build and run crate(s) with a translation spec
     Run {
-        /// Crate to run
-        crate_name: String,
-        /// Translation spec to use (defaults to crate's tspec.toml)
+        /// Crate to run (omit for all apps)
+        crate_name: Option<String>,
+        /// Translation spec to use (defaults to crate's tspec.xt.toml)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -38,16 +41,19 @@ pub enum Commands {
         #[arg(short, long)]
         strip: bool,
     },
-    /// Test a crate with a translation spec
+    /// Test crate(s) with a translation spec
     Test {
-        /// Crate to test
-        crate_name: String,
-        /// Translation spec to use (defaults to crate's tspec.toml)
+        /// Crate to test (omit for all workspace members)
+        crate_name: Option<String>,
+        /// Translation spec to use (defaults to crate's tspec.xt.toml)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
         #[arg(short, long)]
         release: bool,
+        /// Stop on first failure
+        #[arg(short, long)]
+        fail_fast: bool,
     },
     /// Compare two specs for a crate (size and behavior)
     Compare {

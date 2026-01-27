@@ -1,14 +1,27 @@
 use anyhow::Result;
 use clap::Parser;
+use std::process::ExitCode;
 
+use xt::all::{build_all, print_summary, run_all, test_all};
 use xt::binary::strip_binary;
 use xt::build::build_crate;
 use xt::cli::{Cli, Commands, SpecCommands};
 use xt::compare::compare_specs;
 use xt::run::run_binary;
 use xt::testing::test_crate;
+use xt::workspace::WorkspaceInfo;
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn run() -> Result<ExitCode> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -17,33 +30,59 @@ fn main() -> Result<()> {
             tspec,
             release,
             strip,
-        } => {
-            let result = build_crate(&crate_name, tspec.as_deref(), release)?;
-            if strip {
-                strip_binary(&result.binary_path)?;
+            fail_fast,
+        } => match crate_name {
+            None => {
+                // Build all crates
+                let workspace = WorkspaceInfo::discover()?;
+                let results = build_all(&workspace, tspec.as_deref(), release, strip, fail_fast);
+                return Ok(print_summary(&results));
             }
-        }
+            Some(name) => {
+                let result = build_crate(&name, tspec.as_deref(), release)?;
+                if strip {
+                    strip_binary(&result.binary_path)?;
+                }
+            }
+        },
         Commands::Run {
             crate_name,
             tspec,
             release,
             strip,
-        } => {
-            // Build, optionally strip, then run
-            let result = build_crate(&crate_name, tspec.as_deref(), release)?;
-            if strip {
-                strip_binary(&result.binary_path)?;
+        } => match crate_name {
+            None => {
+                // Run all apps
+                let workspace = WorkspaceInfo::discover()?;
+                let results = run_all(&workspace, tspec.as_deref(), release, strip);
+                return Ok(print_summary(&results));
             }
-            let exit_code = run_binary(&result.binary_path)?;
-            std::process::exit(exit_code);
-        }
+            Some(name) => {
+                // Build, optionally strip, then run
+                let result = build_crate(&name, tspec.as_deref(), release)?;
+                if strip {
+                    strip_binary(&result.binary_path)?;
+                }
+                let exit_code = run_binary(&result.binary_path)?;
+                std::process::exit(exit_code);
+            }
+        },
         Commands::Test {
             crate_name,
             tspec,
             release,
-        } => {
-            test_crate(&crate_name, tspec.as_deref(), release)?;
-        }
+            fail_fast,
+        } => match crate_name {
+            None => {
+                // Test all crates
+                let workspace = WorkspaceInfo::discover()?;
+                let results = test_all(&workspace, tspec.as_deref(), release, fail_fast);
+                return Ok(print_summary(&results));
+            }
+            Some(name) => {
+                test_crate(&name, tspec.as_deref(), release)?;
+            }
+        },
         Commands::Compare {
             crate_name,
             spec_a,
@@ -81,5 +120,5 @@ fn main() -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

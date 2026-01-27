@@ -1,3 +1,4 @@
+pub mod all;
 pub mod binary;
 pub mod build;
 pub mod cli;
@@ -7,3 +8,4 @@ pub mod run;
 pub mod testing;
 pub mod tspec;
 pub mod types;
+pub mod workspace;

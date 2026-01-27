@@ -50,7 +50,7 @@ pub fn find_workspace_root() -> Result<PathBuf> {
     }
 }
 
-/// Find a crate's directory - tries as path first, then searches libs/ and apps/
+/// Find a crate's directory - tries as path first, then searches standard locations
 pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
     // Try as path first (relative or absolute)
     let as_path = PathBuf::from(name);
@@ -58,13 +58,31 @@ pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
         return Ok(as_path.canonicalize().unwrap_or(as_path));
     }
 
-    // Fallback: search libs/ and apps/
-    for prefix in ["libs", "apps"] {
+    // Fallback: search libs/, apps/, tools/
+    for prefix in ["libs", "apps", "tools"] {
         let path = workspace.join(prefix).join(name);
         if path.join("Cargo.toml").exists() {
             return Ok(path);
         }
     }
+
+    // Special case: nested test crates like libs/rlibc-x2/tests
+    for prefix in ["libs", "apps"] {
+        for entry in std::fs::read_dir(workspace.join(prefix)).into_iter().flatten() {
+            if let Ok(entry) = entry {
+                let nested = entry.path().join("tests");
+                if nested.join("Cargo.toml").exists() {
+                    // Check if this is the crate we're looking for
+                    if let Ok(pkg_name) = get_crate_name(&nested) {
+                        if pkg_name == name {
+                            return Ok(nested);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     bail!("crate '{}' not found", name);
 }
 
@@ -85,10 +103,18 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
                 return Ok(Some(in_crate));
             }
 
+            // Try with .xt.toml suffix if name has no extension
+            if !name.contains('.') {
+                let with_suffix = crate_dir.join(format!("{}.xt.toml", name));
+                if with_suffix.exists() {
+                    return Ok(Some(with_suffix));
+                }
+            }
+
             bail!("tspec not found: {}", name);
         }
         None => {
-            let default = crate_dir.join("tspec.toml");
+            let default = crate_dir.join("tspec.xt.toml");
             if default.exists() {
                 Ok(Some(default))
             } else {
@@ -314,13 +340,13 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        let tspec_path = crate_dir.join("tspec.toml");
-        fs::write(&tspec_path, "# default spec").unwrap();
+        let tspec_path = crate_dir.join("tspec.xt.toml");
+        fs::write(&tspec_path, "# default tspec").unwrap();
 
         // No explicit name, should find default
         let found = find_tspec(&crate_dir, None).unwrap();
         assert!(found.is_some());
-        assert!(found.unwrap().to_string_lossy().contains("tspec.toml"));
+        assert!(found.unwrap().to_string_lossy().contains("tspec.xt.toml"));
     }
 
     #[test]
@@ -329,7 +355,7 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        // No tspec.toml, should return None (plain cargo build)
+        // No tspec.xt.toml, should return None (plain cargo build)
         let found = find_tspec(&crate_dir, None).unwrap();
         assert!(found.is_none());
     }
@@ -343,6 +369,37 @@ version = "0.1.0"
         let result = find_tspec(&crate_dir, Some("nonexistent.toml"));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[test]
+    fn find_tspec_suffix_fallback() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        // Create optimized.xt.toml
+        let tspec_path = crate_dir.join("optimized.xt.toml");
+        fs::write(&tspec_path, "# optimized tspec").unwrap();
+
+        // Request "optimized" without extension, should find optimized.xt.toml
+        let found = find_tspec(&crate_dir, Some("optimized")).unwrap();
+        assert!(found.is_some());
+        assert!(found.unwrap().to_string_lossy().contains("optimized.xt.toml"));
+    }
+
+    #[test]
+    fn find_tspec_no_suffix_fallback_when_has_extension() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        // Create foo.xt.toml but request foo.toml (has extension)
+        let tspec_path = crate_dir.join("foo.xt.toml");
+        fs::write(&tspec_path, "# tspec").unwrap();
+
+        // Request "foo.toml" - should NOT try suffix fallback
+        let result = find_tspec(&crate_dir, Some("foo.toml"));
+        assert!(result.is_err());
     }
 
     // ==================== get_binary_path tests ====================
