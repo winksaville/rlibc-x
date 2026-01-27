@@ -26,7 +26,8 @@
       "Bash(cargo run:*)",
       "Bash(__NEW_LINE_f48168cdd55bd92f__ echo \"\")",
       "Bash(xargs ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }

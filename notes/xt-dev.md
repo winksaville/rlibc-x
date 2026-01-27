@@ -2,29 +2,41 @@
 
 Development notes for the `xt-dev` branch - building a translation spec based build system.
 
+## 20260127 - Compare Glob Patterns and Summary Improvements
+
+Enhanced `compare` command to support multiple specs via glob patterns:
+
+```bash
+cargo xt compare ex-x2-xt -r                    # All tspec*.xt.toml in crate dir
+cargo xt compare ex-x2-xt -t "*.xt.toml" -r     # Explicit glob pattern
+cargo xt compare ex-x2-xt -t a.toml -t b.toml   # Explicit file list
+```
+
+Output now shows specs sorted by size (smallest first) with percent change from largest:
+```
+============================================
+              COMPARE SUMMARY
+============================================
+  Spec                     Size    Change
+  tspec-opt.xt.toml        6.4K    -84.8%
+  tspec.xt.toml           42.2K     0.0%
+============================================
+```
+
+Also added:
+- Column headers to build/test/run summaries (Crate, Status, Size/Exit)
+- Size column in build summary
+- `print_hline!` and `print_header!` macros for consistent output formatting
+
 ## 20260125 - Compare Command and Path Resolution
 
 Completed Phase 1 (spec comparison) with the `compare` command:
 
 ```bash
-cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r
+cargo xt compare ex-x2-xt -r   # Compare all tspec*.xt.toml
 ```
 
-Output shows size difference and verifies behavior:
-```
-Comparing ex-x2-xt builds:
-
-  tspec.toml:
-    size: 42.2K bytes
-    exit: 42
-
-  tspec-opt.toml:
-    size: 6.4K bytes
-    exit: 42
-
-  Size: tspec-opt.toml is 35.8K smaller (84.8%)
-  Behavior: identical (exit 42)
-```
+Output shows size differences sorted smallest first.
 
 Also added path-first resolution for crates and tspec files:
 - `cargo xt build apps/ex-x2-xt` - path to crate directory
@@ -40,7 +52,7 @@ Added 36 unit tests covering binary operations and path resolution.
 ## The Goal
 
 Create a tool (`xt`) that:
-1. Reads build specifications from `tspec.toml` files
+1. Reads build specifications from `tspec.xt.toml` files
 2. Applies compiler/linker flags consistently
 3. Enables easy comparison of different build configurations
 4. Eventually supports maximal optimization (`-Z build-std`)
@@ -111,22 +123,22 @@ Now:
 
 ### How xt Handles This
 
-Since tspec.toml is meant to be the source of truth, but we need build.rs for
+Since tspec.xt.toml is meant to be the source of truth, but we need build.rs for
 scoping, xt generates a temporary build.rs:
 
-1. Read `tspec.toml` linker args
+1. Read `tspec.xt.toml` linker args
 2. Generate `build.rs` with scoped `cargo:rustc-link-arg-bin` directives
 3. Run `cargo build/test`
 4. Delete the generated `build.rs`
 
 ```
 cargo xt build ex-x2-xt:
-  1. Generate apps/ex-x2-xt/build.rs from tspec.toml
+  1. Generate apps/ex-x2-xt/build.rs from tspec.xt.toml
   2. cargo build -p ex-x2-xt
   3. rm apps/ex-x2-xt/build.rs
 ```
 
-This keeps tspec.toml as the single source of truth while using cargo's scoping
+This keeps tspec.xt.toml as the single source of truth while using cargo's scoping
 mechanism under the hood.
 
 ### What About rustc Flags?
@@ -161,8 +173,8 @@ causing the conflict.
 
 ## Apps Created
 
-| App | Runtime | tspec.toml | Notes |
-|-----|---------|------------|-------|
+| App | Runtime | tspec.xt.toml | Notes |
+|-----|---------|---------------|-------|
 | ex-x1-xt | rlibc-x1 | Yes | Linker flags for no_std |
 | ex-x2-xt | rlibc-x2 | Yes | Linker flags for std-compatible |
 | ex-glibc | glibc | No | Plain cargo build works |
@@ -174,7 +186,7 @@ causing the conflict.
 2. **RUSTFLAGS is dangerous** - Applies to everything, including build scripts
 3. **Generated build.rs is a workaround** - Not ideal, but necessary
 4. **-Z build-std breaks tests** - Fundamental limitation of rebuilding std
-5. **tspec.toml remains the source of truth** - Even though build.rs is generated
+5. **tspec.xt.toml remains the source of truth** - Even though build.rs is generated
 
 ## Future Work
 
@@ -185,35 +197,3 @@ causing the conflict.
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design thoughts.
 
-## 20260125 - Compare Command and Path Resolution
-
-Completed Phase 1 (spec comparison) with the `compare` command:
-
-```bash
-cargo xt compare ex-x2-xt tspec.toml tspec-opt.toml -r
-```
-
-Output shows size difference and verifies behavior:
-```
-Comparing ex-x2-xt builds:
-
-  tspec.toml:
-    size: 42.2K bytes
-    exit: 42
-
-  tspec-opt.toml:
-    size: 6.4K bytes
-    exit: 42
-
-  Size: tspec-opt.toml is 35.8K smaller (84.8%)
-  Behavior: identical (exit 42)
-```
-
-Also added flexible path resolution for crates and tspec files:
-- `cargo xt build apps/ex-x2-xt` - path to crate directory
-- `cargo xt build ex-x2-xt -t /full/path/to/spec.toml` - absolute tspec path
-- `cargo xt build ex-x2-xt -t ../other/spec.toml` - relative tspec path
-
-Resolution order: try name as path first (Cargo.toml or file exists), then fall back to libs/apps or crate_dir.
-
-Added 36 unit tests covering binary operations and path resolution.
