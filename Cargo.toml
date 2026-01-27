@@ -15,7 +15,6 @@ members = [
     "apps/hw-musl",
     "tools/is-libc-used",
     "tools/func-analysis",
-    "xtask",
     "xt",
 ]
 resolver = "3"
