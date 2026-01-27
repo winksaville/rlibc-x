@@ -1,4 +1,4 @@
-# ex-x2-xt spec - uses rlibc-x2 runtime
+# ex-x2 spec - uses rlibc-x2 runtime
 # Linker flags from original build.rs
 
 [[linker]]

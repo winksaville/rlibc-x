@@ -1,5 +1,5 @@
-# ex-x2-xt optimized spec - uses nightly build-std for smallest binary
-# Equivalent to: cargo xtask build ex-x2 -r -opt -s
+# hw-x2 optimized spec - uses nightly build-std for smallest binary
+# Equivalent to: cargo xt build hw-x2 -r --tspec tspec-opt.xt.toml
 
 # Use custom target with plt-by-default: false
 [[cargo]]
