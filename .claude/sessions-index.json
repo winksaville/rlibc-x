@@ -468,6 +468,19 @@
       "gitBranch": "add-tests",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "b7ed45ee-1d40-47b8-8272-942888016767",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/b7ed45ee-1d40-47b8-8272-942888016767.jsonl",
+      "fileMtime": 1769526474542,
+      "firstPrompt": "[Request interrupted by user for tool use]",
+      "summary": "xt all-crates mode with spec renaming",
+      "messageCount": 13,
+      "created": "2026-01-27T06:19:43.794Z",
+      "modified": "2026-01-27T06:29:35.316Z",
+      "gitBranch": "xt-dev",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"

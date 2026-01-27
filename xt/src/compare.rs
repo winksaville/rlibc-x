@@ -2,13 +2,6 @@ use anyhow::Result;
 
 use crate::binary::{binary_size, strip_binary};
 use crate::build::build_crate;
-use crate::run::run_binary;
-
-/// Result of building and running a spec
-struct SpecResult {
-    size: u64,
-    exit_code: i32,
-}
 
 /// Compare two specs for a crate
 pub fn compare_specs(
@@ -20,22 +13,21 @@ pub fn compare_specs(
 ) -> Result<()> {
     println!("Comparing {} builds{}:\n", crate_name, if strip { " (stripped)" } else { "" });
 
-    // Build, optionally strip, and run spec A
-    let result_a = build_and_run(crate_name, spec_a, release, strip)?;
+    // Build and optionally strip spec A
+    let size_a = build_spec(crate_name, spec_a, release, strip)?;
 
     println!();
 
-    // Build, optionally strip, and run spec B
-    let result_b = build_and_run(crate_name, spec_b, release, strip)?;
+    // Build and optionally strip spec B
+    let size_b = build_spec(crate_name, spec_b, release, strip)?;
 
     // Print comparison
-    println!();
-    print_comparison(&result_a, &result_b, spec_a, spec_b);
+    print_comparison(size_a, size_b, spec_a, spec_b);
 
     Ok(())
 }
 
-fn build_and_run(crate_name: &str, spec: &str, release: bool, strip: bool) -> Result<SpecResult> {
+fn build_spec(crate_name: &str, spec: &str, release: bool, strip: bool) -> Result<u64> {
     println!("  {}:", spec);
 
     // Build
@@ -50,52 +42,45 @@ fn build_and_run(crate_name: &str, spec: &str, release: bool, strip: bool) -> Re
     let size = binary_size(&build_result.binary_path)?;
     println!("    size: {} bytes", format_size(size));
 
-    // Run
-    let exit_code = run_binary(&build_result.binary_path)?;
-    println!("    exit: {}", exit_code);
-
-    Ok(SpecResult { size, exit_code })
+    Ok(size)
 }
 
-fn print_comparison(a: &SpecResult, b: &SpecResult, spec_a: &str, spec_b: &str) {
-    // Size comparison
-    let size_diff = (a.size as i64 - b.size as i64).unsigned_abs();
-    let larger_size = a.size.max(b.size);
-    let size_pct = if larger_size > 0 {
-        (size_diff as f64 / larger_size as f64) * 100.0
+fn print_comparison(size_a: u64, size_b: u64, spec_a: &str, spec_b: &str) {
+    let larger_size = size_a.max(size_b);
+
+    // Calculate percent reduction from larger for each spec
+    let pct_a = if larger_size > 0 {
+        ((larger_size as f64 - size_a as f64) / larger_size as f64) * 100.0
+    } else {
+        0.0
+    };
+    let pct_b = if larger_size > 0 {
+        ((larger_size as f64 - size_b as f64) / larger_size as f64) * 100.0
     } else {
         0.0
     };
 
-    let size_str = if a.size < b.size {
-        format!(
-            "{} is {} smaller ({:.1}%)",
-            spec_a,
-            format_size(size_diff),
-            size_pct
-        )
-    } else if b.size < a.size {
-        format!(
-            "{} is {} smaller ({:.1}%)",
-            spec_b,
-            format_size(size_diff),
-            size_pct
-        )
-    } else {
-        "identical".to_string()
+    // Format percent change: show reduction with minus sign, baseline as 0.0%
+    let fmt_pct = |pct: f64| -> String {
+        if pct > 0.0 {
+            format!("{:>7.1}%", -pct)
+        } else {
+            "   0.0%".to_string()
+        }
     };
 
-    println!("  Size: {}", size_str);
+    let max_name_len = spec_a.len().max(spec_b.len());
 
-    // Behavior comparison
-    if a.exit_code == b.exit_code {
-        println!("  Behavior: identical (exit {})", a.exit_code);
-    } else {
-        println!(
-            "  Behavior: DIFFERENT (exit {} vs {}) ⚠️",
-            a.exit_code, b.exit_code
-        );
-    }
+    println!();
+    println!("========================================");
+    println!("          COMPARE SUMMARY");
+    println!("========================================");
+    println!();
+    println!("  {:width$}  {:>10}  {:>8}", "Spec", "Size", "Change", width = max_name_len);
+    println!("  {:width$}  {:>10}  {}", spec_a, format_size(size_a), fmt_pct(pct_a), width = max_name_len);
+    println!("  {:width$}  {:>10}  {}", spec_b, format_size(size_b), fmt_pct(pct_b), width = max_name_len);
+    println!("========================================");
+    println!();
 }
 
 fn format_size(bytes: u64) -> String {
