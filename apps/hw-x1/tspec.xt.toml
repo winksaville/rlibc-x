@@ -1,0 +1,5 @@
+# hw-x1 spec - uses rlibc-x1 runtime
+# Linker flags from original build.rs
+
+[[linker]]
+args = ["-static", "-nostartfiles"]
