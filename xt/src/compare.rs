@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::binary::{binary_size, strip_binary};
 use crate::build::build_crate;
+use crate::{print_header, print_hline};
 
 /// Result of building a spec
 struct SpecResult {
@@ -82,10 +83,8 @@ fn print_comparison(results: &[SpecResult]) {
         }
     };
 
-    println!("========================================");
-    println!("          COMPARE SUMMARY");
-    println!("========================================");
     println!();
+    print_header!("COMPARE SUMMARY");
     println!(
         "  {:width$}  {:>10}  {:>8}",
         "Spec",
@@ -102,7 +101,7 @@ fn print_comparison(results: &[SpecResult]) {
             width = max_name_len
         );
     }
-    println!("========================================");
+    print_hline!();
     println!();
 }
 

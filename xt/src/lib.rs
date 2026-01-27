@@ -4,6 +4,8 @@ pub mod build;
 pub mod cli;
 pub mod compare;
 pub mod find_paths;
+pub mod print_header;
+pub mod print_hline;
 pub mod run;
 pub mod testing;
 pub mod tspec;

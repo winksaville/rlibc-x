@@ -7,6 +7,7 @@ use std::process::ExitCode;
 
 use crate::binary::strip_binary;
 use crate::build::build_crate;
+use crate::{print_header, print_hline};
 use crate::run::run_binary;
 use crate::testing::test_crate;
 use crate::workspace::{CrateKind, WorkspaceInfo};
@@ -238,10 +239,7 @@ pub fn test_all(
 /// Print a summary of operation results (for tests)
 pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
     println!();
-    println!("========================================");
-    println!("            TEST SUMMARY");
-    println!("========================================");
-    println!();
+    print_header!("TEST SUMMARY");
 
     let mut passed = 0;
     let mut failed = 0;
@@ -259,7 +257,7 @@ pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
 
     println!();
     println!("  Test: {} passed, {} failed", passed, failed);
-    println!("========================================");
+    print_hline!();
     println!();
 
     if failed > 0 {
@@ -272,10 +270,7 @@ pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
 /// Print a summary for build operations (OK/FAILED)
 pub fn print_summary(results: &[OpResult]) -> ExitCode {
     println!();
-    println!("========================================");
-    println!("            BUILD SUMMARY");
-    println!("========================================");
-    println!();
+    print_header!("BUILD SUMMARY");
 
     let mut ok_count = 0;
     let mut failed_count = 0;
@@ -293,7 +288,7 @@ pub fn print_summary(results: &[OpResult]) -> ExitCode {
 
     println!();
     println!("  Build: {} ok, {} failed", ok_count, failed_count);
-    println!("========================================");
+    print_hline!();
     println!();
 
     if failed_count > 0 {
@@ -306,10 +301,7 @@ pub fn print_summary(results: &[OpResult]) -> ExitCode {
 /// Print a summary for run operations (shows exit codes, not pass/fail)
 pub fn print_run_summary(results: &[OpResult]) -> ExitCode {
     println!();
-    println!("========================================");
-    println!("             RUN SUMMARY");
-    println!("========================================");
-    println!();
+    print_header!("RUN SUMMARY");
 
     let mut error_count = 0;
     let max_name_len = results.iter().map(|r| r.name.len()).max().unwrap_or(0);
@@ -329,7 +321,7 @@ pub fn print_run_summary(results: &[OpResult]) -> ExitCode {
     if error_count > 0 {
         println!("  Run: {} error(s)", error_count);
     }
-    println!("========================================");
+    print_hline!();
     println!();
 
     if error_count > 0 {
