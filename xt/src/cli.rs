@@ -55,14 +55,13 @@ pub enum Commands {
         #[arg(short, long)]
         fail_fast: bool,
     },
-    /// Compare two specs for a crate (size and behavior)
+    /// Compare specs for a crate (size only)
     Compare {
         /// Crate to compare
         crate_name: String,
-        /// First spec file
-        spec_a: String,
-        /// Second spec file
-        spec_b: String,
+        /// Spec file(s) or glob pattern(s) (defaults to tspec*.xt.toml)
+        #[arg(short = 't', long = "tspec", action = clap::ArgAction::Append)]
+        tspec: Vec<String>,
         /// Release build
         #[arg(short, long)]
         release: bool,

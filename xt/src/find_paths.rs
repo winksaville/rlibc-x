@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, bail};
+use glob::Pattern;
 use std::path::{Path, PathBuf};
 
 use crate::types::{CargoParam, Profile, Spec};
@@ -122,6 +123,66 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
             }
         }
     }
+}
+
+/// Find multiple tspecs by glob patterns
+/// If no patterns given, defaults to "tspec*.xt.toml"
+/// Returns sorted list of paths, errors if none found
+pub fn find_tspecs(crate_dir: &Path, patterns: &[String]) -> Result<Vec<PathBuf>> {
+    let patterns: Vec<&str> = if patterns.is_empty() {
+        vec!["tspec*.xt.toml"]
+    } else {
+        patterns.iter().map(|s| s.as_str()).collect()
+    };
+
+    let mut results = Vec::new();
+
+    for pattern in &patterns {
+        // Try as literal path first (relative to cwd or absolute)
+        let as_path = PathBuf::from(pattern);
+        if as_path.exists() && as_path.is_file() {
+            results.push(as_path.canonicalize().unwrap_or(as_path));
+            continue;
+        }
+
+        // Try as literal path relative to crate_dir
+        let in_crate = crate_dir.join(pattern);
+        if in_crate.exists() && in_crate.is_file() {
+            results.push(in_crate);
+            continue;
+        }
+
+        // Try as glob pattern in crate_dir
+        let glob_pattern = Pattern::new(pattern)
+            .with_context(|| format!("invalid glob pattern: {}", pattern))?;
+
+        let entries: Vec<_> = std::fs::read_dir(crate_dir)
+            .with_context(|| format!("cannot read directory: {}", crate_dir.display()))?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().to_string();
+                e.path().is_file() && glob_pattern.matches(&name)
+            })
+            .map(|e| e.path())
+            .collect();
+
+        results.extend(entries);
+    }
+
+    // Remove duplicates and sort
+    results.sort();
+    results.dedup();
+
+    if results.is_empty() {
+        let pattern_list = patterns.join(", ");
+        bail!(
+            "no tspec files found matching '{}' in {}",
+            pattern_list,
+            crate_dir.display()
+        );
+    }
+
+    Ok(results)
 }
 
 /// Get binary path for a build with a spec
@@ -400,6 +461,83 @@ version = "0.1.0"
         // Request "foo.toml" - should NOT try suffix fallback
         let result = find_tspec(&crate_dir, Some("foo.toml"));
         assert!(result.is_err());
+    }
+
+    // ==================== find_tspecs tests ====================
+
+    #[test]
+    fn find_tspecs_default_pattern() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        fs::write(crate_dir.join("tspec.xt.toml"), "# default").unwrap();
+        fs::write(crate_dir.join("tspec-opt.xt.toml"), "# opt").unwrap();
+        fs::write(crate_dir.join("other.toml"), "# other").unwrap();
+
+        // Empty patterns = default "tspec*.xt.toml"
+        let found = find_tspecs(&crate_dir, &[]).unwrap();
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().any(|p| p.file_name().unwrap() == "tspec.xt.toml"));
+        assert!(found.iter().any(|p| p.file_name().unwrap() == "tspec-opt.xt.toml"));
+    }
+
+    #[test]
+    fn find_tspecs_explicit_glob() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        fs::write(crate_dir.join("tspec.xt.toml"), "# default").unwrap();
+        fs::write(crate_dir.join("tspec-opt.xt.toml"), "# opt").unwrap();
+        fs::write(crate_dir.join("other.xt.toml"), "# other").unwrap();
+
+        let found = find_tspecs(&crate_dir, &["*-opt*".to_string()]).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].file_name().unwrap(), "tspec-opt.xt.toml");
+    }
+
+    #[test]
+    fn find_tspecs_explicit_files() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        fs::write(crate_dir.join("a.toml"), "# a").unwrap();
+        fs::write(crate_dir.join("b.toml"), "# b").unwrap();
+        fs::write(crate_dir.join("c.toml"), "# c").unwrap();
+
+        let found = find_tspecs(&crate_dir, &["a.toml".to_string(), "c.toml".to_string()]).unwrap();
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().any(|p| p.file_name().unwrap() == "a.toml"));
+        assert!(found.iter().any(|p| p.file_name().unwrap() == "c.toml"));
+    }
+
+    #[test]
+    fn find_tspecs_sorted_and_deduped() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        fs::write(crate_dir.join("z.toml"), "# z").unwrap();
+        fs::write(crate_dir.join("a.toml"), "# a").unwrap();
+
+        // Request same file twice via different patterns
+        let found = find_tspecs(&crate_dir, &["*.toml".to_string(), "a.toml".to_string()]).unwrap();
+        assert_eq!(found.len(), 2); // Deduped
+        assert_eq!(found[0].file_name().unwrap(), "a.toml"); // Sorted
+        assert_eq!(found[1].file_name().unwrap(), "z.toml");
+    }
+
+    #[test]
+    fn find_tspecs_none_found_errors() {
+        let tmp = TempDir::new().unwrap();
+        let crate_dir = tmp.path().join("crate");
+        fs::create_dir(&crate_dir).unwrap();
+
+        let result = find_tspecs(&crate_dir, &[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("no tspec files found"));
     }
 
     // ==================== get_binary_path tests ====================
