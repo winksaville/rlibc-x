@@ -2,7 +2,7 @@
 name = "ex-x2"
 version = "0.1.0"
 edition = "2024"
-description = "Minimal exit-only binary using rlibc-x2 (std with custom libc)"
+description = "Minimal exit-only binary using rlibc-x2"
 
 [dependencies]
 rlibc-x2 = { path = "../../libs/rlibc-x2" }

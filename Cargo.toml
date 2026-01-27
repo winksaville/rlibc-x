@@ -5,7 +5,6 @@ members = [
     "libs/rlibc-x2/tests",
     "apps/ex-x1",
     "apps/ex-x2",
-    "apps/ex-x2-xt",
     "apps/ex-glibc",
     "apps/ex-musl",
     "apps/hw-x1",
