@@ -274,6 +274,8 @@ pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
 
     println!();
     println!("  Test: {} passed, {} failed", passed, failed);
+    println!();
+    println!("  Note: Run `cargo xt test xt` or `cargo test -p xt` to test xt itself");
     print_hline!();
     println!();
 
