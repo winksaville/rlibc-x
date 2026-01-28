@@ -49,7 +49,10 @@ pub fn compare_specs(
 
 fn build_spec(crate_name: &str, spec_path: &Path, release: bool, strip: bool) -> Result<u64> {
     let spec_str = spec_path.to_string_lossy();
-    println!("  {}:", spec_path.file_name().unwrap_or_default().to_string_lossy());
+    println!(
+        "  {}:",
+        spec_path.file_name().unwrap_or_default().to_string_lossy()
+    );
 
     // Build
     let build_result = build_crate(crate_name, Some(&spec_str), release)?;

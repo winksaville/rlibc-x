@@ -2,7 +2,11 @@
 macro_rules! print_header {
     ($title:expr) => {{
         $crate::print_hline!();
-        println!("{:^width$}", $title, width = $crate::print_hline::LINE_WIDTH);
+        println!(
+            "{:^width$}",
+            $title,
+            width = $crate::print_hline::LINE_WIDTH
+        );
         $crate::print_hline!();
     }};
     ($title:expr, $width:expr) => {{

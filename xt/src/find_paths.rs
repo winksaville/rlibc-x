@@ -69,7 +69,10 @@ pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
 
     // Special case: nested test crates like libs/rlibc-x2/tests
     for prefix in ["libs", "apps"] {
-        for entry in std::fs::read_dir(workspace.join(prefix)).into_iter().flatten() {
+        for entry in std::fs::read_dir(workspace.join(prefix))
+            .into_iter()
+            .flatten()
+        {
             if let Ok(entry) = entry {
                 let nested = entry.path().join("tests");
                 if nested.join("Cargo.toml").exists() {
@@ -153,8 +156,8 @@ pub fn find_tspecs(crate_dir: &Path, patterns: &[String]) -> Result<Vec<PathBuf>
         }
 
         // Try as glob pattern in crate_dir
-        let glob_pattern = Pattern::new(pattern)
-            .with_context(|| format!("invalid glob pattern: {}", pattern))?;
+        let glob_pattern =
+            Pattern::new(pattern).with_context(|| format!("invalid glob pattern: {}", pattern))?;
 
         let entries: Vec<_> = std::fs::read_dir(crate_dir)
             .with_context(|| format!("cannot read directory: {}", crate_dir.display()))?
@@ -445,7 +448,12 @@ version = "0.1.0"
         // Request "optimized" without extension, should find optimized.xt.toml
         let found = find_tspec(&crate_dir, Some("optimized")).unwrap();
         assert!(found.is_some());
-        assert!(found.unwrap().to_string_lossy().contains("optimized.xt.toml"));
+        assert!(
+            found
+                .unwrap()
+                .to_string_lossy()
+                .contains("optimized.xt.toml")
+        );
     }
 
     #[test]
@@ -478,8 +486,16 @@ version = "0.1.0"
         // Empty patterns = default "tspec*.xt.toml"
         let found = find_tspecs(&crate_dir, &[]).unwrap();
         assert_eq!(found.len(), 2);
-        assert!(found.iter().any(|p| p.file_name().unwrap() == "tspec.xt.toml"));
-        assert!(found.iter().any(|p| p.file_name().unwrap() == "tspec-opt.xt.toml"));
+        assert!(
+            found
+                .iter()
+                .any(|p| p.file_name().unwrap() == "tspec.xt.toml")
+        );
+        assert!(
+            found
+                .iter()
+                .any(|p| p.file_name().unwrap() == "tspec-opt.xt.toml")
+        );
     }
 
     #[test]
@@ -537,7 +553,12 @@ version = "0.1.0"
 
         let result = find_tspecs(&crate_dir, &[]);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("no tspec files found"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("no tspec files found")
+        );
     }
 
     // ==================== get_binary_path tests ====================

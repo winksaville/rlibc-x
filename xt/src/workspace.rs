@@ -45,16 +45,18 @@ impl WorkspaceInfo {
             .exec()
             .context("failed to run cargo metadata")?;
 
-        let root = metadata
-            .workspace_root
-            .as_std_path()
-            .to_path_buf();
+        let root = metadata.workspace_root.as_std_path().to_path_buf();
 
         let members: Vec<CrateMember> = metadata
             .workspace_packages()
             .iter()
             .map(|pkg| {
-                let path = pkg.manifest_path.parent().unwrap().as_std_path().to_path_buf();
+                let path = pkg
+                    .manifest_path
+                    .parent()
+                    .unwrap()
+                    .as_std_path()
+                    .to_path_buf();
                 let has_binary = pkg.targets.iter().any(|t| t.is_bin());
                 let kind = classify_crate(&path, &pkg.name);
 
@@ -178,7 +180,11 @@ mod tests {
 
             // xt and xtask should be excluded from buildable
             let buildable = info.buildable_members();
-            assert!(buildable.iter().all(|m| m.name != "xt" && m.name != "xtask"));
+            assert!(
+                buildable
+                    .iter()
+                    .all(|m| m.name != "xt" && m.name != "xtask")
+            );
 
             // Should have some apps
             let runnable = info.runnable_members();

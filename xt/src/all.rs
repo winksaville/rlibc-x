@@ -7,10 +7,10 @@ use std::process::ExitCode;
 
 use crate::binary::{binary_size, strip_binary};
 use crate::build::build_crate;
-use crate::{print_header, print_hline};
 use crate::run::run_binary;
 use crate::testing::test_crate;
 use crate::workspace::{CrateKind, WorkspaceInfo};
+use crate::{print_header, print_hline};
 
 /// Result of a batch operation on a single crate
 pub struct OpResult {
@@ -186,7 +186,10 @@ pub fn test_all(
                 let name = e.file_name().to_string_lossy().to_string();
                 let is_file = e.path().is_file();
                 let is_test = name.ends_with("-tests");
-                let is_executable = e.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false);
+                let is_executable = e
+                    .metadata()
+                    .map(|m| m.permissions().mode() & 0o111 != 0)
+                    .unwrap_or(false);
                 is_file && is_test && is_executable
             })
             .collect();
@@ -252,7 +255,12 @@ pub fn test_all(
 
 /// Print a summary of operation results (for tests)
 pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
-    let max_name_len = results.iter().map(|r| r.name.len()).max().unwrap_or(5).max(5);
+    let max_name_len = results
+        .iter()
+        .map(|r| r.name.len())
+        .max()
+        .unwrap_or(5)
+        .max(5);
 
     println!();
     print_header!("TEST SUMMARY");
@@ -288,7 +296,12 @@ pub fn print_test_summary(results: &[OpResult]) -> ExitCode {
 
 /// Print a summary for build operations (OK/FAILED)
 pub fn print_summary(results: &[OpResult]) -> ExitCode {
-    let max_name_len = results.iter().map(|r| r.name.len()).max().unwrap_or(5).max(5);
+    let max_name_len = results
+        .iter()
+        .map(|r| r.name.len())
+        .max()
+        .unwrap_or(5)
+        .max(5);
 
     println!();
     print_header!("BUILD SUMMARY");
@@ -305,8 +318,16 @@ pub fn print_summary(results: &[OpResult]) -> ExitCode {
             failed_count += 1;
             "[FAIL]"
         };
-        let size_str = result.size.map(format_size).unwrap_or_else(|| "--".to_string());
-        println!("  {:width$}  {status}  {:>6}", result.name, size_str, width = max_name_len);
+        let size_str = result
+            .size
+            .map(format_size)
+            .unwrap_or_else(|| "--".to_string());
+        println!(
+            "  {:width$}  {status}  {:>6}",
+            result.name,
+            size_str,
+            width = max_name_len
+        );
     }
 
     println!();
@@ -333,7 +354,12 @@ fn format_size(bytes: u64) -> String {
 
 /// Print a summary for run operations (shows exit codes, not pass/fail)
 pub fn print_run_summary(results: &[OpResult]) -> ExitCode {
-    let max_name_len = results.iter().map(|r| r.name.len()).max().unwrap_or(5).max(5);
+    let max_name_len = results
+        .iter()
+        .map(|r| r.name.len())
+        .max()
+        .unwrap_or(5)
+        .max(5);
 
     println!();
     print_header!("RUN SUMMARY");
@@ -344,11 +370,24 @@ pub fn print_run_summary(results: &[OpResult]) -> ExitCode {
     for result in results {
         if result.success {
             // Extract exit code number from message "exit code: X"
-            let code = result.message.strip_prefix("exit code: ").unwrap_or(&result.message);
-            println!("  {:width$}  {:>4}", result.name, code, width = max_name_len);
+            let code = result
+                .message
+                .strip_prefix("exit code: ")
+                .unwrap_or(&result.message);
+            println!(
+                "  {:width$}  {:>4}",
+                result.name,
+                code,
+                width = max_name_len
+            );
         } else {
             error_count += 1;
-            println!("  {:width$}  ERROR: {}", result.name, result.message, width = max_name_len);
+            println!(
+                "  {:width$}  ERROR: {}",
+                result.name,
+                result.message,
+                width = max_name_len
+            );
         }
     }
 
