@@ -44,8 +44,8 @@ fn app_tspec(app_name: &str) -> PathBuf {
 }
 
 #[test]
-fn load_ex_x1_xt_spec() {
-    let spec = load_spec(&app_tspec("ex-x1-xt")).unwrap();
+fn load_ex_x1_spec() {
+    let spec = load_spec(&app_tspec("ex-x1")).unwrap();
 
     assert!(spec.cargo.is_empty());
     assert!(spec.rustc.is_empty());
@@ -57,8 +57,8 @@ fn load_ex_x1_xt_spec() {
 }
 
 #[test]
-fn load_ex_x2_xt_spec() {
-    let spec = load_spec(&app_tspec("ex-x2-xt")).unwrap();
+fn load_ex_x2_spec() {
+    let spec = load_spec(&app_tspec("ex-x2")).unwrap();
 
     assert!(spec.cargo.is_empty());
     assert!(spec.rustc.is_empty());
