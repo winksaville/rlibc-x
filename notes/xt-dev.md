@@ -188,12 +188,50 @@ causing the conflict.
 4. **-Z build-std breaks tests** - Fundamental limitation of rebuilding std
 5. **tspec.xt.toml remains the source of truth** - Even though build.rs is generated
 
+## 20260128 - tspec Naming Convention and CLI Design
+
+Finalized the tspec file naming convention and CLI command structure for Phase 3
+(interactive tspec management).
+
+### File Naming Convention
+
+The `.xt.toml` suffix identifies a tspec file. Two forms:
+
+| Form | Pattern | Example |
+|------|---------|---------|
+| Simple | `<name>.xt.toml` | `opt.xt.toml` |
+| Versioned | `<name>.<NNN>-<HHHHHHHH>.xt.toml` | `opt.001-a7f3b2c1.xt.toml` |
+
+- **Seqnum (NNN)**: 3-digit sequence, scoped per-base-name
+- **Hash (HHHHHHHH)**: 8 hex chars, content-based (identical content = identical hash)
+- **Optional**: If no `*.xt.toml` exists, cargo defaults apply
+
+The versioned form enables CLI-created snapshots with history tracking. The content
+hash allows quick comparison without reading file contents.
+
+### Command Alias
+
+Decided on short alias for ergonomics:
+- `cargo xt tspec` - full form (discoverability)
+- `cargo xt ts` - short form (daily use)
+
+Future enhancement: `xts` shell alias for power users.
+
+### Design Decisions
+
+1. **No "tspec" required in filename** - Any `*.xt.toml` is valid
+2. **Seqnum per-base-name** - `opt.001`, `opt.002` separate from `experiment.001`
+3. **Content hash** - Identical configs produce identical hashes
+4. **Snapshots alongside working spec** - Not in a hidden `.tspec/` subdir
+
+See [notes/interactive-tspec.md](interactive-tspec.md) for the complete design.
+
 ## Future Work
 
 1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
 2. ~~**Spec comparison**~~ Done - `cargo xt compare` (see 20260125 section)
-3. **Interactive tspec management** - CLI for modifying specs without manual TOML editing
+3. **Interactive tspec management** - Design complete, implementation pending
 4. ~~**Merge to main**~~ Done - xtask removed, xt is now the primary build system
 
-See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design thoughts.
+See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design (naming conventions, CLI commands, snapshots).
 
