@@ -2,7 +2,7 @@
 
 A tspec-based build system for comparing target triples and compile/linker commands across apps.
 
-**Status:** In development on `xt-dev` branch.
+**Status:** Active - primary build system (replaced xtask).
 
 ## Usage
 
@@ -102,12 +102,12 @@ cargo xt compare ex-x2-xt -t a.toml -t b.toml -r  # Explicit file list
 
 Output shows specs sorted by size (smallest first) with percent change from largest.
 
-### Phase 2: Merge to Main
+### Phase 2: Merge to Main - Done
 
-1. Create `xtask` branch from current main (preservation)
-2. Merge `xt-dev` to main
-3. Remove xtask crate
-4. Update CLAUDE.md with new commands
+1. ~~Create `xtask` branch from current main (preservation)~~
+2. ~~Merge `xt-dev` to main~~
+3. ~~Remove xtask crate~~
+4. ~~Update CLAUDE.md with new commands~~
 
 ### Phase 3: Interactive tspec Management
 

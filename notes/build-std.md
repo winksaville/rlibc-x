@@ -4,12 +4,12 @@ Development notes on adding `-Z build-std` support to the xt build system.
 
 ## Goal
 
-Enable xt to produce the same optimized builds as `cargo xtask build -opt`, achieving
+Enable xt to produce optimized builds via `tspec-opt.xt.toml`, achieving
 85-97% binary size reduction through nightly's `-Z build-std` feature.
 
 ## The Optimization Stack
 
-The `-opt` flag in xtask combines several nightly features:
+The optimized tspec files combine several nightly features:
 
 | Feature | Flag | Effect |
 |---------|------|--------|
@@ -121,8 +121,8 @@ This single flag accounts for ~30KB of the size difference. The fix was adding
 ## Final tspec-opt.toml
 
 ```toml
-# ex-x2-xt optimized spec
-# Equivalent to: cargo xtask build ex-x2 -r -opt -s
+# ex-x2 optimized spec
+# Usage: cargo xt build ex-x2 -r --tspec tspec-opt.xt.toml
 
 [[cargo]]
 target_json = "x86_64-unknown-linux-rlibcx2.json"
@@ -154,15 +154,12 @@ version_script = { global = ["_start"], local = "*" }
 
 | Build | Binary Size (stripped) |
 |-------|------------------------|
-| xtask ex-x2 -r (baseline) | ~40 KB |
-| xtask ex-x2 -r -opt | 6,416 bytes |
-| xt ex-x2-xt -t tspec-opt.toml -r | 6,416 bytes |
-
-xt now achieves identical results to xtask's optimized builds.
+| cargo xt build ex-x2 -r (baseline) | ~40 KB |
+| cargo xt build ex-x2 -r --tspec tspec-opt.xt.toml | 6,416 bytes |
 
 ## Lessons Learned
 
-1. **Read the xtask code carefully** - The exact flags matter. `-C panic=abort` and
+1. **The exact flags matter** - `-C panic=abort` and
    `-C panic=immediate-abort` are completely different.
 
 2. **Version scripts are important** - They enable `--gc-sections` to remove more

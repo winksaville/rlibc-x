@@ -1,6 +1,6 @@
 # xt Design Notes
 
-Design exploration for `xt` - a translation spec based build system to replace/complement `xtask`.
+Design exploration for `xt` - a translation spec based build system (replaced xtask).
 
 ## Goals
 

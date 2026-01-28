@@ -159,7 +159,7 @@ xtask's `-opt` flag uses `-Z build-std` to rebuild the standard library with
 However, `-Z build-std` is incompatible with tests:
 
 ```
-cargo xtask test hw-x2 -opt
+cargo xt test hw-x2 --tspec tspec-opt.xt.toml
 error[E0152]: duplicate lang item in crate `core`: `sized`
   = note: first definition in `core` loaded from .../libcore-43d09347.rmeta
   = note: second definition in `core` loaded from .../libcore-cf1041a6.rmeta
@@ -193,7 +193,7 @@ causing the conflict.
 1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
 2. ~~**Spec comparison**~~ Done - `cargo xt compare` (see 20260125 section)
 3. **Interactive tspec management** - CLI for modifying specs without manual TOML editing
-4. **Merge to main** - xt now has feature parity with xtask
+4. ~~**Merge to main**~~ Done - xtask removed, xt is now the primary build system
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design thoughts.
 

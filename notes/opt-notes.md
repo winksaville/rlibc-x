@@ -50,7 +50,7 @@ rlibc-x2 is purpose-built to be minimal, while glibc/musl are complete, producti
 
 ### Manual Commands
 
-If not using xtask, here are the raw cargo commands:
+If not using xt, here are the raw cargo commands:
 
 #### For glibc (dynamic linking)
 
@@ -92,23 +92,23 @@ RUSTFLAGS="-Z unstable-options -C panic=immediate-abort"
 - `rust-src` component: `rustup component add rust-src --toolchain nightly`
 - For musl: `rustup target add x86_64-unknown-linux-musl`
 
-### Limitation: -opt is Incompatible with Tests
+### Limitation: Optimized Builds Are Incompatible with Tests
 
-**`cargo xtask test <app> -opt` does not work.** This is a fundamental limitation, not a bug.
+**`cargo xt test` with `tspec-opt.xt.toml` does not work.** This is a fundamental limitation, not a bug.
 
 #### What Works
 
 | Command | Works? | Notes |
 |---------|--------|-------|
-| `cargo xtask build X -opt` | ✓ | Build optimized binary |
-| `cargo xtask run X -opt` | ✓ | Build and run optimized binary |
-| `cargo xtask test X` | ✓ | Test with standard toolchain |
-| `cargo xtask test X --release` | ✓ | Test with release profile |
-| `cargo xtask test X -opt` | ✗ | Always fails |
+| `cargo xt build X -t tspec-opt.xt.toml` | ✓ | Build optimized binary |
+| `cargo xt run X -t tspec-opt.xt.toml` | ✓ | Build and run optimized binary |
+| `cargo xt test X` | ✓ | Test with standard toolchain |
+| `cargo xt test X -r` | ✓ | Test with release profile |
+| `cargo xt test X -t tspec-opt.xt.toml` | ✗ | Always fails |
 
 #### Why It Fails
 
-The `-opt` flag uses `-Z build-std=std,core,panic_abort` to rebuild the standard library with `panic=immediate-abort`. This creates a custom-built `core` crate.
+The optimized tspec uses `-Z build-std=std,core,panic_abort` to rebuild the standard library with `panic=immediate-abort`. This creates a custom-built `core` crate.
 
 When running tests, cargo also needs the `test` crate (Rust's test harness), which depends on the **toolchain's prebuilt** `core`. Now there are two versions of `core`:
 
@@ -131,30 +131,30 @@ The linker sees two different `core` crates and fails with "duplicate lang item"
 The failure is not specific to rlibc-x2. It happens with glibc, musl, and any target:
 
 ```bash
-cargo xtask test hw-x2 -opt     # fails - duplicate core
-cargo xtask test hw-musl -opt   # fails - duplicate core
-cargo xtask test hw-glibc -opt  # fails - duplicate core
+cargo xt test hw-x2 -t tspec-opt.xt.toml     # fails - duplicate core
+cargo xt test hw-musl -t tspec-opt.xt.toml   # fails - duplicate core
+cargo xt test hw-glibc -t tspec-opt.xt.toml  # fails - duplicate core
 ```
 
 #### Workaround
 
-Test without `-opt`, then build the final optimized binary:
+Test without optimized tspec, then build the final optimized binary:
 
 ```bash
 # Run tests (standard toolchain)
-cargo xtask test hw-x2
+cargo xt test hw-x2
 
 # Build optimized binary (no tests)
-cargo xtask build hw-x2 -r -opt -s
+cargo xt build hw-x2 -r -t tspec-opt.xt.toml
 ```
 
-The assumption is: if tests pass with the standard build, the optimized build will behave correctly. The `-opt` flag only changes panic handling and binary size, not program logic.
+The assumption is: if tests pass with the standard build, the optimized build will behave correctly. The optimized tspec only changes panic handling and binary size, not program logic.
 
 ## 20260120 - Extended -opt to all apps
 
 ### Size Comparison
 
-All apps built with `cargo xtask build <app> -r -opt -s`:
+All apps built with `cargo xt build <app> -r -t tspec-opt.xt.toml`:
 
 | App | Runtime | Stable | Nightly | Description |
 |-----|---------|-------:|--------:|-------------|
@@ -167,20 +167,20 @@ All apps built with `cargo xtask build <app> -r -opt -s`:
 | ex-musl | musl | 381 KB | 22.7 KB | Exit-only (static) |
 | hw-musl | musl | 377 KB | 26.8 KB | Hello world (static) |
 
-The `-x1` apps don't benefit from `-opt` since they're already `no_std`.
+The `-x1` apps don't benefit from optimized tspec since they're already `no_std`.
 
-### Using xtask
+### Using xt
 
-The `-opt` flag in xtask enables these optimizations for x2, glibc, and musl crates:
+The `tspec-opt.xt.toml` files enable these optimizations for x2, glibc, and musl crates:
 
 ```bash
-cargo xtask build ex-x2 -r -opt -s     # rlibc-x2 based
-cargo xtask build ex-glibc -r -opt -s  # glibc (dynamic)
-cargo xtask build ex-musl -r -opt -s   # musl (static)
-cargo xtask build hw-glibc -r -opt -s  # hello world variants too
+cargo xt build ex-x2 -r -t tspec-opt.xt.toml     # rlibc-x2 based
+cargo xt build ex-glibc -r -t tspec-opt.xt.toml  # glibc (dynamic)
+cargo xt build ex-musl -r -t tspec-opt.xt.toml   # musl (static)
+cargo xt build hw-glibc -r -t tspec-opt.xt.toml  # hello world variants too
 ```
 
-The `-x1` crates are already `no_std`, so `-opt` has no effect on them.
+The `-x1` crates are already `no_std`, so optimized tspec has no effect on them.
 
 ## 20260120 - Preserving Symbols for Analysis
 
@@ -205,11 +205,11 @@ Two build modes for different purposes:
 
 ```bash
 # For analysis - preserves symbols
-cargo xtask build ex-musl -r -opt
+cargo xt build ex-musl -r -t tspec-opt.xt.toml
 func-analysis analyze target/x86_64-unknown-linux-musl/release/ex-musl
 
-# For production - strips symbols, smallest size
-cargo xtask build ex-musl -r -opt -s
+# For production - strips symbols, smallest size (add strip to tspec or use strip command)
+cargo xt build ex-musl -r -t tspec-opt.xt.toml && strip target/x86_64-unknown-linux-musl/release/ex-musl
 ```
 
 ### func-analysis Output
@@ -274,13 +274,14 @@ But this doesn't work - the linker requires an actual file.
 
 ### Current Implementation
 
-The `-opt` flag in xtask generates `target/opt-version.config` and passes it to the linker:
+The `tspec-opt.xt.toml` files include a version script configuration:
 
-```bash
-RUSTFLAGS="-C panic=immediate-abort -Z unstable-options \
-  -C link-arg=-Wl,--gc-sections \
-  -C link-arg=-Wl,--version-script=target/opt-version.config"
+```toml
+[[linker]]
+version_script = { global = ["_start"], local = "*" }
 ```
+
+This generates the version script and passes it to the linker.
 
 ### Impact on Real Applications
 
@@ -289,7 +290,7 @@ For minimal apps (ex-*), the version script provides significant savings. For la
 | Build | Stripped Size |
 |-------|---:|
 | `cargo build --release && strip` | 886 KB |
-| `cargo xtask build -r -opt -s` | 683 KB |
+| `cargo xt build -r -t tspec-opt.xt.toml && strip` | 683 KB |
 | **Reduction** | **23%** |
 
 ## 20260120 - Does using -no-pie reduce of a binary
@@ -305,23 +306,10 @@ link-args = ["-no-pie"]
 
 The using that didn't change the size
 
-### Modified xtask/src/main.rs
+### Experimentation with -no-pie
 
-Talked with Claude
-[claude on no-pie](https://claude.ai/share/508cfeb9-d1bb-4592-97ad-ec468f827f93)
+Added `-C link-args=-no-pie` to rustflags and compared builds with and without:
 
-Added `-C link-args=-no-pie` to rustflags:
-        let rustflags = format!(
-            "-C panic=immediate-abort -Z unstable-options -C link-args=-no-pie -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
-            //"-C panic=immediate-abort -Z unstable-options -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--version-script={}",
-            version_config.display()
-        );
-
-built twice without one with -no-pie and once without, both times using:
-```
-cargo clean ; cargo xtask build -vc -r -opt -s  func-analysis`
-```
-And copied them to `fa-r-opt-s` and `fa-r-opt-s-no-pie` see below:
 ```
 wink@3900x 26-01-21T02:38:24.386Z:~/data/prgs/rust/rlibc-x (main)
 $ ls -l fa-r*

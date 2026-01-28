@@ -27,7 +27,7 @@ This is achieved through:
 - **`panic="abort"`** - No unwinding machinery
 - **Aggressive optimization** - `opt-level='z'`, LTO, single codegen unit, stripped symbols
 
-For comparison, rlibc-x2 (which supports `std`) produces **~6 KB** with `-opt` (nightly).
+For comparison, rlibc-x2 (which supports `std`) produces **~6 KB** with optimized tspec (nightly).
 
 See [apps/](apps/README.md#size-comparison) for the full size comparison.
 
@@ -39,7 +39,7 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 | [apps/](apps/) | Example and comparison apps |
 | [tools/](tools/) | Development tools (`is-libc-used`, `func-analysis`) |
 | [notes/](notes/) | Technical notes and findings |
-| [xtask/](xtask/) | Project automation |
+| [xt/](xt/) | Build automation (spec-driven via tspec.xt.toml) |
 
 ## Two Approaches
 
@@ -49,12 +49,12 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 
 ## Optimized Builds
 
-The `-opt` flag dramatically reduces binary sizes by eliminating Rust's panic formatting machinery:
+The `tspec-opt.xt.toml` specs dramatically reduce binary sizes by eliminating Rust's panic formatting machinery:
 
 ```bash
-cargo xtask build ex-x2 -r -opt -s     # ~6 KB (vs ~41 KB)
-cargo xtask build ex-glibc -r -opt -s  # ~9 KB (vs ~298 KB)
-cargo xtask build ex-musl -r -opt -s   # ~23 KB (vs ~381 KB)
+cargo xt build ex-x2 -r -t tspec-opt.xt.toml     # ~6 KB (vs ~41 KB)
+cargo xt build ex-glibc -r -t tspec-opt.xt.toml  # ~9 KB (vs ~298 KB)
+cargo xt build ex-musl -r -t tspec-opt.xt.toml   # ~23 KB (vs ~381 KB)
 ```
 
 See [notes/opt-notes.md](notes/opt-notes.md) for details.
@@ -63,18 +63,19 @@ See [notes/opt-notes.md](notes/opt-notes.md) for details.
 
 ```bash
 # Build and run
-cargo xtask run hw-x1          # hello world with rlibc-x1
-cargo xtask run hw-x2          # hello world with rlibc-x2
+cargo xt run hw-x1          # hello world with rlibc-x1
+cargo xt run hw-x2          # hello world with rlibc-x2
 
 # Test
-cargo xtask test               # run all tests
-cargo xtask test -q            # quiet mode
+cargo xt test               # run all tests
 
 # Build release
-cargo xtask build -r           # release builds
+cargo xt build -r           # release builds
 ```
 
-For more information see [xtask/README.md](xtask/README.md)
+The `-t` flag is optional. If a crate has `tspec.xt.toml`, it's used automatically. Use `-t` to select an alternative spec like `tspec-opt.xt.toml`. Crates without any tspec get plain `cargo build`.
+
+For more information see [xt/README.md](xt/README.md)
 
 ## Verifying No libc Usage
 
@@ -85,7 +86,7 @@ cargo run -p is-libc-used -- ./target/release/ex-x1
 cargo run -p is-libc-used -- -v ./target/release/ex-x1  # verbose
 ```
 
-All apps include libc usage tests that run with `cargo xtask test`.
+All apps include libc usage tests that run with `cargo xt test`.
 
 ## Status
 

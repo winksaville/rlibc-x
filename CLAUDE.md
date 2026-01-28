@@ -8,29 +8,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-All builds use the xtask pattern. Run from repository root:
+All builds use the xt build system. Run from repository root:
 
 ```bash
-cargo xtask build [crate] [-r] [-opt] [-s] [-q] [-v]  # Build crate(s)
-cargo xtask run [crate] [-r] [-opt] [-s] [-q] [-v]    # Build and run
-cargo xtask test [crate] [-q] [-r] [-f]               # Run tests
+cargo xt build [crate] [-r] [-t FILE]  # Build crate(s)
+cargo xt run [crate] [-r] [-t FILE]    # Build and run
+cargo xt test [crate] [-r]             # Run tests
 ```
 
 **Options:**
 - `-r, --release` - Release build
-- `-opt, --optimized` - Nightly optimizations (rebuild std, immediate-abort panic)
-- `-s, --strip` - Strip symbols after build
-- `-q, --quiet` - Suppress cargo output
-- `-v, --verbose-compile` - Show compiler/linker commands
-- `-f, --fail-fast` - Stop on first test failure
+- `-t, --tspec FILE` - Use alternative tspec (default: crate's `tspec.xt.toml` if present)
 - Use `.` to operate on crate in current directory
 
 **Examples:**
 ```bash
-cargo xtask run hw-x1           # Quick test of hello world
-cargo xtask build -r            # Build all crates release
-cargo xtask build ex-x2 -r -opt -s  # Optimized build (~6 KB vs ~41 KB)
-cargo xtask test                # Run all tests
+cargo xt run hw-x1                         # Quick test of hello world
+cargo xt build -r                          # Build all crates release
+cargo xt build ex-x2 -r -t tspec-opt.xt.toml  # Optimized build (~6 KB vs ~41 KB)
+cargo xt test                              # Run all tests
 ```
 
 **Verification tools:**
@@ -53,7 +49,7 @@ cargo run -p func-analysis -- analyze target/release/ex-musl  # Analyze function
 - Execution: `_start (asm) → __libc_start_main() → Rust's main → user's main()`
 - No special attributes needed in application code
 - Modular: `process.rs`, `memory.rs`, `io.rs`, `syscall.rs`, `thread.rs`, `environ.rs`, `errno.rs`, `signal.rs`
-- Requires linker flags set in `build.rs` (static, nostdlib, entry point)
+- Linker flags configured via `tspec.xt.toml` (static, nostdlib, entry point)
 
 ### Workspace Structure
 
@@ -70,13 +66,13 @@ apps/               # Example applications
 tools/
   func-analysis/    # ELF function size analyzer (goblin, iced-x86)
   is-libc-used/     # Binary libc detection (object crate)
-xtask/              # Build automation
+xt/                 # Build automation (spec-driven via tspec.xt.toml)
 notes/              # Technical documentation (opt-notes.md, plt-less-linking.md)
 ```
 
 ### Key Insight: Binary Size
 
-Rust's panic formatting machinery is the primary source of binary bloat, not libc itself. The `-opt` flag achieves 85-97% size reduction by:
+Rust's panic formatting machinery is the primary source of binary bloat, not libc itself. The `tspec-opt.xt.toml` specs achieve 85-97% size reduction by:
 - Rebuilding std with `-Z build-std=std,core,panic_abort`
 - Using `-C panic=immediate-abort` to eliminate panic formatting
 - Version script to make symbols LOCAL, enabling dead code elimination
@@ -85,15 +81,15 @@ Rust's panic formatting machinery is the primary source of binary bloat, not lib
 
 Tests verify that binaries don't use libc and execute correctly:
 ```bash
-cargo xtask test           # All crates
-cargo xtask test rlibc-x2  # Includes rlibc-x2-tests binaries
-cargo xtask test ex-x1     # Single crate
+cargo xt test              # All crates
+cargo xt test rlibc-x2     # Includes rlibc-x2-tests binaries
+cargo xt test ex-x1        # Single crate
 ```
 
 ## Conventions
 
 - **Rust Edition:** 2024 for main crates
-- **Toolchain:** Stable (nightly only for `-opt` builds)
+- **Toolchain:** Stable (nightly only for `-opt` builds via tspec-opt.xt.toml)
 - **Commit style:** Conventional commits (feat:, docs:, refactor:)
 - Apps with "musl" in name auto-target `x86_64-unknown-linux-musl`
 - Custom target file: `x86_64-unknown-linux-rlibcx2.json` (plt-by-default: false)
