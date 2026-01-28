@@ -5,7 +5,7 @@ use std::process::ExitCode;
 use xt::all::{build_all, print_run_summary, print_summary, print_test_summary, run_all, test_all};
 use xt::binary::strip_binary;
 use xt::build::build_crate;
-use xt::cli::{Cli, Commands, SpecCommands};
+use xt::cli::{Cli, Commands, TspecCommands};
 use xt::compare::compare_specs;
 use xt::find_paths::{find_crate_dir, find_tspecs, find_workspace_root};
 use xt::run::run_binary;
@@ -106,18 +106,17 @@ fn run() -> Result<ExitCode> {
             println!("incompat add: crate={crate_name} spec={spec}");
             // TODO: implement
         }
-        Commands::Spec { command } => {
+        Commands::Tspec { command } => {
             match command {
-                SpecCommands::List => {
-                    println!("spec list");
+                TspecCommands::List { crate_name } => {
+                    xt::tspec_cmd::list_tspecs(crate_name.as_deref())?;
+                }
+                TspecCommands::Show { crate_name, tspec } => {
+                    println!("ts show: crate={crate_name} tspec={tspec:?}");
                     // TODO: implement
                 }
-                SpecCommands::Show { name, crate_name } => {
-                    println!("spec show: name={name} crate={crate_name:?}");
-                    // TODO: implement
-                }
-                SpecCommands::Hash { name, crate_name } => {
-                    println!("spec hash: name={name} crate={crate_name:?}");
+                TspecCommands::Hash { crate_name, tspec } => {
+                    println!("ts hash: crate={crate_name} tspec={tspec:?}");
                     // TODO: implement
                 }
             }

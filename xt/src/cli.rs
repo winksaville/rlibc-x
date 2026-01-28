@@ -83,31 +83,35 @@ pub enum Commands {
         /// Spec to add to incompat list
         spec: String,
     },
-    /// Show or manage translation specs
-    Spec {
+    /// Manage translation specs (alias: ts)
+    #[command(alias = "ts")]
+    Tspec {
         #[command(subcommand)]
-        command: SpecCommands,
+        command: TspecCommands,
     },
 }
 
 #[derive(Subcommand)]
-pub enum SpecCommands {
-    /// List available global specs
-    List,
-    /// Show a spec (resolved with local mods if --crate specified)
-    Show {
-        /// Spec name
-        name: String,
-        /// Crate to apply local mods from
-        #[arg(long = "crate")]
+pub enum TspecCommands {
+    /// List *.xt.toml files in workspace or for a specific crate
+    List {
+        /// Crate to list specs for (omit for all crates)
         crate_name: Option<String>,
     },
-    /// Show the hash of a resolved spec
+    /// Show a spec's contents
+    Show {
+        /// Crate name
+        crate_name: String,
+        /// Spec name (defaults to tspec.xt.toml)
+        #[arg(short = 't', long = "tspec")]
+        tspec: Option<String>,
+    },
+    /// Show the content hash of a spec
     Hash {
-        /// Spec name
-        name: String,
-        /// Crate to apply local mods from
-        #[arg(long = "crate")]
-        crate_name: Option<String>,
+        /// Crate name
+        crate_name: String,
+        /// Spec name (defaults to tspec.xt.toml)
+        #[arg(short = 't', long = "tspec")]
+        tspec: Option<String>,
     },
 }

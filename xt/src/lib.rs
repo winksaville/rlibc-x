@@ -9,5 +9,6 @@ pub mod print_hline;
 pub mod run;
 pub mod testing;
 pub mod tspec;
+pub mod tspec_cmd;
 pub mod types;
 pub mod workspace;
