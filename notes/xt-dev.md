@@ -226,11 +226,30 @@ Future enhancement: `xts` shell alias for power users.
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for the complete design.
 
+### Implementation: `ts list`
+
+Implemented the first subcommand of the tspec CLI:
+
+```bash
+cargo xt ts list                    # All *.xt.toml in workspace
+cargo xt ts list ex-x2              # All *.xt.toml for a crate
+```
+
+Output shows crate name, tspec filename, and file size:
+```
+ex-x2:
+  tspec-opt.xt.toml (1000 B)
+  tspec.xt.toml (212 B)
+```
+
+Also added reminder in `cargo xt test` summary to run `cargo xt test xt` for
+self-testing (xt is excluded from default test run as a build tool).
+
 ## Future Work
 
 1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
 2. ~~**Spec comparison**~~ Done - `cargo xt compare` (see 20260125 section)
-3. **Interactive tspec management** - Design complete, implementation pending
+3. **Interactive tspec management** - `ts list` done, `ts show`/`ts hash` pending
 4. ~~**Merge to main**~~ Done - xtask removed, xt is now the primary build system
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design (naming conventions, CLI commands, snapshots).
