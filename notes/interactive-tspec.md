@@ -3,10 +3,58 @@
 Design thoughts for Phase 3 - enabling fast iteration on build specifications
 without manual TOML editing.
 
+## File Naming Convention
+
+### File Type
+
+The `.xt.toml` suffix identifies a tspec file. Any `*.xt.toml` file is valid.
+
+### Forms
+
+| Form | Pattern | Example |
+|------|---------|---------|
+| Simple | `<name>.xt.toml` | `opt.xt.toml`, `musl.xt.toml` |
+| Versioned | `<name>.<NNN>-<HHHHHHHH>.xt.toml` | `opt.001-a7f3b2c1.xt.toml` |
+
+- **Seqnum (NNN)**: 3-digit sequence number, scoped per-base-name
+- **Hash (HHHHHHHH)**: 8 hex characters, content-based (identical content = identical hash)
+
+### Optional
+
+If no `*.xt.toml` exists for a crate, cargo defaults apply.
+
+### Example Directory Evolution
+
+```
+apps/ex-x2/
+  # Initially empty - uses cargo defaults
+
+  # User creates first spec via CLI
+  opt.xt.toml
+
+  # CLI modification creates versioned snapshot
+  opt.001-a1b2c3d4.xt.toml
+
+  # Another CLI modification
+  opt.002-e5f6a7b8.xt.toml
+
+  # User creates another variant
+  experiment.xt.toml
+  experiment.001-deadbeef.xt.toml
+```
+
+## Command Alias
+
+The tspec subcommand has a short alias:
+- `cargo xt tspec` - full form (for discoverability)
+- `cargo xt ts` - short form (for daily use)
+
+All examples below use the short form.
+
 ## Motivation
 
 Currently, experimenting with build configurations requires:
-1. Open tspec.toml in editor
+1. Open `*.xt.toml` in editor
 2. Manually write TOML syntax
 3. Save file
 4. Run build
@@ -15,10 +63,10 @@ Currently, experimenting with build configurations requires:
 
 This friction slows down exploration. An interactive CLI would enable:
 ```bash
-cargo xt tspec add myapp --rustc build_std=std,core,panic_abort
+cargo xt ts add myapp --rustc build_std=std,core,panic_abort
 cargo xt build myapp -r
 # Check size, try another option...
-cargo xt tspec add myapp --linker version_script.global=_start
+cargo xt ts add myapp --linker version_script.global=_start
 cargo xt build myapp -r
 ```
 
@@ -27,52 +75,52 @@ cargo xt build myapp -r
 ### List and Show
 
 ```bash
-cargo xt tspec list                    # All tspec.toml files in workspace
-cargo xt tspec list ex-x2-xt           # All tspec*.toml for a crate
-cargo xt tspec show ex-x2-xt           # Show default tspec.toml
-cargo xt tspec show ex-x2-xt -t opt    # Show tspec-opt.toml
+cargo xt ts list                    # All *.xt.toml files in workspace
+cargo xt ts list ex-x2              # All *.xt.toml for a crate
+cargo xt ts show ex-x2              # Show default (first) *.xt.toml
+cargo xt ts show ex-x2 -t opt       # Show opt.xt.toml
 ```
 
 ### Create
 
 ```bash
-cargo xt tspec new myapp               # Create empty tspec.toml
-cargo xt tspec new myapp --from ex-x2-xt  # Copy from another crate
-cargo xt tspec new myapp -t experiment    # Create tspec-experiment.toml
+cargo xt ts new myapp               # Create tspec.xt.toml (conventional default name)
+cargo xt ts new myapp --from ex-x2  # Copy from another crate
+cargo xt ts new myapp -t experiment # Create experiment.xt.toml
 ```
 
 ### Add Options
 
 ```bash
 # Cargo params
-cargo xt tspec add myapp --cargo profile=release
-cargo xt tspec add myapp --cargo target_triple=x86_64-unknown-linux-musl
-cargo xt tspec add myapp --cargo unstable=panic-immediate-abort
+cargo xt ts add myapp --cargo profile=release
+cargo xt ts add myapp --cargo target_triple=x86_64-unknown-linux-musl
+cargo xt ts add myapp --cargo unstable=panic-immediate-abort
 
 # Rustc params
-cargo xt tspec add myapp --rustc build_std=std,core,panic_abort
-cargo xt tspec add myapp --rustc panic=immediate-abort
-cargo xt tspec add myapp --rustc lto=true
-cargo xt tspec add myapp --rustc flag="-Z unstable-options"
+cargo xt ts add myapp --rustc build_std=std,core,panic_abort
+cargo xt ts add myapp --rustc panic=immediate-abort
+cargo xt ts add myapp --rustc lto=true
+cargo xt ts add myapp --rustc flag="-Z unstable-options"
 
 # Linker params
-cargo xt tspec add myapp --linker args=-static,-nostdlib
-cargo xt tspec add myapp --linker version_script.global=_start
+cargo xt ts add myapp --linker args=-static,-nostdlib
+cargo xt ts add myapp --linker version_script.global=_start
 ```
 
 ### Remove Options
 
 ```bash
-cargo xt tspec remove myapp --rustc panic
-cargo xt tspec remove myapp --linker version_script
-cargo xt tspec remove myapp --cargo unstable  # Remove all unstable flags
+cargo xt ts remove myapp --rustc panic
+cargo xt ts remove myapp --linker version_script
+cargo xt ts remove myapp --cargo unstable  # Remove all unstable flags
 ```
 
 ### Diff and Compare
 
 ```bash
-cargo xt tspec diff ex-x2-xt tspec.toml tspec-opt.toml
-cargo xt tspec diff ex-x1-xt ex-x2-xt  # Compare default specs
+cargo xt ts diff ex-x2 base.xt.toml opt.xt.toml
+cargo xt ts diff ex-x1 ex-x2  # Compare default specs
 ```
 
 ## Alternative Syntax: Inline Modifiers
@@ -80,10 +128,10 @@ cargo xt tspec diff ex-x1-xt ex-x2-xt  # Compare default specs
 More fluid, git-like syntax:
 
 ```bash
-cargo xt tspec ex-x2-xt +rustc.build_std=std,core,panic_abort
-cargo xt tspec ex-x2-xt +cargo.unstable=panic-immediate-abort
-cargo xt tspec ex-x2-xt -rustc.panic
-cargo xt tspec ex-x2-xt +linker.args=-static
+cargo xt ts ex-x2 +rustc.build_std=std,core,panic_abort
+cargo xt ts ex-x2 +cargo.unstable=panic-immediate-abort
+cargo xt ts ex-x2 -rustc.panic
+cargo xt ts ex-x2 +linker.args=-static
 ```
 
 Pros:
@@ -97,23 +145,26 @@ Cons:
 
 ## Snapshot Integration
 
-Each modification auto-creates a snapshot for undo/history:
+Each CLI modification auto-creates a versioned snapshot using the naming convention:
 
 ```
-apps/ex-x2-xt/
-  tspec.toml                      # Current working spec
-  .tspec/
-    ex-x2-xt-001-abc123.toml      # Initial
-    ex-x2-xt-002-def456.toml      # After adding build_std
-    ex-x2-xt-003-789abc.toml      # After adding panic
+apps/ex-x2/
+  opt.xt.toml                     # Current working spec
+  opt.001-a1b2c3d4.xt.toml        # Initial (content hash: a1b2c3d4)
+  opt.002-e5f6a7b8.xt.toml        # After adding build_std
+  opt.003-deadbeef.xt.toml        # After adding panic
 ```
+
+The seqnum (NNN) provides ordering within a base name. The hash (8 hex chars) is
+derived from file content, so identical configurations produce identical hashes.
 
 Commands to work with snapshots:
 
 ```bash
-cargo xt tspec history ex-x2-xt           # List snapshots
-cargo xt tspec restore ex-x2-xt 002       # Restore snapshot 002
-cargo xt tspec compare ex-x2-xt 001 003   # Compare two snapshots
+cargo xt ts history ex-x2                 # List all versioned snapshots
+cargo xt ts history ex-x2 -t opt          # List snapshots for opt.xt.toml
+cargo xt ts restore ex-x2 opt.002         # Restore opt to snapshot 002
+cargo xt ts compare ex-x2 opt.001 opt.003 # Compare two snapshots
 ```
 
 ## Value Parsing
@@ -137,7 +188,7 @@ On add/remove, validate:
 - No duplicate conflicting params (e.g., two different panic strategies)
 
 ```bash
-$ cargo xt tspec add myapp --rustc panic=invalid
+$ cargo xt ts add myapp --rustc panic=invalid
 error: invalid panic strategy 'invalid'
   valid options: abort, unwind, immediate-abort
 ```
@@ -147,9 +198,9 @@ error: invalid panic strategy 'invalid'
 Could combine tspec modification with immediate build:
 
 ```bash
-cargo xt tspec add myapp --rustc lto=true --build -r
+cargo xt ts add myapp --rustc lto=true --build -r
 # Equivalent to:
-#   cargo xt tspec add myapp --rustc lto=true
+#   cargo xt ts add myapp --rustc lto=true
 #   cargo xt build myapp -r
 ```
 
@@ -157,16 +208,24 @@ Or even inline temporary modifications (don't save):
 
 ```bash
 cargo xt build myapp -r --with "rustc.lto=true"
-# Builds with lto=true but doesn't modify tspec.toml
+# Builds with lto=true but doesn't modify *.xt.toml
 ```
 
 ## Open Questions
 
-1. **Subcommand vs inline syntax?** `tspec add` is more discoverable, `+/-` is more fluid
+1. **Subcommand vs inline syntax?** `ts add` is more discoverable, `+/-` is more fluid
 2. **Auto-snapshot?** Every change, or only on explicit save?
-3. **Snapshot location?** `.tspec/` subdir, or `tspec-snapshots/` at workspace root?
-4. **Conflict handling?** Error on duplicate params, or replace silently?
-5. **Tab completion?** Generate shell completions for param names and valid values?
+3. **Conflict handling?** Error on duplicate params, or replace silently?
+4. **Tab completion?** Generate shell completions for param names and valid values?
+
+## Future Enhancements
+
+1. **Shell alias `xts`**: For power users, could add a separate `xts` binary or
+   document a shell alias (`alias xts='cargo xt ts'`) for even shorter commands:
+   ```bash
+   xts add myapp --rustc lto=true
+   xts history myapp
+   ```
 
 ## Implementation Notes
 

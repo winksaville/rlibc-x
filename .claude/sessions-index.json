@@ -507,6 +507,19 @@
       "gitBranch": "add-tests",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "4ce9506c-9dcd-48dc-9fb6-39c474d7e17e",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/4ce9506c-9dcd-48dc-9fb6-39c474d7e17e.jsonl",
+      "fileMtime": 1769631926231,
+      "firstPrompt": "reacquaint with repo",
+      "summary": "Migrate xtask to xt build system",
+      "messageCount": 80,
+      "created": "2026-01-27T22:12:32.114Z",
+      "modified": "2026-01-28T01:25:12.692Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"
