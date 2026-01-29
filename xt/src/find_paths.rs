@@ -72,17 +72,14 @@ pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
         for entry in std::fs::read_dir(workspace.join(prefix))
             .into_iter()
             .flatten()
+            .flatten()
         {
-            if let Ok(entry) = entry {
-                let nested = entry.path().join("tests");
-                if nested.join("Cargo.toml").exists() {
-                    // Check if this is the crate we're looking for
-                    if let Ok(pkg_name) = get_crate_name(&nested) {
-                        if pkg_name == name {
-                            return Ok(nested);
-                        }
-                    }
-                }
+            let nested = entry.path().join("tests");
+            if nested.join("Cargo.toml").exists()
+                && let Ok(pkg_name) = get_crate_name(&nested)
+                && pkg_name == name
+            {
+                return Ok(nested);
             }
         }
     }

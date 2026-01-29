@@ -18,6 +18,6 @@ macro_rules! print_hline {
 }
 
 pub fn print_hline_impl(width: usize, ch: char) {
-    let line: String = std::iter::repeat(ch).take(width).collect();
+    let line: String = std::iter::repeat_n(ch, width).collect();
     println!("{line}");
 }

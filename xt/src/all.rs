@@ -35,10 +35,11 @@ pub fn build_all(
 
         let result = match build_crate(&member.name, tspec, release) {
             Ok(build_result) => {
-                if strip && member.has_binary {
-                    if let Err(e) = strip_binary(&build_result.binary_path) {
-                        eprintln!("  warning: strip failed: {}", e);
-                    }
+                if strip
+                    && member.has_binary
+                    && let Err(e) = strip_binary(&build_result.binary_path)
+                {
+                    eprintln!("  warning: strip failed: {}", e);
                 }
                 let size = binary_size(&build_result.binary_path).ok();
                 OpResult {
@@ -81,10 +82,8 @@ pub fn run_all(
 
         let result = match build_crate(&member.name, tspec, release) {
             Ok(build_result) => {
-                if strip {
-                    if let Err(e) = strip_binary(&build_result.binary_path) {
-                        eprintln!("  warning: strip failed: {}", e);
-                    }
+                if strip && let Err(e) = strip_binary(&build_result.binary_path) {
+                    eprintln!("  warning: strip failed: {}", e);
                 }
                 match run_binary(&build_result.binary_path) {
                     Ok(exit_code) => OpResult {
