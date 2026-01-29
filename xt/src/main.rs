@@ -112,8 +112,7 @@ fn run() -> Result<ExitCode> {
                     xt::tspec_cmd::list_tspecs(crate_name.as_deref())?;
                 }
                 TspecCommands::Show { crate_name, tspec } => {
-                    println!("ts show: crate={crate_name} tspec={tspec:?}");
-                    // TODO: implement
+                    xt::tspec_cmd::show_tspec(&crate_name, tspec.as_deref())?;
                 }
                 TspecCommands::Hash { crate_name, tspec } => {
                     println!("ts hash: crate={crate_name} tspec={tspec:?}");

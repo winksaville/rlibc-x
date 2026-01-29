@@ -114,13 +114,18 @@ Output shows specs sorted by size (smallest first) with percent change from larg
 Enable fast iteration without manual TOML editing:
 
 ```bash
-cargo xt tspec list                          # List all tspec files
-cargo xt tspec show ex-x2-xt                 # Show resolved spec
-cargo xt tspec new myapp                     # Create minimal tspec.toml
-cargo xt tspec add myapp --rustc build_std=std,core,panic_abort
-cargo xt tspec remove myapp --rustc panic
-cargo xt tspec diff tspec.toml tspec-opt.toml
+cargo xt ts list                             # List all tspec files in workspace
+cargo xt ts list ex-x2                       # List tspec files for a crate
+cargo xt ts show ex-x2                       # Show all tspec contents for crate
+cargo xt ts show ex-x2 -t tspec-opt          # Show specific tspec
+cargo xt ts hash ex-x2                       # Show content hash (TODO)
+cargo xt ts new myapp                        # Create minimal tspec.toml (TODO)
+cargo xt ts add myapp --rustc build_std=std,core,panic_abort  # (TODO)
+cargo xt ts remove myapp --rustc panic       # (TODO)
+cargo xt ts diff tspec.toml tspec-opt.toml   # (TODO)
 ```
+
+Note: `tspec` and `ts` are aliases for the same subcommand.
 
 See [notes/interactive-tspec.md](../notes/interactive-tspec.md) for design details.
 
@@ -141,6 +146,7 @@ xt/
     testing.rs      # Test command implementation
     compare.rs      # Compare command (size comparison)
     all.rs          # Batch operations (build_all, run_all, test_all)
+    tspec_cmd.rs    # Tspec subcommands (list, show, hash)
     binary.rs       # Binary operations (strip, size)
     print_hline.rs  # Horizontal line macro for output formatting
     print_header.rs # Header macro (uses print_hline!)

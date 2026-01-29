@@ -77,8 +77,8 @@ cargo xt build myapp -r
 ```bash
 cargo xt ts list                    # All *.xt.toml files in workspace
 cargo xt ts list ex-x2              # All *.xt.toml for a crate
-cargo xt ts show ex-x2              # Show default (first) *.xt.toml
-cargo xt ts show ex-x2 -t opt       # Show opt.xt.toml
+cargo xt ts show ex-x2              # Show all *.xt.toml for a crate
+cargo xt ts show ex-x2 -t tspec-opt # Show specific tspec
 ```
 
 ### Create

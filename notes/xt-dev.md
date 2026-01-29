@@ -245,12 +245,51 @@ ex-x2:
 Also added reminder in `cargo xt test` summary to run `cargo xt test xt` for
 self-testing (xt is excluded from default test run as a build tool).
 
-## Future Work
+## 20260129 - Cleanup and `ts show`
+
+### Removed Stale Cargo Aliases
+
+Cleaned up `.cargo/config.toml`:
+- Removed `xtask` alias (xtask crate no longer exists)
+- Removed `b-musl`, `b-glibc`, `r-musl`, `r-glibc`, `t-musl`, `t-glibc` aliases
+- These were undocumented; the tspec-based `cargo xt` approach is preferred
+
+### Renamed `build.rs` to `cargo_build.rs`
+
+Renamed `xt/src/build.rs` to `xt/src/cargo_build.rs` to avoid confusion with Cargo's
+special `build.rs` filename. The module wraps cargo build operations, so the explicit
+name is clearer.
+
+### Implemented `ts show`
+
+Added `cargo xt ts show` command to display tspec contents:
+
+```bash
+cargo xt ts show ex-x2              # Show all *.xt.toml for crate
+cargo xt ts show ex-x2 -t tspec-opt # Show specific tspec
+```
+
+Output uses `====== filename ======` separators between files:
+```
+====== tspec-opt.xt.toml ======
+# ex-x2 optimized spec...
+[[cargo]]
+target_json = "x86_64-unknown-linux-rlibcx2.json"
+...
+
+====== tspec.xt.toml ======
+# ex-x2 spec...
+[[linker]]
+args = ["-static", "-nostdlib", ...]
+```
+
+## Completed Work
 
 1. ~~**build_std support**~~ Done - See [notes/build-std.md](build-std.md)
 2. ~~**Spec comparison**~~ Done - `cargo xt compare` (see 20260125 section)
 3. **Interactive tspec management** - `ts list` done, `ts show`/`ts hash` pending
 4. ~~**Merge to main**~~ Done - xtask removed, xt is now the primary build system
+5. ~~**`ts show`**~~ Done - Shows all tspecs for a crate, or specific one with `-t`
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design (naming conventions, CLI commands, snapshots).
 
