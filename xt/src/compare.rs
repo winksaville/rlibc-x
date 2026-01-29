@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::binary::{binary_size, strip_binary};
-use crate::build::build_crate;
+use crate::cargo_build::build_crate;
 use crate::{print_header, print_hline};
 
 /// Result of building a spec

@@ -1,6 +1,6 @@
 pub mod all;
 pub mod binary;
-pub mod build;
+pub mod cargo_build;
 pub mod cli;
 pub mod compare;
 pub mod find_paths;

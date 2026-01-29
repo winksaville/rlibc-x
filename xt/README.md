@@ -136,7 +136,7 @@ xt/
     tspec.rs        # Spec loading/saving/hashing
     find_paths.rs   # Workspace/crate/tspec/binary path discovery
     workspace.rs    # Workspace member discovery
-    build.rs        # Build command + generated build.rs
+    cargo_build.rs  # Build command + generated build.rs
     run.rs          # Run command implementation
     testing.rs      # Test command implementation
     compare.rs      # Compare command (size comparison)

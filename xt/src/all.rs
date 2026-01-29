@@ -6,7 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::ExitCode;
 
 use crate::binary::{binary_size, strip_binary};
-use crate::build::build_crate;
+use crate::cargo_build::build_crate;
 use crate::run::run_binary;
 use crate::testing::test_crate;
 use crate::workspace::{CrateKind, WorkspaceInfo};

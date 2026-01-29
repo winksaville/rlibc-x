@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use std::fs;
 use std::process::Command;
 
-use crate::build::{apply_spec_to_command, generate_build_rs};
+use crate::cargo_build::{apply_spec_to_command, generate_build_rs};
 use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
 use crate::tspec::load_spec;
 use crate::types::{CargoParam, LinkerParam, RustcParam};

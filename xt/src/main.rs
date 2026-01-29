@@ -4,7 +4,7 @@ use std::process::ExitCode;
 
 use xt::all::{build_all, print_run_summary, print_summary, print_test_summary, run_all, test_all};
 use xt::binary::strip_binary;
-use xt::build::build_crate;
+use xt::cargo_build::build_crate;
 use xt::cli::{Cli, Commands, TspecCommands};
 use xt::compare::compare_specs;
 use xt::find_paths::{find_crate_dir, find_tspecs, find_workspace_root};

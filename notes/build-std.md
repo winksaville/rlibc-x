@@ -56,7 +56,7 @@ enum LinkerParam {
 
 ### 2. Nightly Detection
 
-In `build.rs`, added automatic nightly toolchain selection:
+In `cargo_build.rs`, added automatic nightly toolchain selection:
 
 ```rust
 fn requires_nightly(spec: &Spec) -> bool {
