@@ -40,40 +40,9 @@ Contents:
 
 Overwrite entirely each session - history lives in design logs.
 
-### Completing Changes
+### Workflow
 
-When finishing a set of changes:
-
-1. Update relevant design log with new dated section
-2. Update `claude-next.md` with current state
-3. Update `xt-dev.md` if xt tooling changed (link to design log section)
-4. Run verification loop:
-   ```bash
-   cargo xt test xt && cargo xt test
-   cargo clippy --workspace --all-targets
-   cargo fmt --check
-   ```
-5. Commit with conventional commit message
-
-### Claude Code & Git
-
-The `.claude/` directory contains session state that updates during conversations. This creates a self-referencing situation when Claude commits changes.
-
-**After committing:**
-- You may optionally amend the commit to include `.claude/` session changes
-- Exiting Claude is not required - amending keeps history clean while preserving session
-
-**Before merging:**
-- **Always exit Claude first** - Post-commit discussions almost always occur, updating `.claude/` files
-- Merging while Claude is running risks merge conflicts in `.claude/` between branches
-- Exit ensures session state is saved and consistent with the code being merged
-
-Workflow:
-```
-1. Make changes, commit (code changes)
-2. Optionally: amend to add .claude/ updates
-3. Continue discussion if needed
-4. EXIT CLAUDE before any merge/rebase
-5. Merge in a fresh terminal
-6. Start new Claude session on merged branch
-```
+See [xt/README.md](../xt/README.md#workflow) for:
+- **Progress Tracking** - done-todo.md usage
+- **Completing Changes** - end-of-session checklist
+- **Claude Code & Git** - handling .claude/ files and merges
