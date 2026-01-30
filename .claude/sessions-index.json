@@ -535,9 +535,22 @@
       "isSidechain": false
     },
     {
+      "sessionId": "51006182-95a1-4f99-9808-8652c0675648",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/51006182-95a1-4f99-9808-8652c0675648.jsonl",
+      "fileMtime": 1769797223512,
+      "firstPrompt": "amended the commit with .claude session changes and pushed flatten [[linker]]",
+      "summary": "Flatten linker and rustc config to structs",
+      "messageCount": 19,
+      "created": "2026-01-30T17:51:07.692Z",
+      "modified": "2026-01-30T18:14:56.772Z",
+      "gitBranch": "refactor/tspec-flat-types",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
       "sessionId": "0044b3cd-816a-4f54-93f0-92991a4771da",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/0044b3cd-816a-4f54-93f0-92991a4771da.jsonl",
-      "fileMtime": 1769792424337,
+      "fileMtime": 1769797028905,
       "firstPrompt": "There seems nothing strict to me I assume I could put the two [[cargo]] entries in different order or the 4 [[rustc]] in any order?",
       "summary": "Flatten tspec types, add PanicMode enum",
       "messageCount": 56,

@@ -5,7 +5,9 @@
 This file is for Claude Code session continuity. Read at session start to resume context.
 Overwritten each session - history lives in design logs.
 
-See [Completing Changes](README.md#completing-changes) for end-of-session checklist.
+**Remind the user** of these workflows:
+- [Completing Changes](README.md#completing-changes) - end-of-session checklist
+- [Claude Code & Git](README.md#claude-code--git) - exit Claude before merging!
 
 ---
 
