@@ -114,4 +114,15 @@ pub enum TspecCommands {
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },
+    /// Create a new tspec file
+    New {
+        /// Crate name
+        crate_name: String,
+        /// Name for the new tspec (default: "tspec")
+        #[arg(default_value = "tspec")]
+        name: String,
+        /// Copy from existing tspec (crate/spec or just spec name in same crate)
+        #[arg(short = 'f', long = "from")]
+        from: Option<String>,
+    },
 }

@@ -96,7 +96,7 @@ pub struct LinkerConfig {
 }
 
 /// A translation spec
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Spec {
     /// High-level panic mode (sets both cargo -Z and rustc -C flags)
     pub panic: Option<PanicMode>,

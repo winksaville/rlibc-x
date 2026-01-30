@@ -116,6 +116,13 @@ fn run() -> Result<ExitCode> {
             TspecCommands::Hash { crate_name, tspec } => {
                 xt::ts_cmd::hash_tspec(&crate_name, tspec.as_deref())?;
             }
+            TspecCommands::New {
+                crate_name,
+                name,
+                from,
+            } => {
+                xt::ts_cmd::new_tspec(&crate_name, &name, from.as_deref())?;
+            }
         },
     }
 
