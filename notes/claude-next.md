@@ -13,37 +13,37 @@ Overwritten each session - history lives in design logs.
 
 ## Current State (20260130)
 
-**Branch:** `refactor/tspec-flat-types` - flattening tspec TOML format
+**Branch:** `main`
 
-**Done:**
-- `[cargo]` flattened (struct, not array-of-tables)
-- Top-level `panic` field with `PanicMode` enum
-- `[rustc]` flattened (struct, not array-of-tables)
-- `[linker]` flattened (struct, not array-of-tables)
+**Done this session:**
+- Renamed `.xt.toml` → `.ts.toml` (content-centric naming)
+- Refactored `tspec_cmd.rs` → `ts_cmd/` directory
+- Added `ts new` command with tests
+- Added `find_tspec_files` tests
 
-All sections now flat. tspec format complete:
-```toml
-panic = "immediate-abort"
-[cargo]
-[rustc]
-[linker]
+**tspec CLI commands:**
+```bash
+cargo xt ts list [crate]              # List tspec files
+cargo xt ts show <crate> [-t spec]    # Show contents
+cargo xt ts hash <crate> [-t spec]    # Show hash
+cargo xt ts new <crate> [name] [-f source]  # Create new
 ```
 
 **Next:**
-- Merge to main
-- Consider lifting fields to top level (fully flat, no sections)
-- Consider more high-level options like `panic` (e.g., `strip`, `lto`)
+- `ts set` - Set scalar values
+- `ts add` - Append to list values
+- `ts remove` - Remove from lists
+- File versioning on modification
+- High-level options: `strip`, `lto`
 
 **Key files:**
-- `xt/src/types.rs` - `Spec`, `CargoConfig`, `RustcConfig`, `LinkerConfig`
-- `xt/src/options.rs` - `PanicMode` enum
-- `xt/src/cargo_build.rs` - applies spec to cargo commands
-- `apps/ex-x2/tspec-opt.xt.toml` - example using new format
-- `notes/flatten-translation-spec.md` - detailed design log
+- `xt/src/ts_cmd/` - ts subcommands (list, show, hash, new)
+- `xt/src/types.rs` - `Spec` with `PartialEq, Eq`
+- `notes/goals-20260130.md` - detailed planning
 
 **Quick test:**
 ```bash
 cargo xt test xt
 cargo xt test
-cargo xt build ex-x2 -r -t tspec-opt.xt.toml
+cargo xt build ex-x2 -r -t tspec-opt.ts.toml
 ```

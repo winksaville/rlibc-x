@@ -118,11 +118,13 @@ cargo xt ts list                             # List all tspec files in workspace
 cargo xt ts list ex-x2                       # List tspec files for a crate
 cargo xt ts show ex-x2                       # Show all tspec contents for crate
 cargo xt ts show ex-x2 -t tspec-opt          # Show specific tspec
-cargo xt ts hash ex-x2                       # Show content hash (TODO)
-cargo xt ts new myapp                        # Create minimal tspec.toml (TODO)
-cargo xt ts add myapp --rustc build_std=std,core,panic_abort  # (TODO)
-cargo xt ts remove myapp --rustc panic       # (TODO)
-cargo xt ts diff tspec.toml tspec-opt.toml   # (TODO)
+cargo xt ts hash ex-x2                       # Show content hash
+cargo xt ts new ex-x2                        # Create tspec.ts.toml
+cargo xt ts new ex-x2 experiment             # Create experiment.ts.toml
+cargo xt ts new ex-x2 ts-opt2 -f tspec-opt   # Copy from existing spec
+cargo xt ts set myapp rustc.lto true         # (TODO)
+cargo xt ts add myapp linker.args "-static"  # (TODO)
+cargo xt ts remove myapp rustc.panic         # (TODO)
 ```
 
 Note: `tspec` and `ts` are aliases for the same subcommand.
@@ -146,7 +148,12 @@ xt/
     testing.rs      # Test command implementation
     compare.rs      # Compare command (size comparison)
     all.rs          # Batch operations (build_all, run_all, test_all)
-    tspec_cmd.rs    # Tspec subcommands (list, show, hash)
+    ts_cmd/         # Tspec subcommands
+      mod.rs        # Module exports
+      list.rs       # ts list command
+      show.rs       # ts show command
+      hash.rs       # ts hash command
+      new.rs        # ts new command
     binary.rs       # Binary operations (strip, size)
     print_hline.rs  # Horizontal line macro for output formatting
     print_header.rs # Header macro (uses print_hline!)
