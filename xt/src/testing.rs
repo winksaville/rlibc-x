@@ -5,17 +5,14 @@ use std::process::Command;
 use crate::cargo_build::{apply_spec_to_command, generate_build_rs};
 use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
 use crate::tspec::load_spec;
-use crate::types::{LinkerParam, RustcParam};
+use crate::types::LinkerParam;
 
 /// Check if spec requires nightly toolchain
 fn requires_nightly(spec: &crate::types::Spec) -> bool {
     // High-level panic mode may require nightly
     let panic_needs_nightly = spec.panic.map(|p| p.requires_nightly()).unwrap_or(false);
 
-    let has_build_std = spec
-        .rustc
-        .iter()
-        .any(|p| matches!(p, RustcParam::BuildStd(_)));
+    let has_build_std = !spec.rustc.build_std.is_empty();
 
     let has_unstable = !spec.cargo.unstable.is_empty();
 

@@ -89,7 +89,7 @@ mod tests {
     fn parse_empty_spec() {
         let spec = parse_spec("").unwrap();
         assert_eq!(spec.cargo, CargoConfig::default());
-        assert!(spec.rustc.is_empty());
+        assert_eq!(spec.rustc, RustcConfig::default());
         assert!(spec.linker.is_empty());
     }
 
@@ -126,7 +126,10 @@ mod tests {
                 profile: Some(Profile::Release),
                 ..Default::default()
             },
-            rustc: vec![RustcParam::Lto(true)],
+            rustc: RustcConfig {
+                lto: Some(true),
+                ..Default::default()
+            },
             linker: vec![LinkerParam::Args(vec!["-static".to_string()])],
         };
         let dir = tempfile::tempdir().unwrap();
@@ -136,7 +139,7 @@ mod tests {
         let loaded = load_spec(&path).unwrap();
 
         assert_eq!(spec.cargo, loaded.cargo);
-        assert_eq!(spec.rustc.len(), loaded.rustc.len());
+        assert_eq!(spec.rustc, loaded.rustc);
         assert_eq!(spec.linker.len(), loaded.linker.len());
     }
 

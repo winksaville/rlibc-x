@@ -159,3 +159,77 @@ No more `[cargo]`, `[[rustc]]`, `[[linker]]` sections - just fields.
 Work is on `refactor/tspec-flat-types` branch with commits:
 1. `refactor(tspec): Flatten [cargo] section from array to struct`
 2. `feat(tspec): Add top-level panic field with PanicMode enum`
+
+---
+
+## 20260130 - Flatten `[rustc]` Section
+
+Continued from [20260129](#20260129---investigation-and-initial-implementation).
+
+### Changes
+
+Changed `Vec<RustcParam>` enum to flat `RustcConfig` struct:
+
+```rust
+pub struct RustcConfig {
+    pub opt_level: Option<OptLevel>,
+    pub panic: Option<PanicStrategy>,
+    pub lto: Option<bool>,
+    pub codegen_units: Option<u32>,
+    pub build_std: Vec<String>,
+    pub flags: Vec<String>,
+}
+```
+
+TOML format changes from:
+```toml
+[[rustc]]
+build_std = ["std", "core", "panic_abort"]
+
+[[rustc]]
+flag = "-Z unstable-options"
+
+[[rustc]]
+flag = "-C link-arg=-Wl,--gc-sections"
+```
+
+To:
+```toml
+[rustc]
+build_std = ["std", "core", "panic_abort"]
+flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
+```
+
+### Files Modified
+
+- `xt/src/types.rs` - `RustcParam` enum → `RustcConfig` struct
+- `xt/src/cargo_build.rs` - Use struct fields instead of enum matching
+- `xt/src/testing.rs` - Update `requires_nightly()` check
+- `xt/src/tspec.rs` - Update tests
+- `xt/tests/tspec_test.rs` - Update test assertions
+- `xt/tests/data/minimal.toml` - New format
+- `apps/ex-x2/tspec-opt.xt.toml` - New format
+- `apps/hw-x2/tspec-opt.xt.toml` - New format
+
+### Current tspec-opt.xt.toml
+
+```toml
+panic = "immediate-abort"
+
+[cargo]
+target_json = "x86_64-unknown-linux-rlibcx2.json"
+
+[rustc]
+build_std = ["std", "core", "panic_abort"]
+flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
+
+[[linker]]
+args = ["-static", "-nostdlib", ...]
+
+[[linker]]
+version_script = { global = ["_start"], local = "*" }
+```
+
+### Next
+
+Flatten `[[linker]]` section → `[linker]` struct.

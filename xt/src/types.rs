@@ -52,18 +52,23 @@ pub struct CargoConfig {
     pub unstable: Vec<String>,
 }
 
-/// Rustc codegen and compilation parameters
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RustcParam {
-    OptLevel(OptLevel),
-    Panic(PanicStrategy),
-    Lto(bool),
-    CodegenUnits(u32),
+/// Rustc codegen and compilation configuration (flat struct)
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RustcConfig {
+    /// Optimization level (-C opt-level=)
+    pub opt_level: Option<OptLevel>,
+    /// Panic strategy (-C panic=)
+    pub panic: Option<PanicStrategy>,
+    /// Enable LTO (-C lto=true)
+    pub lto: Option<bool>,
+    /// Codegen units (-C codegen-units=)
+    pub codegen_units: Option<u32>,
     /// Crates to rebuild with -Z build-std (nightly only)
-    BuildStd(Vec<String>),
-    /// Raw flag passed through
-    Flag(String),
+    #[serde(default)]
+    pub build_std: Vec<String>,
+    /// Raw flags passed through
+    #[serde(default)]
+    pub flags: Vec<String>,
 }
 
 /// Version script configuration for symbol visibility
@@ -99,7 +104,7 @@ pub struct Spec {
     #[serde(default)]
     pub cargo: CargoConfig,
     #[serde(default)]
-    pub rustc: Vec<RustcParam>,
+    pub rustc: RustcConfig,
     #[serde(default)]
     pub linker: Vec<LinkerParam>,
 }
@@ -112,7 +117,7 @@ mod tests {
     fn spec_default_is_empty() {
         let spec = Spec::default();
         assert_eq!(spec.cargo, CargoConfig::default());
-        assert!(spec.rustc.is_empty());
+        assert_eq!(spec.rustc, RustcConfig::default());
         assert!(spec.linker.is_empty());
     }
 }

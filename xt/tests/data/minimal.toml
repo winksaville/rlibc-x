@@ -2,8 +2,6 @@
 [cargo]
 profile = "release"
 
-[[rustc]]
+[rustc]
 opt_level = "z"
-
-[[rustc]]
 panic = "abort"

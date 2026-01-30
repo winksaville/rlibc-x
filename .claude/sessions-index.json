@@ -533,6 +533,19 @@
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "0044b3cd-816a-4f54-93f0-92991a4771da",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/0044b3cd-816a-4f54-93f0-92991a4771da.jsonl",
+      "fileMtime": 1769792424337,
+      "firstPrompt": "There seems nothing strict to me I assume I could put the two [[cargo]] entries in different order or the 4 [[rustc]] in any order?",
+      "summary": "Flatten tspec types, add PanicMode enum",
+      "messageCount": 56,
+      "created": "2026-01-30T04:10:22.986Z",
+      "modified": "2026-01-30T05:47:43.477Z",
+      "gitBranch": "refactor/tspec-flat-types",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"

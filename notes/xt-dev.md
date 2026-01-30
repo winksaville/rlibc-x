@@ -307,3 +307,32 @@ Example: `panic = "immediate-abort"` now automatically sets both:
 Added `options.rs` with `PanicMode` enum for type-safe panic configuration.
 
 Work is on `refactor/tspec-flat-types` branch. See [flatten-translation-spec.md](flatten-translation-spec.md) for details.
+
+## 20260130 - Flattening `[rustc]` Section
+
+Continued flattening the tspec format:
+
+3. **`[rustc]` section** - Changed from `[[rustc]]` array-of-tables to flat struct
+   - `Vec<RustcParam>` enum → `RustcConfig` struct
+   - Multiple `flag = "..."` entries → single `flags = [...]` array
+
+Current tspec-opt.xt.toml format after cargo + rustc flattening:
+```toml
+panic = "immediate-abort"
+
+[cargo]
+target_json = "x86_64-unknown-linux-rlibcx2.json"
+
+[rustc]
+build_std = ["std", "core", "panic_abort"]
+flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
+
+[[linker]]
+args = [...]
+[[linker]]
+version_script = { ... }
+```
+
+Next: Flatten `[[linker]]` section.
+
+See [flatten-translation-spec.md#20260130](flatten-translation-spec.md#20260130---flatten-rustc-section) for implementation details.

@@ -9,7 +9,7 @@ use crate::find_paths::{
     get_crate_name,
 };
 use crate::tspec::load_spec;
-use crate::types::{LinkerParam, Profile, RustcParam, Spec};
+use crate::types::{LinkerParam, OptLevel, PanicStrategy, Profile, Spec};
 
 /// Result of a successful build
 pub struct BuildResult {
@@ -112,10 +112,7 @@ fn requires_nightly(spec: &Spec) -> bool {
     let panic_needs_nightly = spec.panic.map(|p| p.requires_nightly()).unwrap_or(false);
 
     // BuildStd requires nightly
-    let has_build_std = spec
-        .rustc
-        .iter()
-        .any(|p| matches!(p, RustcParam::BuildStd(_)));
+    let has_build_std = !spec.rustc.build_std.is_empty();
 
     // Unstable cargo flags require nightly
     let has_unstable = !spec.cargo.unstable.is_empty();
@@ -142,10 +139,10 @@ pub fn apply_spec_to_command(
     release: bool,
 ) -> Result<()> {
     // Handle high-level panic mode (cargo -Z flag)
-    if let Some(panic_mode) = spec.panic {
-        if let Some(z_flag) = panic_mode.cargo_z_flag() {
-            cmd.arg("-Z").arg(z_flag);
-        }
+    if let Some(panic_mode) = spec.panic
+        && let Some(z_flag) = panic_mode.cargo_z_flag()
+    {
+        cmd.arg("-Z").arg(z_flag);
     }
 
     // Handle cargo config
@@ -182,51 +179,52 @@ pub fn apply_spec_to_command(
     let mut rustc_flags: Vec<String> = Vec::new();
 
     // Handle high-level panic mode (rustc -C flag)
-    if let Some(panic_mode) = spec.panic {
-        if let Some(panic_value) = panic_mode.rustc_panic_value() {
-            rustc_flags.push(format!("-C panic={}", panic_value));
-        }
+    if let Some(panic_mode) = spec.panic
+        && let Some(panic_value) = panic_mode.rustc_panic_value()
+    {
+        rustc_flags.push(format!("-C panic={}", panic_value));
     }
 
-    // Handle rustc params
-    for param in &spec.rustc {
-        match param {
-            RustcParam::OptLevel(level) => {
-                let lvl = match level {
-                    crate::types::OptLevel::O0 => "0",
-                    crate::types::OptLevel::O1 => "1",
-                    crate::types::OptLevel::O2 => "2",
-                    crate::types::OptLevel::O3 => "3",
-                    crate::types::OptLevel::Os => "s",
-                    crate::types::OptLevel::Oz => "z",
-                };
-                rustc_flags.push(format!("-C opt-level={}", lvl));
-            }
-            RustcParam::Panic(strategy) => {
-                let s = match strategy {
-                    crate::types::PanicStrategy::Abort => "abort",
-                    crate::types::PanicStrategy::Unwind => "unwind",
-                    crate::types::PanicStrategy::ImmediateAbort => "immediate-abort",
-                };
-                rustc_flags.push(format!("-C panic={}", s));
-            }
-            RustcParam::Lto(enabled) => {
-                if *enabled {
-                    rustc_flags.push("-C lto=true".to_string());
-                }
-            }
-            RustcParam::CodegenUnits(n) => {
-                rustc_flags.push(format!("-C codegen-units={}", n));
-            }
-            RustcParam::BuildStd(crates) => {
-                // -Z build-std is a cargo flag, not rustc
-                let crates_str = crates.join(",");
-                cmd.arg("-Z").arg(format!("build-std={}", crates_str));
-            }
-            RustcParam::Flag(flag) => {
-                rustc_flags.push(flag.clone());
-            }
-        }
+    // Handle rustc config
+    let rustc = &spec.rustc;
+
+    if let Some(level) = &rustc.opt_level {
+        let lvl = match level {
+            OptLevel::O0 => "0",
+            OptLevel::O1 => "1",
+            OptLevel::O2 => "2",
+            OptLevel::O3 => "3",
+            OptLevel::Os => "s",
+            OptLevel::Oz => "z",
+        };
+        rustc_flags.push(format!("-C opt-level={}", lvl));
+    }
+
+    if let Some(strategy) = &rustc.panic {
+        let s = match strategy {
+            PanicStrategy::Abort => "abort",
+            PanicStrategy::Unwind => "unwind",
+            PanicStrategy::ImmediateAbort => "immediate-abort",
+        };
+        rustc_flags.push(format!("-C panic={}", s));
+    }
+
+    if let Some(true) = rustc.lto {
+        rustc_flags.push("-C lto=true".to_string());
+    }
+
+    if let Some(n) = rustc.codegen_units {
+        rustc_flags.push(format!("-C codegen-units={}", n));
+    }
+
+    if !rustc.build_std.is_empty() {
+        // -Z build-std is a cargo flag, not rustc
+        let crates_str = rustc.build_std.join(",");
+        cmd.arg("-Z").arg(format!("build-std={}", crates_str));
+    }
+
+    for flag in &rustc.flags {
+        rustc_flags.push(flag.clone());
     }
 
     // Handle version script (generates file and adds linker arg)

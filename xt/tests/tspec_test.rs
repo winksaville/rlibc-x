@@ -18,9 +18,12 @@ fn load_minimal_spec() {
     assert!(spec.cargo.target_json.is_none());
     assert!(spec.cargo.unstable.is_empty());
 
-    assert_eq!(spec.rustc.len(), 2);
-    assert_eq!(spec.rustc[0], RustcParam::OptLevel(OptLevel::Oz));
-    assert_eq!(spec.rustc[1], RustcParam::Panic(PanicStrategy::Abort));
+    assert_eq!(spec.rustc.opt_level, Some(OptLevel::Oz));
+    assert_eq!(spec.rustc.panic, Some(PanicStrategy::Abort));
+    assert!(spec.rustc.lto.is_none());
+    assert!(spec.rustc.codegen_units.is_none());
+    assert!(spec.rustc.build_std.is_empty());
+    assert!(spec.rustc.flags.is_empty());
 
     assert!(spec.linker.is_empty());
 }
@@ -51,7 +54,7 @@ fn load_ex_x1_spec() {
     let spec = load_spec(&app_tspec("ex-x1")).unwrap();
 
     assert_eq!(spec.cargo, CargoConfig::default());
-    assert!(spec.rustc.is_empty());
+    assert_eq!(spec.rustc, RustcConfig::default());
     assert_eq!(spec.linker.len(), 1);
     assert_eq!(
         spec.linker[0],
@@ -64,7 +67,7 @@ fn load_ex_x2_spec() {
     let spec = load_spec(&app_tspec("ex-x2")).unwrap();
 
     assert_eq!(spec.cargo, CargoConfig::default());
-    assert!(spec.rustc.is_empty());
+    assert_eq!(spec.rustc, RustcConfig::default());
     assert_eq!(spec.linker.len(), 1);
     assert_eq!(
         spec.linker[0],

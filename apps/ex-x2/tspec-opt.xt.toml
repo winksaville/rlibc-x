@@ -8,16 +8,11 @@ panic = "immediate-abort"
 # Use custom target with plt-by-default: false
 target_json = "x86_64-unknown-linux-rlibcx2.json"
 
+[rustc]
 # Rebuild std with panic_abort
-[[rustc]]
 build_std = ["std", "core", "panic_abort"]
-
 # Enable --gc-sections for dead code elimination (requires -Z unstable-options)
-[[rustc]]
-flag = "-Z unstable-options"
-
-[[rustc]]
-flag = "-C link-arg=-Wl,--gc-sections"
+flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
 
 # Linker flags from original build.rs
 [[linker]]
