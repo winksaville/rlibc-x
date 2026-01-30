@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use glob::Pattern;
 use std::path::{Path, PathBuf};
 
+use crate::TSPEC_SUFFIX;
 use crate::types::{CargoParam, Profile, Spec};
 
 /// Extract crate name from Cargo.toml
@@ -104,9 +105,9 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
                 return Ok(Some(in_crate));
             }
 
-            // Try with .xt.toml suffix if name has no extension
+            // Try with TSPEC_SUFFIX if name has no extension
             if !name.contains('.') {
-                let with_suffix = crate_dir.join(format!("{}.xt.toml", name));
+                let with_suffix = crate_dir.join(format!("{}{}", name, TSPEC_SUFFIX));
                 if with_suffix.exists() {
                     return Ok(Some(with_suffix));
                 }
@@ -115,7 +116,7 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
             bail!("tspec not found: {}", name);
         }
         None => {
-            let default = crate_dir.join("tspec.xt.toml");
+            let default = crate_dir.join(format!("tspec{}", TSPEC_SUFFIX));
             if default.exists() {
                 Ok(Some(default))
             } else {
@@ -126,11 +127,12 @@ pub fn find_tspec(crate_dir: &Path, explicit: Option<&str>) -> Result<Option<Pat
 }
 
 /// Find multiple tspecs by glob patterns
-/// If no patterns given, defaults to "tspec*.xt.toml"
+/// If no patterns given, defaults to "tspec*{TSPEC_SUFFIX}"
 /// Returns sorted list of paths, errors if none found
 pub fn find_tspecs(crate_dir: &Path, patterns: &[String]) -> Result<Vec<PathBuf>> {
+    let default_pattern = format!("tspec*{}", TSPEC_SUFFIX);
     let patterns: Vec<&str> = if patterns.is_empty() {
-        vec!["tspec*.xt.toml"]
+        vec![&default_pattern]
     } else {
         patterns.iter().map(|s| s.as_str()).collect()
     };
@@ -220,6 +222,7 @@ pub fn get_binary_path_simple(workspace: &Path, crate_name: &str, release: bool)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_constants::SUFFIX;
     use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -401,13 +404,18 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        let tspec_path = crate_dir.join("tspec.xt.toml");
+        let tspec_path = crate_dir.join(format!("tspec{}", SUFFIX));
         fs::write(&tspec_path, "# default tspec").unwrap();
 
         // No explicit name, should find default
         let found = find_tspec(&crate_dir, None).unwrap();
         assert!(found.is_some());
-        assert!(found.unwrap().to_string_lossy().contains("tspec.xt.toml"));
+        assert!(
+            found
+                .unwrap()
+                .to_string_lossy()
+                .contains(&format!("tspec{}", SUFFIX))
+        );
     }
 
     #[test]
@@ -416,7 +424,7 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        // No tspec.xt.toml, should return None (plain cargo build)
+        // No default tspec, should return None (plain cargo build)
         let found = find_tspec(&crate_dir, None).unwrap();
         assert!(found.is_none());
     }
@@ -438,18 +446,18 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        // Create optimized.xt.toml
-        let tspec_path = crate_dir.join("optimized.xt.toml");
+        // Create optimized{SUFFIX}
+        let tspec_path = crate_dir.join(format!("optimized{}", SUFFIX));
         fs::write(&tspec_path, "# optimized tspec").unwrap();
 
-        // Request "optimized" without extension, should find optimized.xt.toml
+        // Request "optimized" without extension, should find optimized{SUFFIX}
         let found = find_tspec(&crate_dir, Some("optimized")).unwrap();
         assert!(found.is_some());
         assert!(
             found
                 .unwrap()
                 .to_string_lossy()
-                .contains("optimized.xt.toml")
+                .contains(&format!("optimized{}", SUFFIX))
         );
     }
 
@@ -459,8 +467,8 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        // Create foo.xt.toml but request foo.toml (has extension)
-        let tspec_path = crate_dir.join("foo.xt.toml");
+        // Create foo{SUFFIX} but request foo.toml (has extension)
+        let tspec_path = crate_dir.join(format!("foo{}", SUFFIX));
         fs::write(&tspec_path, "# tspec").unwrap();
 
         // Request "foo.toml" - should NOT try suffix fallback
@@ -476,22 +484,24 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        fs::write(crate_dir.join("tspec.xt.toml"), "# default").unwrap();
-        fs::write(crate_dir.join("tspec-opt.xt.toml"), "# opt").unwrap();
+        let default_name = format!("tspec{}", SUFFIX);
+        let opt_name = format!("tspec-opt{}", SUFFIX);
+        fs::write(crate_dir.join(&default_name), "# default").unwrap();
+        fs::write(crate_dir.join(&opt_name), "# opt").unwrap();
         fs::write(crate_dir.join("other.toml"), "# other").unwrap();
 
-        // Empty patterns = default "tspec*.xt.toml"
+        // Empty patterns = default "tspec*{SUFFIX}"
         let found = find_tspecs(&crate_dir, &[]).unwrap();
         assert_eq!(found.len(), 2);
         assert!(
             found
                 .iter()
-                .any(|p| p.file_name().unwrap() == "tspec.xt.toml")
+                .any(|p| p.file_name().unwrap() == default_name.as_str())
         );
         assert!(
             found
                 .iter()
-                .any(|p| p.file_name().unwrap() == "tspec-opt.xt.toml")
+                .any(|p| p.file_name().unwrap() == opt_name.as_str())
         );
     }
 
@@ -501,13 +511,14 @@ version = "0.1.0"
         let crate_dir = tmp.path().join("crate");
         fs::create_dir(&crate_dir).unwrap();
 
-        fs::write(crate_dir.join("tspec.xt.toml"), "# default").unwrap();
-        fs::write(crate_dir.join("tspec-opt.xt.toml"), "# opt").unwrap();
-        fs::write(crate_dir.join("other.xt.toml"), "# other").unwrap();
+        let opt_name = format!("tspec-opt{}", SUFFIX);
+        fs::write(crate_dir.join(format!("tspec{}", SUFFIX)), "# default").unwrap();
+        fs::write(crate_dir.join(&opt_name), "# opt").unwrap();
+        fs::write(crate_dir.join(format!("other{}", SUFFIX)), "# other").unwrap();
 
         let found = find_tspecs(&crate_dir, &["*-opt*".to_string()]).unwrap();
         assert_eq!(found.len(), 1);
-        assert_eq!(found[0].file_name().unwrap(), "tspec-opt.xt.toml");
+        assert_eq!(found[0].file_name().unwrap(), opt_name.as_str());
     }
 
     #[test]

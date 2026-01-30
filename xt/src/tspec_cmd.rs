@@ -3,17 +3,18 @@
 use anyhow::Result;
 use std::path::Path;
 
+use crate::TSPEC_SUFFIX;
 use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
 use crate::workspace::WorkspaceInfo;
 
-/// List all *.xt.toml files in workspace or for a specific crate
+/// List all tspec files in workspace or for a specific crate
 pub fn list_tspecs(crate_name: Option<&str>) -> Result<()> {
     let workspace = find_workspace_root()?;
 
     match crate_name {
         Some(name) => {
             let crate_dir = find_crate_dir(&workspace, name)?;
-            let tspecs = find_xt_toml_files(&crate_dir)?;
+            let tspecs = find_tspec_files(&crate_dir)?;
             print_crate_tspecs(name, &crate_dir, &tspecs);
         }
         None => {
@@ -21,7 +22,7 @@ pub fn list_tspecs(crate_name: Option<&str>) -> Result<()> {
             let mut found_any = false;
 
             for member in &info.members {
-                let tspecs = find_xt_toml_files(&member.path)?;
+                let tspecs = find_tspec_files(&member.path)?;
                 if !tspecs.is_empty() {
                     print_crate_tspecs(&member.name, &member.path, &tspecs);
                     found_any = true;
@@ -29,7 +30,7 @@ pub fn list_tspecs(crate_name: Option<&str>) -> Result<()> {
             }
 
             if !found_any {
-                println!("No *.xt.toml files found in workspace");
+                println!("No *{} files found in workspace", TSPEC_SUFFIX);
             }
         }
     }
@@ -52,10 +53,10 @@ pub fn show_tspec(crate_name: &str, tspec: Option<&str>) -> Result<()> {
             }
         }
         None => {
-            // No tspec specified - show all *.xt.toml files
-            let tspecs = find_xt_toml_files(&crate_dir)?;
+            // No tspec specified - show all tspec files
+            let tspecs = find_tspec_files(&crate_dir)?;
             if tspecs.is_empty() {
-                println!("No *.xt.toml files found for {}", crate_name);
+                println!("No *{} files found for {}", TSPEC_SUFFIX, crate_name);
             } else {
                 for (i, name) in tspecs.iter().enumerate() {
                     if i > 0 {
@@ -85,14 +86,14 @@ fn print_tspec_content(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Find all *.xt.toml files in a directory
-fn find_xt_toml_files(dir: &Path) -> Result<Vec<String>> {
+/// Find all tspec files (files ending with TSPEC_SUFFIX) in a directory
+fn find_tspec_files(dir: &Path) -> Result<Vec<String>> {
     let mut files = Vec::new();
 
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.filter_map(|e| e.ok()) {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.ends_with(".xt.toml") {
+            if name.ends_with(TSPEC_SUFFIX) {
                 files.push(name);
             }
         }

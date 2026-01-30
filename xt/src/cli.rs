@@ -14,7 +14,7 @@ pub enum Commands {
     Build {
         /// Crate to build (omit for all workspace members)
         crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec.xt.toml)
+        /// Translation spec to use (defaults to crate's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -31,7 +31,7 @@ pub enum Commands {
     Run {
         /// Crate to run (omit for all apps)
         crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec.xt.toml)
+        /// Translation spec to use (defaults to crate's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -45,7 +45,7 @@ pub enum Commands {
     Test {
         /// Crate to test (omit for all workspace members)
         crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec.xt.toml)
+        /// Translation spec to use (defaults to crate's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -59,7 +59,7 @@ pub enum Commands {
     Compare {
         /// Crate to compare
         crate_name: String,
-        /// Spec file(s) or glob pattern(s) (defaults to tspec*.xt.toml)
+        /// Spec file(s) or glob pattern(s) (defaults to tspec* pattern)
         #[arg(short = 't', long = "tspec", action = clap::ArgAction::Append)]
         tspec: Vec<String>,
         /// Release build
@@ -93,24 +93,24 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum TspecCommands {
-    /// List *.xt.toml files in workspace or for a specific crate
+    /// List tspec files in workspace or for a specific crate
     List {
         /// Crate to list specs for (omit for all crates)
         crate_name: Option<String>,
     },
-    /// Show a spec's contents
+    /// Show a tspec's contents
     Show {
         /// Crate name
         crate_name: String,
-        /// Spec name (defaults to tspec.xt.toml)
+        /// Tspec name (defaults to all tspec files)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },
-    /// Show the content hash of a spec
+    /// Show the content hash of a tspec
     Hash {
         /// Crate name
         crate_name: String,
-        /// Spec name (defaults to tspec.xt.toml)
+        /// Tspec name (defaults to crate's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },

@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
+use crate::TSPEC_SUFFIX;
 use crate::types::Spec;
 
 /// Load a spec from a TOML file
@@ -54,8 +55,8 @@ pub fn save_spec_snapshot(spec: &Spec, name: &str, dir: &Path) -> Result<PathBuf
         .filter_map(|entry| entry.ok())
         .filter_map(|entry| {
             let filename = entry.file_name().to_string_lossy().into_owned();
-            if filename.starts_with(&prefix) && filename.ends_with(".xt.toml") {
-                // Extract sequence number: {name}-{seq:03}-{hash}.xt.toml
+            if filename.starts_with(&prefix) && filename.ends_with(TSPEC_SUFFIX) {
+                // Extract sequence number: {name}-{seq:03}-{hash}{TSPEC_SUFFIX}
                 let rest = filename.strip_prefix(&prefix)?;
                 let seq_str = rest.split('-').next()?;
                 seq_str.parse::<u32>().ok()
@@ -68,7 +69,7 @@ pub fn save_spec_snapshot(spec: &Spec, name: &str, dir: &Path) -> Result<PathBuf
         .unwrap_or(1);
 
     let hash = hash_spec(spec)?;
-    let filename = format!("{}-{:03}-{}.xt.toml", name, next_seq, hash);
+    let filename = format!("{}-{:03}-{}{}", name, next_seq, hash, TSPEC_SUFFIX);
     let path = dir.join(&filename);
 
     let content = serialize_spec(spec)?;
@@ -81,6 +82,7 @@ pub fn save_spec_snapshot(spec: &Spec, name: &str, dir: &Path) -> Result<PathBuf
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_constants::SUFFIX;
     use crate::types::*;
 
     #[test]
@@ -161,18 +163,18 @@ mod tests {
         assert!(name1.starts_with("test-001-"), "got: {}", name1);
         assert!(name2.starts_with("test-002-"), "got: {}", name2);
         assert!(name3.starts_with("test-003-"), "got: {}", name3);
-        assert!(name1.ends_with(".xt.toml"), "got: {}", name1);
+        assert!(name1.ends_with(SUFFIX), "got: {}", name1);
 
-        // Same content = same hash suffix (strip prefix and .xt.toml suffix)
+        // Same content = same hash suffix (strip prefix and SUFFIX)
         let hash1 = name1
             .strip_prefix("test-001-")
             .unwrap()
-            .strip_suffix(".xt.toml")
+            .strip_suffix(SUFFIX)
             .unwrap();
         let hash3 = name3
             .strip_prefix("test-003-")
             .unwrap()
-            .strip_suffix(".xt.toml")
+            .strip_suffix(SUFFIX)
             .unwrap();
         assert_eq!(hash1, hash3);
     }

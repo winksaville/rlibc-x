@@ -12,3 +12,12 @@ pub mod tspec;
 pub mod tspec_cmd;
 pub mod types;
 pub mod workspace;
+
+/// File suffix for tspec files (e.g., "tspec.xt.toml")
+pub const TSPEC_SUFFIX: &str = ".xt.toml";
+
+#[cfg(test)]
+pub mod test_constants {
+    /// Test version of TSPEC_SUFFIX - kept separate so tests break if main constant changes
+    pub const SUFFIX: &str = ".xt.toml";
+}

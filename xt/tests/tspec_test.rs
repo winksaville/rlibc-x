@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use xt::tspec::{hash_spec, load_spec};
 use xt::types::*;
+use xt::TSPEC_SUFFIX;
 
 fn test_data(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -40,7 +41,7 @@ fn app_tspec(app_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../apps")
         .join(app_name)
-        .join("tspec.xt.toml")
+        .join(format!("tspec{}", TSPEC_SUFFIX))
 }
 
 #[test]
