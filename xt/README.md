@@ -7,15 +7,15 @@ A tspec-based build system for comparing target triples and compile/linker comma
 ## Usage
 
 ```bash
-cargo xt build ex-x1-xt                     # Build with crate's tspec.xt.toml
+cargo xt build ex-x1-xt                     # Build with crate's tspec.ts.toml
 cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with alternative spec
 cargo xt build ex-x2-xt -t tspec-opt.toml -r -s  # Build optimized, strip
 cargo xt run ex-x1-xt                       # Build and run
 cargo xt test ex-x2-xt                      # Build and test
-cargo xt build ex-glibc                     # Works without tspec.xt.toml too
+cargo xt build ex-glibc                     # Works without tspec.ts.toml too
 cargo xt build apps/ex-x2-xt                # Path to crate directory
-cargo xt compare ex-x2-xt -r                # Compare all tspec*.xt.toml
-cargo xt compare ex-x2-xt -t "*.xt.toml" -r # Compare with glob pattern
+cargo xt compare ex-x2-xt -r                # Compare all tspec*.ts.toml
+cargo xt compare ex-x2-xt -t "*.ts.toml" -r # Compare with glob pattern
 ```
 
 The `-t` flag is optional - use it to try alternative spec files without modifying `tspec.toml`.
@@ -27,8 +27,8 @@ See [notes/xt-design.md](../notes/xt-design.md) for full design documentation.
 See [notes/xt-dev.md](../notes/xt-dev.md) for development notes and the linker flag scoping issue.
 
 Key concepts:
-- **App specs** - Apps define build requirements in `apps/<app>/tspec.xt.toml`
-- **tspec.xt.toml is optional** - Crates without one get plain `cargo build/test`
+- **App specs** - Apps define build requirements in `apps/<app>/tspec.ts.toml`
+- **tspec.ts.toml is optional** - Crates without one get plain `cargo build/test`
 - **Generated build.rs** - xt generates temporary build.rs for scoped linker flags
 
 ### How Linker Flags Work
@@ -95,8 +95,8 @@ cargo test -p xt spec_default    # run specific test
 Compare specs to see size differences:
 
 ```bash
-cargo xt compare ex-x2-xt -r                # All tspec*.xt.toml in crate dir
-cargo xt compare ex-x2-xt -t "*.xt.toml" -r # Explicit glob pattern
+cargo xt compare ex-x2-xt -r                # All tspec*.ts.toml in crate dir
+cargo xt compare ex-x2-xt -t "*.ts.toml" -r # Explicit glob pattern
 cargo xt compare ex-x2-xt -t a.toml -t b.toml -r  # Explicit file list
 ```
 

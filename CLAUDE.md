@@ -18,14 +18,14 @@ cargo xt test [crate] [-r]             # Run tests
 
 **Options:**
 - `-r, --release` - Release build
-- `-t, --tspec FILE` - Use alternative tspec (default: crate's `tspec.xt.toml` if present)
+- `-t, --tspec FILE` - Use alternative tspec (default: crate's `tspec.ts.toml` if present)
 - Use `.` to operate on crate in current directory
 
 **Examples:**
 ```bash
 cargo xt run hw-x1                         # Quick test of hello world
 cargo xt build -r                          # Build all crates release
-cargo xt build ex-x2 -r -t tspec-opt.xt.toml  # Optimized build (~6 KB vs ~41 KB)
+cargo xt build ex-x2 -r -t tspec-opt.ts.toml  # Optimized build (~6 KB vs ~41 KB)
 cargo xt test                              # Run all tests
 ```
 
@@ -49,7 +49,7 @@ cargo run -p func-analysis -- analyze target/release/ex-musl  # Analyze function
 - Execution: `_start (asm) → __libc_start_main() → Rust's main → user's main()`
 - No special attributes needed in application code
 - Modular: `process.rs`, `memory.rs`, `io.rs`, `syscall.rs`, `thread.rs`, `environ.rs`, `errno.rs`, `signal.rs`
-- Linker flags configured via `tspec.xt.toml` (static, nostdlib, entry point)
+- Linker flags configured via `tspec.ts.toml` (static, nostdlib, entry point)
 
 ### Workspace Structure
 
@@ -66,13 +66,13 @@ apps/               # Example applications
 tools/
   func-analysis/    # ELF function size analyzer (goblin, iced-x86)
   is-libc-used/     # Binary libc detection (object crate)
-xt/                 # Build automation (spec-driven via tspec.xt.toml)
+xt/                 # Build automation (spec-driven via tspec.ts.toml)
 notes/              # Technical documentation (opt-notes.md, plt-less-linking.md)
 ```
 
 ### Key Insight: Binary Size
 
-Rust's panic formatting machinery is the primary source of binary bloat, not libc itself. The `tspec-opt.xt.toml` specs achieve 85-97% size reduction by:
+Rust's panic formatting machinery is the primary source of binary bloat, not libc itself. The `tspec-opt.ts.toml` specs achieve 85-97% size reduction by:
 - Rebuilding std with `-Z build-std=std,core,panic_abort`
 - Using `-C panic=immediate-abort` to eliminate panic formatting
 - Version script to make symbols LOCAL, enabling dead code elimination
@@ -89,7 +89,7 @@ cargo xt test ex-x1        # Single crate
 ## Conventions
 
 - **Rust Edition:** 2024 for main crates
-- **Toolchain:** Stable (nightly only for `-opt` builds via tspec-opt.xt.toml)
+- **Toolchain:** Stable (nightly only for `-opt` builds via tspec-opt.ts.toml)
 - **Commit style:** Conventional commits (feat:, docs:, refactor:)
 - Apps with "musl" in name auto-target `x86_64-unknown-linux-musl`
 - Custom target file: `x86_64-unknown-linux-rlibcx2.json` (plt-by-default: false)

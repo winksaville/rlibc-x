@@ -39,7 +39,7 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 | [apps/](apps/) | Example and comparison apps |
 | [tools/](tools/) | Development tools (`is-libc-used`, `func-analysis`) |
 | [notes/](notes/) | Technical notes and findings |
-| [xt/](xt/) | Build automation (spec-driven via tspec.xt.toml) |
+| [xt/](xt/) | Build automation (spec-driven via tspec.ts.toml) |
 
 ## Two Approaches
 
@@ -49,12 +49,12 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 
 ## Optimized Builds
 
-The `tspec-opt.xt.toml` specs dramatically reduce binary sizes by eliminating Rust's panic formatting machinery:
+The `tspec-opt.ts.toml` specs dramatically reduce binary sizes by eliminating Rust's panic formatting machinery:
 
 ```bash
-cargo xt build ex-x2 -r -t tspec-opt.xt.toml     # ~6 KB (vs ~41 KB)
-cargo xt build ex-glibc -r -t tspec-opt.xt.toml  # ~9 KB (vs ~298 KB)
-cargo xt build ex-musl -r -t tspec-opt.xt.toml   # ~23 KB (vs ~381 KB)
+cargo xt build ex-x2 -r -t tspec-opt.ts.toml     # ~6 KB (vs ~41 KB)
+cargo xt build ex-glibc -r -t tspec-opt.ts.toml  # ~9 KB (vs ~298 KB)
+cargo xt build ex-musl -r -t tspec-opt.ts.toml   # ~23 KB (vs ~381 KB)
 ```
 
 See [notes/opt-notes.md](notes/opt-notes.md) for details.
@@ -73,7 +73,7 @@ cargo xt test               # run all tests
 cargo xt build -r           # release builds
 ```
 
-The `-t` flag is optional. If a crate has `tspec.xt.toml`, it's used automatically. Use `-t` to select an alternative spec like `tspec-opt.xt.toml`. Crates without any tspec get plain `cargo build`.
+The `-t` flag is optional. If a crate has `tspec.ts.toml`, it's used automatically. Use `-t` to select an alternative spec like `tspec-opt.ts.toml`. Crates without any tspec get plain `cargo build`.
 
 For more information see [xt/README.md](xt/README.md)
 
