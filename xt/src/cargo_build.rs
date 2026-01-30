@@ -210,6 +210,13 @@ pub fn apply_spec_to_command(
         rustc_flags.push(format!("-C codegen-units={}", n));
     }
 
+    // Handle high-level strip mode
+    if let Some(strip_mode) = spec.strip
+        && let Some(strip_value) = strip_mode.rustc_strip_value()
+    {
+        rustc_flags.push(format!("-C strip={}", strip_value));
+    }
+
     if !rustc.build_std.is_empty() {
         // -Z build-std is a cargo flag, not rustc
         let crates_str = rustc.build_std.join(",");

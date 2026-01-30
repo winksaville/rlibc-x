@@ -50,6 +50,36 @@ impl PanicMode {
     }
 }
 
+/// Symbol stripping mode.
+///
+/// This is a high-level option that sets the rustc strip flag.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum StripMode {
+    /// No stripping (default).
+    #[default]
+    None,
+
+    /// Strip debug info only.
+    /// Sets: rustc -C strip=debuginfo
+    Debuginfo,
+
+    /// Strip all symbols.
+    /// Sets: rustc -C strip=symbols
+    Symbols,
+}
+
+impl StripMode {
+    /// Returns the rustc -C strip= value, if any.
+    pub fn rustc_strip_value(&self) -> Option<&'static str> {
+        match self {
+            StripMode::None => None,
+            StripMode::Debuginfo => Some("debuginfo"),
+            StripMode::Symbols => Some("symbols"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +114,17 @@ mod tests {
             PanicMode::ImmediateAbort.rustc_panic_value(),
             Some("immediate-abort")
         );
+    }
+
+    #[test]
+    fn strip_none_is_default() {
+        assert_eq!(StripMode::default(), StripMode::None);
+    }
+
+    #[test]
+    fn rustc_strip_values() {
+        assert_eq!(StripMode::None.rustc_strip_value(), None);
+        assert_eq!(StripMode::Debuginfo.rustc_strip_value(), Some("debuginfo"));
+        assert_eq!(StripMode::Symbols.rustc_strip_value(), Some("symbols"));
     }
 }

@@ -125,4 +125,14 @@ pub enum TspecCommands {
         #[arg(short = 'f', long = "from")]
         from: Option<String>,
     },
+    /// Set a scalar value in a tspec (creates versioned copy)
+    Set {
+        /// Crate name
+        crate_name: String,
+        /// Key=value pair (e.g., "strip=symbols", "panic=abort", "rustc.lto=true")
+        assignment: String,
+        /// Tspec to modify (defaults to crate's tspec.ts.toml)
+        #[arg(short = 't', long = "tspec")]
+        tspec: Option<String>,
+    },
 }

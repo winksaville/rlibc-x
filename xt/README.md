@@ -122,7 +122,8 @@ cargo xt ts hash ex-x2                       # Show content hash
 cargo xt ts new ex-x2                        # Create tspec.ts.toml
 cargo xt ts new ex-x2 experiment             # Create experiment.ts.toml
 cargo xt ts new ex-x2 ts-opt2 -f tspec-opt   # Copy from existing spec
-cargo xt ts set myapp rustc.lto true         # (TODO)
+cargo xt ts set ex-x2 strip symbols          # Set value, create versioned file
+cargo xt ts set ex-x2 rustc.lto true -t opt  # Set value in specific tspec
 cargo xt ts add myapp linker.args "-static"  # (TODO)
 cargo xt ts remove myapp rustc.panic         # (TODO)
 ```
@@ -154,6 +155,7 @@ xt/
       show.rs       # ts show command
       hash.rs       # ts hash command
       new.rs        # ts new command
+      set.rs        # ts set command (creates versioned file)
     binary.rs       # Binary operations (strip, size)
     print_hline.rs  # Horizontal line macro for output formatting
     print_header.rs # Header macro (uses print_hline!)

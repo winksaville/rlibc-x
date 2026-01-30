@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::options::PanicMode;
+use crate::options::{PanicMode, StripMode};
 
 /// Build profile - mutually exclusive
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,6 +100,9 @@ pub struct LinkerConfig {
 pub struct Spec {
     /// High-level panic mode (sets both cargo -Z and rustc -C flags)
     pub panic: Option<PanicMode>,
+
+    /// High-level strip mode (sets rustc -C strip=)
+    pub strip: Option<StripMode>,
 
     #[serde(default)]
     pub cargo: CargoConfig,

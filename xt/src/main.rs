@@ -123,6 +123,16 @@ fn run() -> Result<ExitCode> {
             } => {
                 xt::ts_cmd::new_tspec(&crate_name, &name, from.as_deref())?;
             }
+            TspecCommands::Set {
+                crate_name,
+                assignment,
+                tspec,
+            } => {
+                let (key, value) = assignment.split_once('=').ok_or_else(|| {
+                    anyhow::anyhow!("invalid assignment '{}': expected key=value", assignment)
+                })?;
+                xt::ts_cmd::set_value(&crate_name, key, value, tspec.as_deref())?;
+            }
         },
     }
 
