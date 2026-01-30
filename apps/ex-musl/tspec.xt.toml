@@ -1,4 +1,4 @@
 # ex-musl spec - static linking with musl libc
 
-[[cargo]]
+[cargo]
 target_triple = "x86_64-unknown-linux-musl"

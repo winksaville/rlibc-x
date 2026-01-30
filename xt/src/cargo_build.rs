@@ -9,7 +9,7 @@ use crate::find_paths::{
     get_crate_name,
 };
 use crate::tspec::load_spec;
-use crate::types::{CargoParam, LinkerParam, Profile, RustcParam, Spec};
+use crate::types::{LinkerParam, Profile, RustcParam, Spec};
 
 /// Result of a successful build
 pub struct BuildResult {
@@ -115,10 +115,7 @@ fn requires_nightly(spec: &Spec) -> bool {
         .any(|p| matches!(p, RustcParam::BuildStd(_)));
 
     // Unstable cargo flags require nightly
-    let has_unstable = spec
-        .cargo
-        .iter()
-        .any(|p| matches!(p, CargoParam::Unstable(_)));
+    let has_unstable = !spec.cargo.unstable.is_empty();
 
     has_build_std || has_unstable
 }
@@ -141,31 +138,29 @@ pub fn apply_spec_to_command(
     workspace: &Path,
     release: bool,
 ) -> Result<()> {
-    // Handle cargo params
-    let mut has_profile = false;
-    for param in &spec.cargo {
-        match param {
-            CargoParam::Profile(p) => {
-                has_profile = true;
-                match p {
-                    Profile::Release => {
-                        cmd.arg("--release");
-                    }
-                    Profile::Debug => {
-                        // Debug is default, no flag needed
-                    }
-                }
+    // Handle cargo config
+    let has_profile = spec.cargo.profile.is_some();
+    if let Some(ref profile) = spec.cargo.profile {
+        match profile {
+            Profile::Release => {
+                cmd.arg("--release");
             }
-            CargoParam::TargetTriple(triple) => {
-                cmd.arg("--target").arg(triple);
-            }
-            CargoParam::TargetJson(path) => {
-                cmd.arg("--target").arg(path);
-            }
-            CargoParam::Unstable(flag) => {
-                cmd.arg("-Z").arg(flag);
+            Profile::Debug => {
+                // Debug is default, no flag needed
             }
         }
+    }
+
+    if let Some(ref triple) = spec.cargo.target_triple {
+        cmd.arg("--target").arg(triple);
+    }
+
+    if let Some(ref path) = spec.cargo.target_json {
+        cmd.arg("--target").arg(path);
+    }
+
+    for flag in &spec.cargo.unstable {
+        cmd.arg("-Z").arg(flag);
     }
 
     // If no profile in spec but release flag passed, use release

@@ -1,5 +1,5 @@
 # Minimal spec for testing
-[[cargo]]
+[cargo]
 profile = "release"
 
 [[rustc]]

@@ -13,8 +13,10 @@ fn test_data(name: &str) -> PathBuf {
 fn load_minimal_spec() {
     let spec = load_spec(&test_data("minimal.toml")).unwrap();
 
-    assert_eq!(spec.cargo.len(), 1);
-    assert_eq!(spec.cargo[0], CargoParam::Profile(Profile::Release));
+    assert_eq!(spec.cargo.profile, Some(Profile::Release));
+    assert!(spec.cargo.target_triple.is_none());
+    assert!(spec.cargo.target_json.is_none());
+    assert!(spec.cargo.unstable.is_empty());
 
     assert_eq!(spec.rustc.len(), 2);
     assert_eq!(spec.rustc[0], RustcParam::OptLevel(OptLevel::Oz));
@@ -48,7 +50,7 @@ fn app_tspec(app_name: &str) -> PathBuf {
 fn load_ex_x1_spec() {
     let spec = load_spec(&app_tspec("ex-x1")).unwrap();
 
-    assert!(spec.cargo.is_empty());
+    assert_eq!(spec.cargo, CargoConfig::default());
     assert!(spec.rustc.is_empty());
     assert_eq!(spec.linker.len(), 1);
     assert_eq!(
@@ -61,7 +63,7 @@ fn load_ex_x1_spec() {
 fn load_ex_x2_spec() {
     let spec = load_spec(&app_tspec("ex-x2")).unwrap();
 
-    assert!(spec.cargo.is_empty());
+    assert_eq!(spec.cargo, CargoConfig::default());
     assert!(spec.rustc.is_empty());
     assert_eq!(spec.linker.len(), 1);
     assert_eq!(

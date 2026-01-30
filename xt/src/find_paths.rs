@@ -3,7 +3,7 @@ use glob::Pattern;
 use std::path::{Path, PathBuf};
 
 use crate::TSPEC_SUFFIX;
-use crate::types::{CargoParam, Profile, Spec};
+use crate::types::{Profile, Spec};
 
 /// Extract crate name from Cargo.toml
 pub fn get_crate_name(crate_dir: &Path) -> Result<String> {
@@ -189,16 +189,13 @@ pub fn find_tspecs(crate_dir: &Path, patterns: &[String]) -> Result<Vec<PathBuf>
 
 /// Get binary path for a build with a spec
 pub fn get_binary_path(workspace: &Path, crate_name: &str, spec: &Spec, release: bool) -> PathBuf {
-    let is_release = release
-        || spec
-            .cargo
-            .iter()
-            .any(|p| matches!(p, CargoParam::Profile(Profile::Release)));
+    let is_release = release || spec.cargo.profile.as_ref() == Some(&Profile::Release);
 
-    let target = spec.cargo.iter().find_map(|p| match p {
-        CargoParam::TargetTriple(t) => Some(t.clone()),
-        CargoParam::TargetJson(p) => p.file_stem().map(|s| s.to_string_lossy().to_string()),
-        _ => None,
+    let target = spec.cargo.target_triple.clone().or_else(|| {
+        spec.cargo
+            .target_json
+            .as_ref()
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
     });
 
     let profile_dir = if is_release { "release" } else { "debug" };
@@ -603,9 +600,13 @@ version = "0.1.0"
 
     #[test]
     fn get_binary_path_release_from_spec_profile() {
+        use crate::types::CargoConfig;
         let workspace = Path::new("/workspace");
         let spec = Spec {
-            cargo: vec![CargoParam::Profile(Profile::Release)],
+            cargo: CargoConfig {
+                profile: Some(Profile::Release),
+                ..Default::default()
+            },
             ..Default::default()
         };
         // release=false but spec says Release
@@ -615,11 +616,13 @@ version = "0.1.0"
 
     #[test]
     fn get_binary_path_with_target_triple() {
+        use crate::types::CargoConfig;
         let workspace = Path::new("/workspace");
         let spec = Spec {
-            cargo: vec![CargoParam::TargetTriple(
-                "x86_64-unknown-linux-musl".to_string(),
-            )],
+            cargo: CargoConfig {
+                target_triple: Some("x86_64-unknown-linux-musl".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         };
         let path = get_binary_path(workspace, "myapp", &spec, true);
@@ -631,11 +634,13 @@ version = "0.1.0"
 
     #[test]
     fn get_binary_path_with_target_json() {
+        use crate::types::CargoConfig;
         let workspace = Path::new("/workspace");
         let spec = Spec {
-            cargo: vec![CargoParam::TargetJson(PathBuf::from(
-                "x86_64-unknown-linux-rlibcx2.json",
-            ))],
+            cargo: CargoConfig {
+                target_json: Some(PathBuf::from("x86_64-unknown-linux-rlibcx2.json")),
+                ..Default::default()
+            },
             ..Default::default()
         };
         let path = get_binary_path(workspace, "myapp", &spec, true);
@@ -647,11 +652,13 @@ version = "0.1.0"
 
     #[test]
     fn get_binary_path_target_triple_debug() {
+        use crate::types::CargoConfig;
         let workspace = Path::new("/workspace");
         let spec = Spec {
-            cargo: vec![CargoParam::TargetTriple(
-                "x86_64-unknown-linux-musl".to_string(),
-            )],
+            cargo: CargoConfig {
+                target_triple: Some("x86_64-unknown-linux-musl".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         };
         let path = get_binary_path(workspace, "myapp", &spec, false);
@@ -663,9 +670,13 @@ version = "0.1.0"
 
     #[test]
     fn get_binary_path_release_flag_with_debug_spec() {
+        use crate::types::CargoConfig;
         let workspace = Path::new("/workspace");
         let spec = Spec {
-            cargo: vec![CargoParam::Profile(Profile::Debug)],
+            cargo: CargoConfig {
+                profile: Some(Profile::Debug),
+                ..Default::default()
+            },
             ..Default::default()
         };
         // release=true overrides spec's Debug profile

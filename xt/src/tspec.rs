@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn parse_empty_spec() {
         let spec = parse_spec("").unwrap();
-        assert!(spec.cargo.is_empty());
+        assert_eq!(spec.cargo, CargoConfig::default());
         assert!(spec.rustc.is_empty());
         assert!(spec.linker.is_empty());
     }
@@ -106,7 +106,10 @@ mod tests {
     fn different_specs_different_hash() {
         let empty = Spec::default();
         let with_release = Spec {
-            cargo: vec![CargoParam::Profile(Profile::Release)],
+            cargo: CargoConfig {
+                profile: Some(Profile::Release),
+                ..Default::default()
+            },
             ..Default::default()
         };
         assert_ne!(
@@ -118,7 +121,10 @@ mod tests {
     #[test]
     fn save_and_load_roundtrip() {
         let spec = Spec {
-            cargo: vec![CargoParam::Profile(Profile::Release)],
+            cargo: CargoConfig {
+                profile: Some(Profile::Release),
+                ..Default::default()
+            },
             rustc: vec![RustcParam::Lto(true)],
             linker: vec![LinkerParam::Args(vec!["-static".to_string()])],
         };
@@ -128,7 +134,7 @@ mod tests {
         save_spec(&spec, &path).unwrap();
         let loaded = load_spec(&path).unwrap();
 
-        assert_eq!(spec.cargo.len(), loaded.cargo.len());
+        assert_eq!(spec.cargo, loaded.cargo);
         assert_eq!(spec.rustc.len(), loaded.rustc.len());
         assert_eq!(spec.linker.len(), loaded.linker.len());
     }
@@ -148,7 +154,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let spec1 = Spec::default();
         let spec2 = Spec {
-            cargo: vec![CargoParam::Profile(Profile::Release)],
+            cargo: CargoConfig {
+                profile: Some(Profile::Release),
+                ..Default::default()
+            },
             ..Default::default()
         };
 
