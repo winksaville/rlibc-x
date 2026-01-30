@@ -106,20 +106,17 @@ fn run() -> Result<ExitCode> {
             println!("incompat add: crate={crate_name} spec={spec}");
             // TODO: implement
         }
-        Commands::Tspec { command } => {
-            match command {
-                TspecCommands::List { crate_name } => {
-                    xt::tspec_cmd::list_tspecs(crate_name.as_deref())?;
-                }
-                TspecCommands::Show { crate_name, tspec } => {
-                    xt::tspec_cmd::show_tspec(&crate_name, tspec.as_deref())?;
-                }
-                TspecCommands::Hash { crate_name, tspec } => {
-                    println!("ts hash: crate={crate_name} tspec={tspec:?}");
-                    // TODO: implement
-                }
+        Commands::Tspec { command } => match command {
+            TspecCommands::List { crate_name } => {
+                xt::tspec_cmd::list_tspecs(crate_name.as_deref())?;
             }
-        }
+            TspecCommands::Show { crate_name, tspec } => {
+                xt::tspec_cmd::show_tspec(&crate_name, tspec.as_deref())?;
+            }
+            TspecCommands::Hash { crate_name, tspec } => {
+                xt::tspec_cmd::hash_tspec(&crate_name, tspec.as_deref())?;
+            }
+        },
     }
 
     Ok(ExitCode::SUCCESS)

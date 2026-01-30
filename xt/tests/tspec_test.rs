@@ -1,7 +1,7 @@
 use std::path::PathBuf;
+use xt::TSPEC_SUFFIX;
 use xt::tspec::{hash_spec, load_spec};
 use xt::types::*;
-use xt::TSPEC_SUFFIX;
 
 fn test_data(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
