@@ -293,3 +293,17 @@ args = ["-static", "-nostdlib", ...]
 
 See [notes/interactive-tspec.md](interactive-tspec.md) for Phase 3 design (naming conventions, CLI commands, snapshots).
 
+## 20260129 - Flattening the tspec Format
+
+Started refactoring tspec files toward a simpler, flatter format:
+
+1. **`[cargo]` section** - Changed from `[[cargo]]` array-of-tables to flat struct
+2. **Top-level `panic` field** - One setting replaces redundant cargo + rustc flags
+
+Example: `panic = "immediate-abort"` now automatically sets both:
+- Cargo `-Z panic-immediate-abort`
+- Rustc `-C panic=immediate-abort`
+
+Added `options.rs` with `PanicMode` enum for type-safe panic configuration.
+
+Work is on `refactor/tspec-flat-types` branch. See [flatten-translation-spec.md](flatten-translation-spec.md) for details.
