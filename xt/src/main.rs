@@ -108,13 +108,13 @@ fn run() -> Result<ExitCode> {
         }
         Commands::Tspec { command } => match command {
             TspecCommands::List { crate_name } => {
-                xt::tspec_cmd::list_tspecs(crate_name.as_deref())?;
+                xt::ts_cmd::list_tspecs(crate_name.as_deref())?;
             }
             TspecCommands::Show { crate_name, tspec } => {
-                xt::tspec_cmd::show_tspec(&crate_name, tspec.as_deref())?;
+                xt::ts_cmd::show_tspec(&crate_name, tspec.as_deref())?;
             }
             TspecCommands::Hash { crate_name, tspec } => {
-                xt::tspec_cmd::hash_tspec(&crate_name, tspec.as_deref())?;
+                xt::ts_cmd::hash_tspec(&crate_name, tspec.as_deref())?;
             }
         },
     }

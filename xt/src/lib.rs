@@ -9,8 +9,8 @@ pub mod print_header;
 pub mod print_hline;
 pub mod run;
 pub mod testing;
+pub mod ts_cmd;
 pub mod tspec;
-pub mod tspec_cmd;
 pub mod types;
 pub mod workspace;
 
