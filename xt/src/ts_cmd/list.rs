@@ -79,6 +79,8 @@ pub(crate) fn format_size(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_constants::SUFFIX;
+    use tempfile::TempDir;
 
     #[test]
     fn format_size_bytes() {
@@ -90,5 +92,52 @@ mod tests {
     fn format_size_kb() {
         assert_eq!(format_size(1024), "1.0 KB");
         assert_eq!(format_size(2560), "2.5 KB");
+    }
+
+    #[test]
+    fn find_tspec_files_empty_dir() {
+        let dir = TempDir::new().unwrap();
+        let files = find_tspec_files(dir.path()).unwrap();
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn find_tspec_files_returns_sorted() {
+        let dir = TempDir::new().unwrap();
+
+        // Create files in non-alphabetical order
+        std::fs::write(dir.path().join(format!("zebra{}", SUFFIX)), "").unwrap();
+        std::fs::write(dir.path().join(format!("alpha{}", SUFFIX)), "").unwrap();
+        std::fs::write(dir.path().join(format!("middle{}", SUFFIX)), "").unwrap();
+
+        let files = find_tspec_files(dir.path()).unwrap();
+
+        assert_eq!(files.len(), 3);
+        assert_eq!(files[0], format!("alpha{}", SUFFIX));
+        assert_eq!(files[1], format!("middle{}", SUFFIX));
+        assert_eq!(files[2], format!("zebra{}", SUFFIX));
+    }
+
+    #[test]
+    fn find_tspec_files_filters_by_suffix() {
+        let dir = TempDir::new().unwrap();
+
+        // Create mix of tspec and non-tspec files
+        std::fs::write(dir.path().join(format!("tspec{}", SUFFIX)), "").unwrap();
+        std::fs::write(dir.path().join("other.toml"), "").unwrap();
+        std::fs::write(dir.path().join("readme.md"), "").unwrap();
+        std::fs::write(dir.path().join(format!("opt{}", SUFFIX)), "").unwrap();
+
+        let files = find_tspec_files(dir.path()).unwrap();
+
+        assert_eq!(files.len(), 2);
+        assert!(files.contains(&format!("opt{}", SUFFIX)));
+        assert!(files.contains(&format!("tspec{}", SUFFIX)));
+    }
+
+    #[test]
+    fn find_tspec_files_nonexistent_dir() {
+        let files = find_tspec_files(Path::new("/nonexistent/path")).unwrap();
+        assert!(files.is_empty());
     }
 }
