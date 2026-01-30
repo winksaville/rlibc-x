@@ -108,6 +108,9 @@ pub fn generate_build_rs(path: &Path, crate_name: &str, spec: &Spec) -> Result<(
 
 /// Check if spec requires nightly toolchain
 fn requires_nightly(spec: &Spec) -> bool {
+    // High-level panic mode may require nightly
+    let panic_needs_nightly = spec.panic.map(|p| p.requires_nightly()).unwrap_or(false);
+
     // BuildStd requires nightly
     let has_build_std = spec
         .rustc
@@ -117,7 +120,7 @@ fn requires_nightly(spec: &Spec) -> bool {
     // Unstable cargo flags require nightly
     let has_unstable = !spec.cargo.unstable.is_empty();
 
-    has_build_std || has_unstable
+    panic_needs_nightly || has_build_std || has_unstable
 }
 
 /// Build the base cargo command (with toolchain if needed)
@@ -138,6 +141,13 @@ pub fn apply_spec_to_command(
     workspace: &Path,
     release: bool,
 ) -> Result<()> {
+    // Handle high-level panic mode (cargo -Z flag)
+    if let Some(panic_mode) = spec.panic {
+        if let Some(z_flag) = panic_mode.cargo_z_flag() {
+            cmd.arg("-Z").arg(z_flag);
+        }
+    }
+
     // Handle cargo config
     let has_profile = spec.cargo.profile.is_some();
     if let Some(ref profile) = spec.cargo.profile {
@@ -170,6 +180,13 @@ pub fn apply_spec_to_command(
 
     // Collect rustc flags
     let mut rustc_flags: Vec<String> = Vec::new();
+
+    // Handle high-level panic mode (rustc -C flag)
+    if let Some(panic_mode) = spec.panic {
+        if let Some(panic_value) = panic_mode.rustc_panic_value() {
+            rustc_flags.push(format!("-C panic={}", panic_value));
+        }
+    }
 
     // Handle rustc params
     for param in &spec.rustc {

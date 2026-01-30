@@ -121,6 +121,7 @@ mod tests {
     #[test]
     fn save_and_load_roundtrip() {
         let spec = Spec {
+            panic: None,
             cargo: CargoConfig {
                 profile: Some(Profile::Release),
                 ..Default::default()

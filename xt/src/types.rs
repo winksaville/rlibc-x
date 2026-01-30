@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+use crate::options::PanicMode;
+
 /// Build profile - mutually exclusive
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -91,6 +93,9 @@ pub enum LinkerParam {
 /// A translation spec
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Spec {
+    /// High-level panic mode (sets both cargo -Z and rustc -C flags)
+    pub panic: Option<PanicMode>,
+
     #[serde(default)]
     pub cargo: CargoConfig,
     #[serde(default)]

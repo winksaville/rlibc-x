@@ -9,6 +9,9 @@ use crate::types::{LinkerParam, RustcParam};
 
 /// Check if spec requires nightly toolchain
 fn requires_nightly(spec: &crate::types::Spec) -> bool {
+    // High-level panic mode may require nightly
+    let panic_needs_nightly = spec.panic.map(|p| p.requires_nightly()).unwrap_or(false);
+
     let has_build_std = spec
         .rustc
         .iter()
@@ -16,7 +19,7 @@ fn requires_nightly(spec: &crate::types::Spec) -> bool {
 
     let has_unstable = !spec.cargo.unstable.is_empty();
 
-    has_build_std || has_unstable
+    panic_needs_nightly || has_build_std || has_unstable
 }
 
 /// Test a crate with a spec

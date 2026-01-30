@@ -1,19 +1,16 @@
 # hw-x2 optimized spec - uses nightly build-std for smallest binary
 # Equivalent to: cargo xt build hw-x2 -r --tspec tspec-opt.xt.toml
 
+# High-level panic mode (sets both cargo -Z and rustc -C flags)
+panic = "immediate-abort"
+
 [cargo]
 # Use custom target with plt-by-default: false
 target_json = "x86_64-unknown-linux-rlibcx2.json"
-# Enable panic-immediate-abort (nightly -Z flag)
-unstable = ["panic-immediate-abort"]
 
 # Rebuild std with panic_abort
 [[rustc]]
 build_std = ["std", "core", "panic_abort"]
-
-# Use immediate abort panic (nightly -C flag, eliminates panic formatting)
-[[rustc]]
-panic = "immediate-abort"
 
 # Enable --gc-sections for dead code elimination (requires -Z unstable-options)
 [[rustc]]
