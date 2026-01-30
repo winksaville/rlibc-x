@@ -1,5 +1,5 @@
 # ex-x1-xt spec - uses rlibc-x1 runtime
 # No build.rs, linker flags come from here
 
-[[linker]]
+[linker]
 args = ["-static", "-nostartfiles"]

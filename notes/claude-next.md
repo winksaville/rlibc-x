@@ -17,12 +17,23 @@ See [Completing Changes](README.md#completing-changes) for end-of-session checkl
 - `[cargo]` flattened (struct, not array-of-tables)
 - Top-level `panic` field with `PanicMode` enum
 - `[rustc]` flattened (struct, not array-of-tables)
+- `[linker]` flattened (struct, not array-of-tables)
+
+All sections now flat. tspec format complete:
+```toml
+panic = "immediate-abort"
+[cargo]
+[rustc]
+[linker]
+```
 
 **Next:**
-- Flatten `[[linker]]` section → `[linker]` struct
+- Merge to main
+- Consider lifting fields to top level (fully flat, no sections)
+- Consider more high-level options like `panic` (e.g., `strip`, `lto`)
 
 **Key files:**
-- `xt/src/types.rs` - `Spec`, `CargoConfig`, `RustcConfig`, `LinkerParam`
+- `xt/src/types.rs` - `Spec`, `CargoConfig`, `RustcConfig`, `LinkerConfig`
 - `xt/src/options.rs` - `PanicMode` enum
 - `xt/src/cargo_build.rs` - applies spec to cargo commands
 - `apps/ex-x2/tspec-opt.xt.toml` - example using new format
@@ -31,5 +42,6 @@ See [Completing Changes](README.md#completing-changes) for end-of-session checkl
 **Quick test:**
 ```bash
 cargo xt test xt
+cargo xt test
 cargo xt build ex-x2 -r -t tspec-opt.xt.toml
 ```

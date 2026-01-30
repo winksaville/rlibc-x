@@ -333,6 +333,24 @@ args = [...]
 version_script = { ... }
 ```
 
-Next: Flatten `[[linker]]` section.
+4. **`[linker]` section** - Changed from `[[linker]]` array-of-tables to flat struct
+   - `Vec<LinkerParam>` enum → `LinkerConfig` struct
+   - Both `args` and `version_script` now in single `[linker]` section
 
-See [flatten-translation-spec.md#20260130](flatten-translation-spec.md#20260130---flatten-rustc-section) for implementation details.
+Final tspec-opt.xt.toml format - all sections flat:
+```toml
+panic = "immediate-abort"
+
+[cargo]
+target_json = "..."
+
+[rustc]
+build_std = [...]
+flags = [...]
+
+[linker]
+args = [...]
+version_script = { global = [...], local = "*" }
+```
+
+See [flatten-translation-spec.md](flatten-translation-spec.md#20260130---flatten-linker-section) for implementation details.

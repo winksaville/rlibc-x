@@ -9,7 +9,7 @@ use crate::find_paths::{
     get_crate_name,
 };
 use crate::tspec::load_spec;
-use crate::types::{LinkerParam, OptLevel, PanicStrategy, Profile, Spec};
+use crate::types::{OptLevel, PanicStrategy, Profile, Spec};
 
 /// Result of a successful build
 pub struct BuildResult {
@@ -43,10 +43,7 @@ pub fn build_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resu
         println!("Building {} with spec {}", pkg_name, path.display());
 
         // Generate temporary build.rs for linker flags if needed
-        let has_linker_args = spec
-            .linker
-            .iter()
-            .any(|p| matches!(p, LinkerParam::Args(_)));
+        let has_linker_args = !spec.linker.args.is_empty();
         if has_linker_args && !had_build_rs {
             generate_build_rs(&build_rs_path, &pkg_name, &spec)?;
         }
@@ -90,15 +87,11 @@ pub fn generate_build_rs(path: &Path, crate_name: &str, spec: &Spec) -> Result<(
         "fn main() {".to_string(),
     ];
 
-    for param in &spec.linker {
-        if let LinkerParam::Args(args) = param {
-            for arg in args {
-                lines.push(format!(
-                    "    println!(\"cargo:rustc-link-arg-bin={}={}\");",
-                    crate_name, arg
-                ));
-            }
-        }
+    for arg in &spec.linker.args {
+        lines.push(format!(
+            "    println!(\"cargo:rustc-link-arg-bin={}={}\");",
+            crate_name, arg
+        ));
     }
 
     lines.push("}".to_string());
@@ -228,25 +221,23 @@ pub fn apply_spec_to_command(
     }
 
     // Handle version script (generates file and adds linker arg)
-    for param in &spec.linker {
-        if let LinkerParam::VersionScript(vs) = param {
-            let target_dir = workspace.join("target");
-            let _ = fs::create_dir_all(&target_dir);
-            let version_script_path = target_dir.join("xt-version.script");
+    if let Some(vs) = &spec.linker.version_script {
+        let target_dir = workspace.join("target");
+        let _ = fs::create_dir_all(&target_dir);
+        let version_script_path = target_dir.join("xt-version.script");
 
-            // Generate version script: { global: sym1; sym2; local: *; };
-            let globals = vs.global.join("; ");
-            let content = format!("{{ global: {}; local: {}; }};", globals, vs.local);
+        // Generate version script: { global: sym1; sym2; local: *; };
+        let globals = vs.global.join("; ");
+        let content = format!("{{ global: {}; local: {}; }};", globals, vs.local);
 
-            let mut f = fs::File::create(&version_script_path)
-                .context("failed to create version script")?;
-            writeln!(f, "{}", content)?;
+        let mut f =
+            fs::File::create(&version_script_path).context("failed to create version script")?;
+        writeln!(f, "{}", content)?;
 
-            rustc_flags.push(format!(
-                "-C link-arg=-Wl,--version-script={}",
-                version_script_path.display()
-            ));
-        }
+        rustc_flags.push(format!(
+            "-C link-arg=-Wl,--version-script={}",
+            version_script_path.display()
+        ));
     }
 
     // Apply rustc flags (linker args from Args handled by generated build.rs)

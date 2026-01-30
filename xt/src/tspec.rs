@@ -90,7 +90,7 @@ mod tests {
         let spec = parse_spec("").unwrap();
         assert_eq!(spec.cargo, CargoConfig::default());
         assert_eq!(spec.rustc, RustcConfig::default());
-        assert!(spec.linker.is_empty());
+        assert_eq!(spec.linker, LinkerConfig::default());
     }
 
     #[test]
@@ -130,7 +130,10 @@ mod tests {
                 lto: Some(true),
                 ..Default::default()
             },
-            linker: vec![LinkerParam::Args(vec!["-static".to_string()])],
+            linker: LinkerConfig {
+                args: vec!["-static".to_string()],
+                ..Default::default()
+            },
         };
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.toml");
@@ -140,7 +143,7 @@ mod tests {
 
         assert_eq!(spec.cargo, loaded.cargo);
         assert_eq!(spec.rustc, loaded.rustc);
-        assert_eq!(spec.linker.len(), loaded.linker.len());
+        assert_eq!(spec.linker, loaded.linker);
     }
 
     #[test]

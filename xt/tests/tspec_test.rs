@@ -25,7 +25,7 @@ fn load_minimal_spec() {
     assert!(spec.rustc.build_std.is_empty());
     assert!(spec.rustc.flags.is_empty());
 
-    assert!(spec.linker.is_empty());
+    assert_eq!(spec.linker, LinkerConfig::default());
 }
 
 #[test]
@@ -55,11 +55,11 @@ fn load_ex_x1_spec() {
 
     assert_eq!(spec.cargo, CargoConfig::default());
     assert_eq!(spec.rustc, RustcConfig::default());
-    assert_eq!(spec.linker.len(), 1);
     assert_eq!(
-        spec.linker[0],
-        LinkerParam::Args(vec!["-static".to_string(), "-nostartfiles".to_string()])
+        spec.linker.args,
+        vec!["-static".to_string(), "-nostartfiles".to_string()]
     );
+    assert!(spec.linker.version_script.is_none());
 }
 
 #[test]
@@ -68,16 +68,16 @@ fn load_ex_x2_spec() {
 
     assert_eq!(spec.cargo, CargoConfig::default());
     assert_eq!(spec.rustc, RustcConfig::default());
-    assert_eq!(spec.linker.len(), 1);
     assert_eq!(
-        spec.linker[0],
-        LinkerParam::Args(vec![
+        spec.linker.args,
+        vec![
             "-static".to_string(),
             "-nostdlib".to_string(),
             "-nodefaultlibs".to_string(),
             "-e_start".to_string(),
             "-Wl,--undefined=_start".to_string(),
             "-Wl,--undefined=__libc_start_main".to_string(),
-        ])
+        ]
     );
+    assert!(spec.linker.version_script.is_none());
 }

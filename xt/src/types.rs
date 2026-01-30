@@ -85,14 +85,14 @@ fn default_local() -> String {
     "*".to_string()
 }
 
-/// Linker parameters
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum LinkerParam {
-    /// Linker arguments from tspec.toml
-    Args(Vec<String>),
+/// Linker configuration (flat struct)
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LinkerConfig {
+    /// Linker arguments (e.g., ["-static", "-nostdlib"])
+    #[serde(default)]
+    pub args: Vec<String>,
     /// Version script for symbol visibility (enables --gc-sections optimization)
-    VersionScript(VersionScript),
+    pub version_script: Option<VersionScript>,
 }
 
 /// A translation spec
@@ -106,7 +106,7 @@ pub struct Spec {
     #[serde(default)]
     pub rustc: RustcConfig,
     #[serde(default)]
-    pub linker: Vec<LinkerParam>,
+    pub linker: LinkerConfig,
 }
 
 #[cfg(test)]
@@ -118,6 +118,6 @@ mod tests {
         let spec = Spec::default();
         assert_eq!(spec.cargo, CargoConfig::default());
         assert_eq!(spec.rustc, RustcConfig::default());
-        assert!(spec.linker.is_empty());
+        assert_eq!(spec.linker, LinkerConfig::default());
     }
 }

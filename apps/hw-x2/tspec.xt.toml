@@ -1,5 +1,5 @@
 # hw-x2 spec - uses rlibc-x2 runtime
 # Linker flags from original build.rs
 
-[[linker]]
+[linker]
 args = ["-static", "-nostdlib", "-nodefaultlibs", "-e_start", "-Wl,--undefined=_start", "-Wl,--undefined=__libc_start_main"]

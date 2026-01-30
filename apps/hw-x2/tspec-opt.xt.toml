@@ -14,10 +14,8 @@ build_std = ["std", "core", "panic_abort"]
 # Enable --gc-sections for dead code elimination (requires -Z unstable-options)
 flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
 
+[linker]
 # Linker flags from original build.rs
-[[linker]]
 args = ["-static", "-nostdlib", "-nodefaultlibs", "-e_start", "-Wl,--undefined=_start", "-Wl,--undefined=__libc_start_main"]
-
 # Version script for aggressive dead code elimination
-[[linker]]
 version_script = { global = ["_start"], local = "*" }

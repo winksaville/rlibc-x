@@ -232,4 +232,71 @@ version_script = { global = ["_start"], local = "*" }
 
 ### Next
 
-Flatten `[[linker]]` section → `[linker]` struct.
+~~Flatten `[[linker]]` section → `[linker]` struct.~~ Done below.
+
+---
+
+## 20260130 - Flatten `[linker]` Section
+
+Continued from [above](#20260130---flatten-rustc-section).
+
+### Changes
+
+Changed `Vec<LinkerParam>` enum to flat `LinkerConfig` struct:
+
+```rust
+pub struct LinkerConfig {
+    pub args: Vec<String>,
+    pub version_script: Option<VersionScript>,
+}
+```
+
+TOML format changes from:
+```toml
+[[linker]]
+args = ["-static", "-nostdlib", ...]
+
+[[linker]]
+version_script = { global = ["_start"], local = "*" }
+```
+
+To:
+```toml
+[linker]
+args = ["-static", "-nostdlib", ...]
+version_script = { global = ["_start"], local = "*" }
+```
+
+### Files Modified
+
+- `xt/src/types.rs` - `LinkerParam` enum → `LinkerConfig` struct
+- `xt/src/cargo_build.rs` - Use struct fields
+- `xt/src/testing.rs` - Update linker args check
+- `xt/src/tspec.rs` - Update tests
+- `xt/tests/tspec_test.rs` - Update test assertions
+- All `tspec*.xt.toml` files - New `[linker]` format
+
+### Final tspec-opt.xt.toml Format
+
+All sections now flat:
+
+```toml
+panic = "immediate-abort"
+
+[cargo]
+target_json = "x86_64-unknown-linux-rlibcx2.json"
+
+[rustc]
+build_std = ["std", "core", "panic_abort"]
+flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
+
+[linker]
+args = ["-static", "-nostdlib", ...]
+version_script = { global = ["_start"], local = "*" }
+```
+
+### What's Next
+
+All three sections are now flat structs. Possible future work:
+- Lift fields to top level (eliminate sections entirely)
+- Add more high-level options like `panic` (e.g., `strip`, `lto`)

@@ -5,8 +5,6 @@ use std::process::Command;
 use crate::cargo_build::{apply_spec_to_command, generate_build_rs};
 use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
 use crate::tspec::load_spec;
-use crate::types::LinkerParam;
-
 /// Check if spec requires nightly toolchain
 fn requires_nightly(spec: &crate::types::Spec) -> bool {
     // High-level panic mode may require nightly
@@ -35,10 +33,7 @@ pub fn test_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Resul
         println!("Testing {} with spec {}", crate_name, path.display());
 
         // Generate temporary build.rs for linker flags if needed
-        let has_linker_args = spec
-            .linker
-            .iter()
-            .any(|p| matches!(p, LinkerParam::Args(_)));
+        let has_linker_args = !spec.linker.args.is_empty();
         if has_linker_args && !had_build_rs {
             generate_build_rs(&build_rs_path, crate_name, &spec)?;
         }
