@@ -113,4 +113,13 @@ cargo clippy --workspace --all-targets
 cargo fmt --check
 ```
 
+**After committing code, remind about .claude/ files:**
+```
+Committed abc123.
+
+Remember to commit .claude/ session files.
+```
+
+**On next prompt after a commit+reminder:** Check `git log -1 --name-only` to see if `.claude/` was included in a commit after the code commit. If not, ask: "Did you forget to commit .claude sessions?"
+
 **Short-term tasks:** See `notes/done-todo.md` for current Todo/Done status.

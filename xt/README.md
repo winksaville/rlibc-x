@@ -188,23 +188,15 @@ When finishing a set of changes:
 
 ### Claude Code & Git
 
-The `.claude/` directory contains session state that updates during conversations. This creates a self-referencing situation when Claude commits changes.
+The `.claude/` directory contains session state that updates during conversations.
 
-**After committing:**
-- You may optionally amend the commit to include `.claude/` session changes
-- Exiting Claude is not required - amending keeps history clean while preserving session
+**After Claude commits code:**
+1. Claude says "Committed abc123." then "Remember to commit .claude/ session files."
+2. User should commit `.claude/` files separately (or amend)
+3. On next prompt, if `.claude/` wasn't committed, Claude asks: "Did you forget to commit .claude sessions?"
+
+**Why separate commits:** The `.claude/` files update continuously during conversation, so they're always dirty mid-session. Committing them separately keeps code commits clean.
 
 **Before merging:**
-- **Always exit Claude first** - Post-commit discussions almost always occur, updating `.claude/` files
-- Merging while Claude is running risks merge conflicts in `.claude/` between branches
-- Exit ensures session state is saved and consistent with the code being merged
-
-Workflow:
-```
-1. Make changes, commit (code changes)
-2. Optionally: amend to add .claude/ updates
-3. Continue discussion if needed
-4. EXIT CLAUDE before any merge/rebase
-5. Merge in a fresh terminal
-6. Start new Claude session on merged branch
-```
+- **Always exit Claude first** - merging while Claude runs risks conflicts in `.claude/`
+- Exit ensures session state is consistent with the code being merged
