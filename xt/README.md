@@ -2,6 +2,8 @@
 
 A tspec-based build system for comparing target triples and compile/linker commands across apps.
 
+See [Claude Code Sessions](../README.md#claude-code-sessions) for how `.claude/` session files are managed in this repo.
+
 **Status:** Active - primary build system (replaced xtask).
 
 ## Usage

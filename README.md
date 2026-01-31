@@ -95,6 +95,19 @@ This is an experimental/educational project. For production use, consider:
 - [relibc](https://gitlab.redox-os.org/redox-os/relibc) - Redox OS's portable POSIX C library in Rust
 - [c-ward](https://github.com/aspect-build/c-ward) - A libc implementation in Rust
 
+## Claude Code Sessions
+
+This project stores `.claude/` session files in the repo. A symlink in `~/.claude/projects/` points to it:
+```
+$ ls -l ~/.claude/projects/
+lrwxrwxrwx 1 wink users 41 Jan 15 17:44 -home-wink-data-prgs-rust-rlibc-x -> /home/wink/data/prgs/rust/rlibc-x/.claude
+```
+This allows all Claude Code prompts to be saved in git, providing a rich history of conversations.
+
+However, there's a circular reference issue - Claude cannot commit `.claude/` changes because the session file updates as Claude works:
+1. **Linear commits:** User should amend every commit performed by Claude, adding `.claude/*` changes. See [xt/README.md](xt/README.md#claude-code--git) for workflow details.
+2. **Merge commits:** Trickier - Claude would need to stash changes, but popping the stash causes merge conflicts in `.claude/`. The current solution is to `/exit` the Claude session and do the merge yourself.
+
 ## Origin
 
 Started with this prompt for Claude Code:

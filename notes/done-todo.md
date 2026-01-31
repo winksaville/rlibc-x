@@ -9,6 +9,7 @@ Working document for tracking progress. Items reference discussions in goals fil
 - ts add command (append to lists)
 - ts remove command (remove from lists)
 - lto high-level option [2]
+- Make xt/README.md more generic (remove repo-specific .claude/ content)
 
 ## Done
 
