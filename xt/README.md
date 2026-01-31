@@ -177,15 +177,14 @@ Discussion and design rationale lives in `notes/goals-<date>.md` files. The done
 When finishing a set of changes:
 
 1. Update relevant design log with new dated section
-2. Update `notes/claude-next.md` with current state
-3. Update `notes/done-todo.md` - move items from Todo to Done
-4. Run verification loop:
+2. Update `notes/done-todo.md` - move items from Todo to Done
+3. Run verification loop:
    ```bash
    cargo xt test xt && cargo xt test
    cargo clippy --workspace --all-targets
    cargo fmt --check
    ```
-5. Commit with conventional commit message
+4. Commit with conventional commit message
 
 ### Claude Code & Git
 

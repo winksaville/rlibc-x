@@ -14,6 +14,7 @@ All builds use the xt build system. Run from repository root:
 cargo xt build [crate] [-r] [-t FILE]  # Build crate(s)
 cargo xt run [crate] [-r] [-t FILE]    # Build and run
 cargo xt test [crate] [-r]             # Run tests
+cargo xt compare <crate> [-r]          # Compare all tspec*.ts.toml sizes
 ```
 
 **Options:**
@@ -27,6 +28,15 @@ cargo xt run hw-x1                         # Quick test of hello world
 cargo xt build -r                          # Build all crates release
 cargo xt build ex-x2 -r -t tspec-opt.ts.toml  # Optimized build (~6 KB vs ~41 KB)
 cargo xt test                              # Run all tests
+cargo xt compare ex-x2 -r                  # Compare spec sizes
+```
+
+**Interactive tspec management:**
+```bash
+cargo xt ts list [crate]                      # List tspec files
+cargo xt ts show <crate> [-t spec]            # Show contents
+cargo xt ts new <crate> [name] [-f source]    # Create new spec
+cargo xt ts set <crate> key=value [-t spec]   # Set value (creates versioned file)
 ```
 
 **Verification tools:**
@@ -93,3 +103,14 @@ cargo xt test ex-x1        # Single crate
 - **Commit style:** Conventional commits (feat:, docs:, refactor:)
 - Apps with "musl" in name auto-target `x86_64-unknown-linux-musl`
 - Custom target file: `x86_64-unknown-linux-rlibcx2.json` (plt-by-default: false)
+
+## Workflow
+
+**Before committing, run verification:**
+```bash
+cargo xt test xt && cargo xt test
+cargo clippy --workspace --all-targets
+cargo fmt --check
+```
+
+**Short-term tasks:** See `notes/done-todo.md` for current Todo/Done status.
