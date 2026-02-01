@@ -33,10 +33,10 @@ cargo xt compare ex-x2 -r                  # Compare spec sizes
 
 **Interactive tspec management:**
 ```bash
-cargo xt ts list [crate]                      # List tspec files
-cargo xt ts show <crate> [-t spec]            # Show contents
-cargo xt ts new <crate> [name] [-f source]    # Create new spec
-cargo xt ts set <crate> key=value [-t spec]   # Set value (creates versioned file)
+cargo xt ts list [-p PKG]                     # List tspec files
+cargo xt ts show [-p PKG] [-t spec]           # Show contents
+cargo xt ts new [name] [-p PKG] [-f source]   # Create new spec
+cargo xt ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
 ```
 
 **Verification tools:**

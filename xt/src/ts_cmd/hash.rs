@@ -4,33 +4,34 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::TSPEC_SUFFIX;
-use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
+use crate::find_paths::{find_tspec, find_workspace_root, get_crate_name, resolve_package_dir};
 use crate::tspec::{hash_spec, load_spec};
 
 use super::list::find_tspec_files;
 
 /// Show hash of a tspec file
-pub fn hash_tspec(crate_name: &str, tspec: Option<&str>) -> Result<()> {
+pub fn hash_tspec(package: Option<&str>, tspec: Option<&str>) -> Result<()> {
     let workspace = find_workspace_root()?;
-    let crate_dir = find_crate_dir(&workspace, crate_name)?;
+    let package_dir = resolve_package_dir(&workspace, package)?;
+    let pkg_name = get_crate_name(&package_dir)?;
 
     match tspec {
         Some(name) => {
             // Explicit tspec - hash just that one
-            let path = find_tspec(&crate_dir, Some(name))?;
+            let path = find_tspec(&package_dir, Some(name))?;
             match path {
                 Some(p) => print_tspec_hash(&p)?,
-                None => anyhow::bail!("tspec '{}' not found for crate '{}'", name, crate_name),
+                None => anyhow::bail!("tspec '{}' not found for package '{}'", name, pkg_name),
             }
         }
         None => {
             // No tspec specified - hash all tspec files
-            let tspecs = find_tspec_files(&crate_dir)?;
+            let tspecs = find_tspec_files(&package_dir)?;
             if tspecs.is_empty() {
-                println!("No *{} files found for {}", TSPEC_SUFFIX, crate_name);
+                println!("No *{} files found for {}", TSPEC_SUFFIX, pkg_name);
             } else {
                 for name in &tspecs {
-                    print_tspec_hash(&crate_dir.join(name))?;
+                    print_tspec_hash(&package_dir.join(name))?;
                 }
             }
         }

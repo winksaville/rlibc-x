@@ -7,7 +7,7 @@ use xt::binary::strip_binary;
 use xt::cargo_build::build_crate;
 use xt::cli::{Cli, Commands, TspecCommands};
 use xt::compare::compare_specs;
-use xt::find_paths::{find_crate_dir, find_tspecs, find_workspace_root};
+use xt::find_paths::{find_package_dir, find_tspecs, find_workspace_root};
 use xt::run::run_binary;
 use xt::testing::test_crate;
 use xt::workspace::WorkspaceInfo;
@@ -91,8 +91,8 @@ fn run() -> Result<ExitCode> {
             strip,
         } => {
             let workspace = find_workspace_root()?;
-            let crate_dir = find_crate_dir(&workspace, &crate_name)?;
-            let spec_paths = find_tspecs(&crate_dir, &tspec)?;
+            let package_dir = find_package_dir(&workspace, &crate_name)?;
+            let spec_paths = find_tspecs(&package_dir, &tspec)?;
             compare_specs(&crate_name, &spec_paths, release, strip)?;
         }
         Commands::Compat { crate_name, spec } => {
@@ -107,31 +107,31 @@ fn run() -> Result<ExitCode> {
             // TODO: implement
         }
         Commands::Tspec { command } => match command {
-            TspecCommands::List { crate_name } => {
-                xt::ts_cmd::list_tspecs(crate_name.as_deref())?;
+            TspecCommands::List { package } => {
+                xt::ts_cmd::list_tspecs(package.as_deref())?;
             }
-            TspecCommands::Show { crate_name, tspec } => {
-                xt::ts_cmd::show_tspec(&crate_name, tspec.as_deref())?;
+            TspecCommands::Show { package, tspec } => {
+                xt::ts_cmd::show_tspec(package.as_deref(), tspec.as_deref())?;
             }
-            TspecCommands::Hash { crate_name, tspec } => {
-                xt::ts_cmd::hash_tspec(&crate_name, tspec.as_deref())?;
+            TspecCommands::Hash { package, tspec } => {
+                xt::ts_cmd::hash_tspec(package.as_deref(), tspec.as_deref())?;
             }
             TspecCommands::New {
-                crate_name,
                 name,
+                package,
                 from,
             } => {
-                xt::ts_cmd::new_tspec(&crate_name, &name, from.as_deref())?;
+                xt::ts_cmd::new_tspec(package.as_deref(), &name, from.as_deref())?;
             }
             TspecCommands::Set {
-                crate_name,
                 assignment,
+                package,
                 tspec,
             } => {
                 let (key, value) = assignment.split_once('=').ok_or_else(|| {
                     anyhow::anyhow!("invalid assignment '{}': expected key=value", assignment)
                 })?;
-                xt::ts_cmd::set_value(&crate_name, key, value, tspec.as_deref())?;
+                xt::ts_cmd::set_value(package.as_deref(), key, value, tspec.as_deref())?;
             }
         },
     }

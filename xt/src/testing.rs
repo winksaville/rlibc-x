@@ -3,7 +3,7 @@ use std::fs;
 use std::process::Command;
 
 use crate::cargo_build::{apply_spec_to_command, generate_build_rs};
-use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
+use crate::find_paths::{find_package_dir, find_tspec, find_workspace_root};
 use crate::tspec::load_spec;
 /// Check if spec requires nightly toolchain
 fn requires_nightly(spec: &crate::types::Spec) -> bool {
@@ -20,7 +20,7 @@ fn requires_nightly(spec: &crate::types::Spec) -> bool {
 /// Test a crate with a spec
 pub fn test_crate(crate_name: &str, tspec: Option<&str>, release: bool) -> Result<()> {
     let workspace = find_workspace_root()?;
-    let crate_dir = find_crate_dir(&workspace, crate_name)?;
+    let crate_dir = find_package_dir(&workspace, crate_name)?;
     let tspec_path = find_tspec(&crate_dir, tspec)?;
 
     // Track if we generated a build.rs

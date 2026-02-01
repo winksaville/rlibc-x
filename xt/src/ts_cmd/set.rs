@@ -2,18 +2,18 @@
 
 use anyhow::{Context, Result, bail};
 
-use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
+use crate::find_paths::{find_tspec, find_workspace_root, resolve_package_dir};
 use crate::options::{PanicMode, StripMode};
 use crate::tspec::{load_spec, save_spec_snapshot};
 use crate::types::{OptLevel, PanicStrategy, Profile, Spec};
 
 /// Set a value in a tspec and save as versioned snapshot
-pub fn set_value(crate_name: &str, key: &str, value: &str, tspec: Option<&str>) -> Result<()> {
+pub fn set_value(package: Option<&str>, key: &str, value: &str, tspec: Option<&str>) -> Result<()> {
     let workspace = find_workspace_root()?;
-    let crate_dir = find_crate_dir(&workspace, crate_name)?;
+    let package_dir = resolve_package_dir(&workspace, package)?;
 
     // Load existing spec or use default
-    let mut spec = match find_tspec(&crate_dir, tspec)? {
+    let mut spec = match find_tspec(&package_dir, tspec)? {
         Some(path) => load_spec(&path)?,
         None => Spec::default(),
     };
@@ -34,7 +34,7 @@ pub fn set_value(crate_name: &str, key: &str, value: &str, tspec: Option<&str>) 
     };
 
     // Save as versioned snapshot
-    let output_path = save_spec_snapshot(&spec, &base_name, &crate_dir)?;
+    let output_path = save_spec_snapshot(&spec, &base_name, &package_dir)?;
 
     println!(
         "Saved {}",

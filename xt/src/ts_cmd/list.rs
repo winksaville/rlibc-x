@@ -4,27 +4,40 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::TSPEC_SUFFIX;
-use crate::find_paths::{find_crate_dir, find_workspace_root};
+use crate::find_paths::{find_workspace_root, get_crate_name, resolve_package_dir};
 use crate::workspace::WorkspaceInfo;
 
-/// List all tspec files in workspace or for a specific crate
-pub fn list_tspecs(crate_name: Option<&str>) -> Result<()> {
+/// List all tspec files in workspace or for a specific package
+pub fn list_tspecs(package: Option<&str>) -> Result<()> {
     let workspace = find_workspace_root()?;
 
-    match crate_name {
-        Some(name) => {
-            let crate_dir = find_crate_dir(&workspace, name)?;
-            let tspecs = find_tspec_files(&crate_dir)?;
-            print_crate_tspecs(name, &crate_dir, &tspecs);
+    // Check if we're in a package directory (has Cargo.toml with [package], not just workspace)
+    let cwd = std::env::current_dir()?;
+    let in_package_dir = get_crate_name(&cwd).is_ok();
+
+    match (package, in_package_dir) {
+        (Some(name), _) => {
+            // Explicit package specified
+            let package_dir = resolve_package_dir(&workspace, Some(name))?;
+            let tspecs = find_tspec_files(&package_dir)?;
+            print_package_tspecs(name, &package_dir, &tspecs);
         }
-        None => {
+        (None, true) => {
+            // In a package directory, list just this package
+            let package_dir = cwd;
+            let pkg_name = get_crate_name(&package_dir)?;
+            let tspecs = find_tspec_files(&package_dir)?;
+            print_package_tspecs(&pkg_name, &package_dir, &tspecs);
+        }
+        (None, false) => {
+            // At workspace root or no package, list all packages
             let info = WorkspaceInfo::discover()?;
             let mut found_any = false;
 
             for member in &info.members {
                 let tspecs = find_tspec_files(&member.path)?;
                 if !tspecs.is_empty() {
-                    print_crate_tspecs(&member.name, &member.path, &tspecs);
+                    print_package_tspecs(&member.name, &member.path, &tspecs);
                     found_any = true;
                 }
             }
@@ -55,11 +68,11 @@ pub(crate) fn find_tspec_files(dir: &Path) -> Result<Vec<String>> {
     Ok(files)
 }
 
-/// Print tspec files for a crate
-fn print_crate_tspecs(crate_name: &str, crate_dir: &Path, tspecs: &[String]) {
-    println!("{}:", crate_name);
+/// Print tspec files for a package
+fn print_package_tspecs(package_name: &str, package_dir: &Path, tspecs: &[String]) {
+    println!("{}:", package_name);
     for tspec in tspecs {
-        let path = crate_dir.join(tspec);
+        let path = package_dir.join(tspec);
         let size = std::fs::metadata(&path)
             .map(|m| format_size(m.len()))
             .unwrap_or_else(|_| "?".to_string());

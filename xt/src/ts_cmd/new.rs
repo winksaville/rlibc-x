@@ -4,48 +4,52 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::TSPEC_SUFFIX;
-use crate::find_paths::{find_crate_dir, find_tspec, find_workspace_root};
+use crate::find_paths::{find_package_dir, find_tspec, find_workspace_root, resolve_package_dir};
 use crate::tspec::{load_spec, save_spec};
 use crate::types::Spec;
 
 /// Create a new tspec file (public entry point)
-pub fn new_tspec(crate_name: &str, name: &str, from: Option<&str>) -> Result<()> {
+pub fn new_tspec(package: Option<&str>, name: &str, from: Option<&str>) -> Result<()> {
     let workspace = find_workspace_root()?;
-    let crate_dir = find_crate_dir(&workspace, crate_name)?;
+    let package_dir = resolve_package_dir(&workspace, package)?;
 
     // Resolve source spec if --from provided
     let source_spec = match from {
         Some(source) => {
-            let source_path = resolve_source_spec(&workspace, crate_name, source)?;
+            let source_path = resolve_source_spec(&workspace, &package_dir, source)?;
             Some(load_spec(&source_path)?)
         }
         None => None,
     };
 
-    create_tspec_file(&workspace, &crate_dir, name, source_spec.as_ref())
+    create_tspec_file(&workspace, &package_dir, name, source_spec.as_ref())
 }
 
 /// Resolve the source spec path from a --from argument
 fn resolve_source_spec(
     workspace: &Path,
-    crate_name: &str,
+    current_package_dir: &Path,
     source: &str,
 ) -> Result<std::path::PathBuf> {
-    // Parse source: could be "crate/spec" or just "spec"
-    let (source_crate, source_spec) = if source.contains('/') {
+    // Parse source: could be "package/spec" or just "spec"
+    let (source_package_dir, source_spec, source_name) = if source.contains('/') {
         let parts: Vec<&str> = source.splitn(2, '/').collect();
-        (parts[0], Some(parts[1]))
+        let pkg_dir = find_package_dir(workspace, parts[0])?;
+        (pkg_dir, Some(parts[1]), parts[0])
     } else {
-        // Same crate, just spec name
-        (crate_name, Some(source))
+        // Same package, just spec name
+        (
+            current_package_dir.to_path_buf(),
+            Some(source),
+            "current package",
+        )
     };
 
-    let source_crate_dir = find_crate_dir(workspace, source_crate)?;
-    find_tspec(&source_crate_dir, source_spec)?.ok_or_else(|| {
+    find_tspec(&source_package_dir, source_spec)?.ok_or_else(|| {
         anyhow::anyhow!(
-            "source tspec '{}' not found in crate '{}'",
+            "source tspec '{}' not found in {}",
             source_spec.unwrap_or("tspec"),
-            source_crate
+            source_name
         )
     })
 }

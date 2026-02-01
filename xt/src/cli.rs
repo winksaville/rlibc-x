@@ -93,45 +93,50 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum TspecCommands {
-    /// List tspec files in workspace or for a specific crate
+    /// List tspec files in workspace or for a specific package
     List {
-        /// Crate to list specs for (omit for all crates)
-        crate_name: Option<String>,
+        /// Package to list specs for (defaults to current directory or all packages)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
     },
     /// Show a tspec's contents
     Show {
-        /// Crate name
-        crate_name: String,
+        /// Package name (defaults to current directory)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
         /// Tspec name (defaults to all tspec files)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },
     /// Show the content hash of a tspec
     Hash {
-        /// Crate name
-        crate_name: String,
-        /// Tspec name (defaults to crate's tspec file)
+        /// Package name (defaults to current directory)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Tspec name (defaults to package's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },
     /// Create a new tspec file
     New {
-        /// Crate name
-        crate_name: String,
         /// Name for the new tspec (default: "tspec")
         #[arg(default_value = "tspec")]
         name: String,
-        /// Copy from existing tspec (crate/spec or just spec name in same crate)
+        /// Package name (defaults to current directory)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Copy from existing tspec (package/spec or just spec name in same package)
         #[arg(short = 'f', long = "from")]
         from: Option<String>,
     },
     /// Set a scalar value in a tspec (creates versioned copy)
     Set {
-        /// Crate name
-        crate_name: String,
         /// Key=value pair (e.g., "strip=symbols", "panic=abort", "rustc.lto=true")
         assignment: String,
-        /// Tspec to modify (defaults to crate's tspec.ts.toml)
+        /// Package name (defaults to current directory)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Tspec to modify (defaults to package's tspec.ts.toml)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
     },

@@ -52,8 +52,27 @@ pub fn find_workspace_root() -> Result<PathBuf> {
     }
 }
 
-/// Find a crate's directory - tries as path first, then searches standard locations
-pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
+/// Resolve package directory from optional name, defaulting to current directory
+/// If package is None, uses current directory (must contain Cargo.toml)
+/// If package is Some, looks up the package by name
+pub fn resolve_package_dir(workspace: &Path, package: Option<&str>) -> Result<PathBuf> {
+    match package {
+        Some(name) => find_package_dir(workspace, name),
+        None => {
+            let cwd = std::env::current_dir()?;
+            if cwd.join("Cargo.toml").exists() {
+                Ok(cwd)
+            } else {
+                bail!(
+                    "not in a package directory (no Cargo.toml found). Use -p to specify a package."
+                )
+            }
+        }
+    }
+}
+
+/// Find a package's directory - tries as path first, then searches standard locations
+pub fn find_package_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
     // Try as path first (relative or absolute)
     let as_path = PathBuf::from(name);
     if as_path.join("Cargo.toml").exists() {
@@ -85,7 +104,7 @@ pub fn find_crate_dir(workspace: &Path, name: &str) -> Result<PathBuf> {
         }
     }
 
-    bail!("crate '{}' not found", name);
+    bail!("package '{}' not found", name);
 }
 
 /// Find the tspec for a crate - tries as path first, then relative to crate_dir
@@ -301,44 +320,44 @@ version = "0.1.0"
         assert_eq!(name, "correct-name");
     }
 
-    // ==================== find_crate_dir tests ====================
+    // ==================== find_package_dir tests ====================
 
     #[test]
-    fn find_crate_dir_as_path() {
+    fn find_package_dir_as_path() {
         let tmp = TempDir::new().unwrap();
         let crate_dir = tmp.path().join("my-crate");
         fs::create_dir(&crate_dir).unwrap();
         fs::write(crate_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
 
         // Pass path directly
-        let found = find_crate_dir(tmp.path(), crate_dir.to_str().unwrap()).unwrap();
+        let found = find_package_dir(tmp.path(), crate_dir.to_str().unwrap()).unwrap();
         assert_eq!(found.file_name().unwrap(), "my-crate");
     }
 
     #[test]
-    fn find_crate_dir_in_libs() {
+    fn find_package_dir_in_libs() {
         let tmp = TempDir::new().unwrap();
         let libs_dir = tmp.path().join("libs").join("my-lib");
         fs::create_dir_all(&libs_dir).unwrap();
         fs::write(libs_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
 
-        let found = find_crate_dir(tmp.path(), "my-lib").unwrap();
+        let found = find_package_dir(tmp.path(), "my-lib").unwrap();
         assert_eq!(found, libs_dir);
     }
 
     #[test]
-    fn find_crate_dir_in_apps() {
+    fn find_package_dir_in_apps() {
         let tmp = TempDir::new().unwrap();
         let apps_dir = tmp.path().join("apps").join("my-app");
         fs::create_dir_all(&apps_dir).unwrap();
         fs::write(apps_dir.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
 
-        let found = find_crate_dir(tmp.path(), "my-app").unwrap();
+        let found = find_package_dir(tmp.path(), "my-app").unwrap();
         assert_eq!(found, apps_dir);
     }
 
     #[test]
-    fn find_crate_dir_libs_preferred_over_apps() {
+    fn find_package_dir_libs_preferred_over_apps() {
         let tmp = TempDir::new().unwrap();
         // Create both libs/foo and apps/foo
         let libs_foo = tmp.path().join("libs").join("foo");
@@ -349,14 +368,14 @@ version = "0.1.0"
         fs::write(apps_foo.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
 
         // libs/ is checked first
-        let found = find_crate_dir(tmp.path(), "foo").unwrap();
+        let found = find_package_dir(tmp.path(), "foo").unwrap();
         assert_eq!(found, libs_foo);
     }
 
     #[test]
-    fn find_crate_dir_not_found() {
+    fn find_package_dir_not_found() {
         let tmp = TempDir::new().unwrap();
-        let result = find_crate_dir(tmp.path(), "nonexistent");
+        let result = find_package_dir(tmp.path(), "nonexistent");
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
     }

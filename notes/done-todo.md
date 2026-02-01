@@ -4,7 +4,6 @@ Working document for tracking progress. Items reference discussions in goals fil
 
 ## Todo
 
-- Unified `-p` option for all ts commands, default to cwd [1]
 - `--comment` flag for ts set [1]
 - ts add command (append to lists)
 - ts remove command (remove from lists)
@@ -13,6 +12,7 @@ Working document for tracking progress. Items reference discussions in goals fil
 
 ## Done
 
+- Unified `-p` option for all ts commands, default to cwd [1,7]
 - ts set command with versioned snapshots [3]
 - strip high-level option [3,4]
 - ts new command [5]
@@ -27,3 +27,4 @@ Working document for tracking progress. Items reference discussions in goals fil
 [4]: goals-20260130.md#20260130-4---add-strip-support
 [5]: goals-20260130.md#20260130-3---session-summary
 [6]: goals-20260130.md#decision-file-suffix-xttomml-vs-tstoml
+[7]: goals-20260130.md#20260131-7---refactor-to--p---package-option
