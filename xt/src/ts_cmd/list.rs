@@ -8,44 +8,42 @@ use crate::find_paths::{find_workspace_root, get_crate_name, resolve_package_dir
 use crate::workspace::WorkspaceInfo;
 
 /// List all tspec files in workspace or for a specific package
-pub fn list_tspecs(package: Option<&str>) -> Result<()> {
+pub fn list_tspecs(package: Option<&str>, all: bool) -> Result<()> {
     let workspace = find_workspace_root()?;
 
     // Check if we're in a package directory (has Cargo.toml with [package], not just workspace)
     let cwd = std::env::current_dir()?;
     let in_package_dir = get_crate_name(&cwd).is_ok();
 
-    match (package, in_package_dir) {
-        (Some(name), _) => {
-            // Explicit package specified
-            let package_dir = resolve_package_dir(&workspace, Some(name))?;
-            let tspecs = find_tspec_files(&package_dir)?;
-            print_package_tspecs(name, &package_dir, &tspecs);
-        }
-        (None, true) => {
-            // In a package directory, list just this package
-            let package_dir = cwd;
-            let pkg_name = get_crate_name(&package_dir)?;
-            let tspecs = find_tspec_files(&package_dir)?;
-            print_package_tspecs(&pkg_name, &package_dir, &tspecs);
-        }
-        (None, false) => {
-            // At workspace root or no package, list all packages
-            let info = WorkspaceInfo::discover()?;
-            let mut found_any = false;
+    // Resolve: --all > -p PKG > cwd > all
+    let list_all = all || (package.is_none() && !in_package_dir);
 
-            for member in &info.members {
-                let tspecs = find_tspec_files(&member.path)?;
-                if !tspecs.is_empty() {
-                    print_package_tspecs(&member.name, &member.path, &tspecs);
-                    found_any = true;
-                }
-            }
+    if let Some(name) = package {
+        // Explicit package specified
+        let package_dir = resolve_package_dir(&workspace, Some(name))?;
+        let tspecs = find_tspec_files(&package_dir)?;
+        print_package_tspecs(name, &package_dir, &tspecs);
+    } else if list_all {
+        // List all packages
+        let info = WorkspaceInfo::discover()?;
+        let mut found_any = false;
 
-            if !found_any {
-                println!("No *{} files found in workspace", TSPEC_SUFFIX);
+        for member in &info.members {
+            let tspecs = find_tspec_files(&member.path)?;
+            if !tspecs.is_empty() {
+                print_package_tspecs(&member.name, &member.path, &tspecs);
+                found_any = true;
             }
         }
+
+        if !found_any {
+            println!("No *{} files found in workspace", TSPEC_SUFFIX);
+        }
+    } else {
+        // In a package directory, list just this package
+        let pkg_name = get_crate_name(&cwd)?;
+        let tspecs = find_tspec_files(&cwd)?;
+        print_package_tspecs(&pkg_name, &cwd, &tspecs);
     }
 
     Ok(())

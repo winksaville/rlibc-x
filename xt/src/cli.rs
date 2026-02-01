@@ -10,11 +10,15 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Build crate(s) with a translation spec
+    /// Build package(s) with a translation spec
     Build {
-        /// Crate to build (omit for all workspace members)
-        crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec file)
+        /// Package to build (defaults to current directory or all packages)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Build all packages (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
+        /// Translation spec to use (defaults to package's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -23,15 +27,19 @@ pub enum Commands {
         /// Strip symbols from binary after build
         #[arg(short, long)]
         strip: bool,
-        /// Stop on first failure (for all-crates mode)
+        /// Stop on first failure (for all-packages mode)
         #[arg(short, long)]
         fail_fast: bool,
     },
-    /// Build and run crate(s) with a translation spec
+    /// Build and run package(s) with a translation spec
     Run {
-        /// Crate to run (omit for all apps)
-        crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec file)
+        /// Package to run (defaults to current directory or all apps)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Run all apps (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
+        /// Translation spec to use (defaults to package's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -41,11 +49,15 @@ pub enum Commands {
         #[arg(short, long)]
         strip: bool,
     },
-    /// Test crate(s) with a translation spec
+    /// Test package(s) with a translation spec
     Test {
-        /// Crate to test (omit for all workspace members)
-        crate_name: Option<String>,
-        /// Translation spec to use (defaults to crate's tspec file)
+        /// Package to test (defaults to current directory or all packages)
+        #[arg(short = 'p', long = "package")]
+        package: Option<String>,
+        /// Test all packages (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
+        /// Translation spec to use (defaults to package's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
         /// Release build
@@ -55,10 +67,11 @@ pub enum Commands {
         #[arg(short, long)]
         fail_fast: bool,
     },
-    /// Compare specs for a crate (size only)
+    /// Compare specs for a package (size only)
     Compare {
-        /// Crate to compare
-        crate_name: String,
+        /// Package to compare (required)
+        #[arg(short = 'p', long = "package")]
+        package: String,
         /// Spec file(s) or glob pattern(s) (defaults to tspec* pattern)
         #[arg(short = 't', long = "tspec", action = clap::ArgAction::Append)]
         tspec: Vec<String>,
@@ -69,17 +82,19 @@ pub enum Commands {
         #[arg(short, long)]
         strip: bool,
     },
-    /// Manage crate compatibility with specs
+    /// Manage package compatibility with specs
     Compat {
-        /// Crate name
-        crate_name: String,
+        /// Package name
+        #[arg(short = 'p', long = "package")]
+        package: String,
         /// Spec to add to compat list (omit to show current state)
         spec: Option<String>,
     },
-    /// Mark a spec as incompatible with a crate
+    /// Mark a spec as incompatible with a package
     Incompat {
-        /// Crate name
-        crate_name: String,
+        /// Package name
+        #[arg(short = 'p', long = "package")]
+        package: String,
         /// Spec to add to incompat list
         spec: String,
     },
@@ -98,12 +113,18 @@ pub enum TspecCommands {
         /// Package to list specs for (defaults to current directory or all packages)
         #[arg(short = 'p', long = "package")]
         package: Option<String>,
+        /// List all packages (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
     },
     /// Show a tspec's contents
     Show {
         /// Package name (defaults to current directory)
         #[arg(short = 'p', long = "package")]
         package: Option<String>,
+        /// Show all packages (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
         /// Tspec name (defaults to all tspec files)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,
@@ -113,6 +134,9 @@ pub enum TspecCommands {
         /// Package name (defaults to current directory)
         #[arg(short = 'p', long = "package")]
         package: Option<String>,
+        /// Hash all packages (even when in a package directory)
+        #[arg(short = 'a', long = "all")]
+        all: bool,
         /// Tspec name (defaults to package's tspec file)
         #[arg(short = 't', long = "tspec")]
         tspec: Option<String>,

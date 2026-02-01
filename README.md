@@ -52,9 +52,9 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 The `tspec-opt.ts.toml` specs dramatically reduce binary sizes by eliminating Rust's panic formatting machinery:
 
 ```bash
-cargo xt build ex-x2 -r -t tspec-opt.ts.toml     # ~6 KB (vs ~41 KB)
-cargo xt build ex-glibc -r -t tspec-opt.ts.toml  # ~9 KB (vs ~298 KB)
-cargo xt build ex-musl -r -t tspec-opt.ts.toml   # ~23 KB (vs ~381 KB)
+cargo xt build -p ex-x2 -r -t tspec-opt.ts.toml     # ~6 KB (vs ~41 KB)
+cargo xt build -p ex-glibc -r -t tspec-opt.ts.toml  # ~9 KB (vs ~298 KB)
+cargo xt build -p ex-musl -r -t tspec-opt.ts.toml   # ~23 KB (vs ~381 KB)
 ```
 
 See [notes/opt-notes.md](notes/opt-notes.md) for details.
@@ -63,17 +63,19 @@ See [notes/opt-notes.md](notes/opt-notes.md) for details.
 
 ```bash
 # Build and run
-cargo xt run hw-x1          # hello world with rlibc-x1
-cargo xt run hw-x2          # hello world with rlibc-x2
+cargo xt run -p hw-x1       # hello world with rlibc-x1
+cargo xt run -p hw-x2       # hello world with rlibc-x2
 
 # Test
 cargo xt test               # run all tests
+cargo xt test -p xt         # test specific package
 
 # Build release
-cargo xt build -r           # release builds
+cargo xt build -r           # release builds (all packages)
+cargo xt build -a -r        # force all packages (even from inside a package dir)
 ```
 
-The `-t` flag is optional. If a crate has `tspec.ts.toml`, it's used automatically. Use `-t` to select an alternative spec like `tspec-opt.ts.toml`. Crates without any tspec get plain `cargo build`.
+The `-p` flag specifies a package (defaults to current directory if in a package, otherwise all packages). Use `-a, --all` to force all-packages mode. The `-t` flag selects a tspec; if omitted and a package has `tspec.ts.toml`, it's used automatically.
 
 For more information see [xt/README.md](xt/README.md)
 

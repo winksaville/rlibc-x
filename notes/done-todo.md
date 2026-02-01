@@ -12,7 +12,8 @@ Working document for tracking progress. Items reference discussions in goals fil
 
 ## Done
 
-- Unified `-p` option for all ts commands, default to cwd [1,7]
+- Unified `-p` option for all commands (ts, build, run, test, compare), default to cwd [1,7]
+- Added `-a, --all` flag to build/run/test to force all-packages mode [7]
 - ts set command with versioned snapshots [3]
 - strip high-level option [3,4]
 - ts new command [5]

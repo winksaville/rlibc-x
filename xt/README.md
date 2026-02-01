@@ -9,19 +9,21 @@ See [Claude Code Sessions](../README.md#claude-code-sessions) for how `.claude/`
 ## Usage
 
 ```bash
-cargo xt build ex-x1-xt                     # Build with crate's tspec.ts.toml
-cargo xt build ex-x1-xt -t tspec-expr.toml  # Build with alternative spec
-cargo xt build ex-x2-xt -t tspec-opt.toml -r -s  # Build optimized, strip
-cargo xt run ex-x1-xt                       # Build and run
-cargo xt test ex-x2-xt                      # Build and test
-cargo xt build ex-glibc                     # Works without tspec.ts.toml too
-cargo xt build apps/ex-x2-xt                # Path to crate directory
-cargo xt compare ex-x2-xt -r                # Compare all tspec*.ts.toml
-cargo xt compare ex-x2-xt -t "*.ts.toml" -r # Compare with glob pattern
+cargo xt build -p ex-x1                     # Build with package's tspec.ts.toml
+cargo xt build -p ex-x1 -t tspec-expr.toml  # Build with alternative spec
+cargo xt build -p ex-x2 -t tspec-opt.toml -r -s  # Build optimized, strip
+cargo xt run -p ex-x1                       # Build and run
+cargo xt test -p ex-x2                      # Build and test
+cargo xt build -p ex-glibc                  # Works without tspec.ts.toml too
+cargo xt compare -p ex-x2 -r                # Compare all tspec*.ts.toml
+cargo xt compare -p ex-x2 -t "*.ts.toml" -r # Compare with glob pattern
+cargo xt build                              # Build all packages (from workspace root)
+cargo xt build -a                           # Build all packages (even from inside a package dir)
 ```
 
+The `-p` flag specifies a package (defaults to current directory if in a package, otherwise all packages).
+Use `-a, --all` to force all-packages mode even when inside a package directory.
 The `-t` flag is optional - use it to try alternative spec files without modifying `tspec.toml`.
-Future: use `save_spec_snapshot` to create `tspec-001-abc123de.toml` variants.
 
 ## Design
 
@@ -97,9 +99,9 @@ cargo test -p xt spec_default    # run specific test
 Compare specs to see size differences:
 
 ```bash
-cargo xt compare ex-x2-xt -r                # All tspec*.ts.toml in crate dir
-cargo xt compare ex-x2-xt -t "*.ts.toml" -r # Explicit glob pattern
-cargo xt compare ex-x2-xt -t a.toml -t b.toml -r  # Explicit file list
+cargo xt compare -p ex-x2 -r                # All tspec*.ts.toml in package dir
+cargo xt compare -p ex-x2 -t "*.ts.toml" -r # Explicit glob pattern
+cargo xt compare -p ex-x2 -t a.toml -t b.toml -r  # Explicit file list
 ```
 
 Output shows specs sorted by size (smallest first) with percent change from largest.
@@ -117,17 +119,17 @@ Enable fast iteration without manual TOML editing:
 
 ```bash
 cargo xt ts list                             # List all tspec files in workspace
-cargo xt ts list ex-x2                       # List tspec files for a crate
-cargo xt ts show ex-x2                       # Show all tspec contents for crate
-cargo xt ts show ex-x2 -t tspec-opt          # Show specific tspec
-cargo xt ts hash ex-x2                       # Show content hash
-cargo xt ts new ex-x2                        # Create tspec.ts.toml
-cargo xt ts new ex-x2 experiment             # Create experiment.ts.toml
-cargo xt ts new ex-x2 ts-opt2 -f tspec-opt   # Copy from existing spec
-cargo xt ts set ex-x2 strip symbols          # Set value, create versioned file
-cargo xt ts set ex-x2 rustc.lto true -t opt  # Set value in specific tspec
-cargo xt ts add myapp linker.args "-static"  # (TODO)
-cargo xt ts remove myapp rustc.panic         # (TODO)
+cargo xt ts list -p ex-x2                    # List tspec files for a package
+cargo xt ts show -p ex-x2                    # Show all tspec contents for package
+cargo xt ts show -p ex-x2 -t tspec-opt       # Show specific tspec
+cargo xt ts hash -p ex-x2                    # Show content hash
+cargo xt ts new -p ex-x2                     # Create tspec.ts.toml
+cargo xt ts new experiment -p ex-x2          # Create experiment.ts.toml
+cargo xt ts new ts-opt2 -p ex-x2 -f tspec-opt  # Copy from existing spec
+cargo xt ts set strip=symbols -p ex-x2       # Set value, create versioned file
+cargo xt ts set rustc.lto=true -p ex-x2 -t opt  # Set value in specific tspec
+cargo xt ts add linker.args="-static" -p myapp  # (TODO)
+cargo xt ts remove rustc.panic -p myapp      # (TODO)
 ```
 
 Note: `tspec` and `ts` are aliases for the same subcommand.
@@ -182,7 +184,7 @@ When finishing a set of changes:
 2. Update `notes/done-todo.md` - move items from Todo to Done
 3. Run verification loop:
    ```bash
-   cargo xt test xt && cargo xt test
+   cargo xt test -p xt && cargo xt test
    cargo clippy --workspace --all-targets
    cargo fmt --check
    ```
