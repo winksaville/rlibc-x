@@ -21,9 +21,9 @@ Working document for tracking progress. Items reference discussions in goals fil
 
 ## References
 
-[1]: goals-20260130.md#20260130-6
+[1]: goals-20260130.md#20260130-6---open-issues
 [2]: goals-20260130.md#potential-high-level-options
-[3]: goals-20260130.md#20260130-5
-[4]: goals-20260130.md#20260130-4
-[5]: goals-20260130.md#20260130-3
+[3]: goals-20260130.md#20260130-5---strip-and-ts-set-implementation
+[4]: goals-20260130.md#20260130-4---add-strip-support
+[5]: goals-20260130.md#20260130-3---session-summary
 [6]: goals-20260130.md#decision-file-suffix-xttomml-vs-tstoml
