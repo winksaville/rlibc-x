@@ -561,9 +561,22 @@
       "isSidechain": false
     },
     {
+      "sessionId": "5d2dad0a-198a-4c08-b8c9-cb9dd3f02ded",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/5d2dad0a-198a-4c08-b8c9-cb9dd3f02ded.jsonl",
+      "fileMtime": 1769895741154,
+      "firstPrompt": "reaquaint",
+      "summary": "Implement tspec CLI with ts list command",
+      "messageCount": 66,
+      "created": "2026-01-28T20:25:25.604Z",
+      "modified": "2026-01-28T22:33:01.101Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
+    },
+    {
       "sessionId": "cfecba6d-4505-44bf-923e-e65172f9be8b",
       "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/cfecba6d-4505-44bf-923e-e65172f9be8b.jsonl",
-      "fileMtime": 1769919063951,
+      "fileMtime": 1769976619342,
       "firstPrompt": "No prompt",
       "summary": "User Exited Claude Code Session",
       "messageCount": 2,
@@ -574,14 +587,14 @@
       "isSidechain": false
     },
     {
-      "sessionId": "5d2dad0a-198a-4c08-b8c9-cb9dd3f02ded",
-      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/5d2dad0a-198a-4c08-b8c9-cb9dd3f02ded.jsonl",
-      "fileMtime": 1769895741154,
-      "firstPrompt": "reaquaint",
-      "summary": "Implement tspec CLI with ts list command",
-      "messageCount": 66,
-      "created": "2026-01-28T20:25:25.604Z",
-      "modified": "2026-01-28T22:33:01.101Z",
+      "sessionId": "b8658aac-7602-4dad-beeb-c24f37f2c0a1",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/b8658aac-7602-4dad-beeb-c24f37f2c0a1.jsonl",
+      "fileMtime": 1769976745874,
+      "firstPrompt": "Look at CLAUDE.md",
+      "summary": "Unify CLI with -p package and --all flags",
+      "messageCount": 82,
+      "created": "2026-02-01T04:11:02.837Z",
+      "modified": "2026-02-01T06:53:36.382Z",
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false

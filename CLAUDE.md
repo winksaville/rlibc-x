@@ -124,4 +124,4 @@ Remember to commit .claude/ session files.
 
 **On next prompt after a commit+reminder:** Check `git log -1 --name-only` to see if `.claude/` was included in a commit after the code commit. If not, ask: "Did you forget to commit .claude sessions?"
 
-**Short-term tasks:** See `notes/done-todo.md` for current Todo/Done status.
+**Short-term tasks:** See `notes/todo.md` for current Todo/Done status.

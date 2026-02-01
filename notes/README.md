@@ -8,7 +8,7 @@ Technical documentation and session notes for the rlibc-x project.
 
 - **Technical docs** (`*.md`) - Deep dives on specific topics (e.g., `build-std.md`, `plt-less-linking.md`)
 - **Design logs** - Append-only dated sections tracking design evolution (e.g., `flatten-translation-spec.md`)
-- **Progress tracking** (`done-todo.md`) - Current Todo/Done status
+- **Progress tracking** (`todo.md`) - Current Todo/Done status
 
 ### Design Logs
 
@@ -30,6 +30,6 @@ What's pending.
 ### Workflow
 
 See [xt/README.md](../xt/README.md#workflow) for:
-- **Progress Tracking** - done-todo.md usage
+- **Progress Tracking** - todo.md usage
 - **Completing Changes** - end-of-session checklist
 - **Claude Code & Git** - handling .claude/ files and merges

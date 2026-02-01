@@ -172,16 +172,16 @@ xt/
 
 ### Progress Tracking
 
-See [notes/done-todo.md](../notes/done-todo.md) for current Done/Todo status.
+See [notes/todo.md](../notes/todo.md) for current Done/Todo status.
 
-Discussion and design rationale lives in `notes/goals-<date>.md` files. The done-todo file references these but doesn't duplicate content.
+Discussion and design rationale lives in `notes/chores-<date>.md` files. The todo file references these but doesn't duplicate content.
 
 ### Completing Changes
 
 When finishing a set of changes:
 
 1. Update relevant design log with new dated section
-2. Update `notes/done-todo.md` - move items from Todo to Done
+2. Update `notes/todo.md` - move items from Todo to Done
 3. Run verification loop:
    ```bash
    cargo xt test -p xt && cargo xt test

@@ -77,6 +77,31 @@ cargo xt build -a -r        # force all packages (even from inside a package dir
 
 The `-p` flag specifies a package (defaults to current directory if in a package, otherwise all packages). Use `-a, --all` to force all-packages mode. The `-t` flag selects a tspec; if omitted and a package has `tspec.ts.toml`, it's used automatically.
 
+## tspec Management (ts)
+
+The `ts` subcommand manages translation spec files:
+
+```bash
+# List and inspect
+cargo xt ts list [-p PKG] [-a]                # List tspec files
+cargo xt ts show [-p PKG] [-t spec]           # Show tspec contents
+cargo xt ts hash [-p PKG] [-t spec]           # Show content hash
+
+# Create and modify
+cargo xt ts new [name] [-p PKG] [-f source]   # Create new spec
+cargo xt ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
+
+# Compare builds
+cargo xt compare -p PKG [-r]                  # Compare binary sizes across all tspecs
+```
+
+Example workflow:
+```bash
+cargo xt ts new opt -p ex-x2                  # Create opt.ts.toml
+cargo xt ts set strip=symbols -p ex-x2 -t opt # Set strip option
+cargo xt compare -p ex-x2 -r                  # Compare sizes
+```
+
 For more information see [xt/README.md](xt/README.md)
 
 ## Verifying No libc Usage
