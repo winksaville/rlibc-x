@@ -7,6 +7,8 @@ Working document for tracking progress. Items reference discussions in chores fi
 - Discuss xt relationship to cargo and standalone operation [3,4,5]
 -- Make xt/README.md more generic
 -- Update /README.md to document all xt commands including ts
+- xt clean command (clean, build, run, test covers 98% of usage)
+- xt should work for any cargo package, not just workspaces
 - ts add command (append to lists)
 - ts remove command (remove from lists)
 - lto high-level option [2]
