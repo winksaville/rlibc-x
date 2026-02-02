@@ -598,6 +598,19 @@
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "a5dd8215-7aaa-4944-b486-8926dbe5f75b",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/a5dd8215-7aaa-4944-b486-8926dbe5f75b.jsonl",
+      "fileMtime": 1770051495727,
+      "firstPrompt": "Add to our todo list implement `xt clean` with clean, build, run and test we cover 98% of the usesages I think",
+      "summary": "Implement xt clean and fix standalone package support",
+      "messageCount": 18,
+      "created": "2026-02-02T00:31:11.144Z",
+      "modified": "2026-02-02T00:41:17.911Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"
