@@ -193,9 +193,11 @@ Rationale:
 
 ## Actions
 
-- [ ] Delete xt/ directory
-- [ ] Remove xt from workspace members in Cargo.toml
-- [ ] Update CLAUDE.md (`cargo xt` → `tspec`)
-- [ ] Update notes/todo.md if it references xt
-- [ ] Check other notes/*.md for xt references
-- [ ] Test documented workflows with tspec
+- [x] Delete xt/ directory
+- [x] Remove xt from workspace members in Cargo.toml
+- [x] Update CLAUDE.md (`cargo xt` → `tspec`)
+- [x] Update README.md (`cargo xt` → `tspec`)
+- [x] Update notes/README.md (remove xt/README.md reference)
+- [x] Test documented workflows with tspec
+
+Note: Historical notes (chores-*.md, opt-notes.md, etc.) not updated - they document what was done at the time.

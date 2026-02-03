@@ -39,7 +39,6 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 | [apps/](apps/) | Example and comparison apps |
 | [tools/](tools/) | Development tools (`is-libc-used`, `func-analysis`) |
 | [notes/](notes/) | Technical notes and findings |
-| [xt/](xt/) | Build automation (spec-driven via tspec.ts.toml) |
 
 ## Two Approaches
 
@@ -52,27 +51,39 @@ See [apps/](apps/README.md#size-comparison) for the full size comparison.
 The `tspec-opt.ts.toml` specs dramatically reduce binary sizes by eliminating Rust's panic formatting machinery:
 
 ```bash
-cargo xt build -p ex-x2 -r -t tspec-opt.ts.toml     # ~6 KB (vs ~41 KB)
-cargo xt build -p ex-glibc -r -t tspec-opt.ts.toml  # ~9 KB (vs ~298 KB)
-cargo xt build -p ex-musl -r -t tspec-opt.ts.toml   # ~23 KB (vs ~381 KB)
+tspec build -p ex-x2 -r -t tspec-opt.ts.toml     # ~6 KB (vs ~41 KB)
+tspec build -p ex-glibc -r -t tspec-opt.ts.toml  # ~9 KB (vs ~298 KB)
+tspec build -p ex-musl -r -t tspec-opt.ts.toml   # ~23 KB (vs ~381 KB)
 ```
 
 See [notes/opt-notes.md](notes/opt-notes.md) for details.
 
 ## Quick Start
 
+First, install [tspec](https://github.com/winksaville/tspec):
+
+```bash
+cargo install --git https://github.com/winksaville/tspec
+```
+
+Then build and run:
+
 ```bash
 # Build and run
-cargo xt run -p hw-x1       # hello world with rlibc-x1
-cargo xt run -p hw-x2       # hello world with rlibc-x2
+tspec run -p hw-x1       # hello world with rlibc-x1
+tspec run -p hw-x2       # hello world with rlibc-x2
 
 # Test
-cargo xt test               # run all tests
-cargo xt test -p xt         # test specific package
+tspec test               # run all tests
+tspec test -p ex-x1      # test specific package
 
 # Build release
-cargo xt build -r           # release builds (all packages)
-cargo xt build -a -r        # force all packages (even from inside a package dir)
+tspec build -r           # release builds (all packages)
+tspec build -a -r        # force all packages (even from inside a package dir)
+
+# Clean
+tspec clean              # clean all build artifacts
+tspec clean -p ex-x2     # clean specific package
 ```
 
 The `-p` flag specifies a package (defaults to current directory if in a package, otherwise all packages). Use `-a, --all` to force all-packages mode. The `-t` flag selects a tspec; if omitted and a package has `tspec.ts.toml`, it's used automatically.
@@ -83,26 +94,26 @@ The `ts` subcommand manages translation spec files:
 
 ```bash
 # List and inspect
-cargo xt ts list [-p PKG] [-a]                # List tspec files
-cargo xt ts show [-p PKG] [-t spec]           # Show tspec contents
-cargo xt ts hash [-p PKG] [-t spec]           # Show content hash
+tspec ts list [-p PKG] [-a]                # List tspec files
+tspec ts show [-p PKG] [-t spec]           # Show tspec contents
+tspec ts hash [-p PKG] [-t spec]           # Show content hash
 
 # Create and modify
-cargo xt ts new [name] [-p PKG] [-f source]   # Create new spec
-cargo xt ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
+tspec ts new [name] [-p PKG] [-f source]   # Create new spec
+tspec ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
 
 # Compare builds
-cargo xt compare -p PKG [-r]                  # Compare binary sizes across all tspecs
+tspec compare -p PKG [-r]                  # Compare binary sizes across all tspecs
 ```
 
 Example workflow:
 ```bash
-cargo xt ts new opt -p ex-x2                  # Create opt.ts.toml
-cargo xt ts set strip=symbols -p ex-x2 -t opt # Set strip option
-cargo xt compare -p ex-x2 -r                  # Compare sizes
+tspec ts new opt -p ex-x2                  # Create opt.ts.toml
+tspec ts set strip=symbols -p ex-x2 -t opt # Set strip option
+tspec compare -p ex-x2 -r                  # Compare sizes
 ```
 
-For more information see [xt/README.md](xt/README.md)
+For more information see the [tspec README](https://github.com/winksaville/tspec#readme).
 
 ## Verifying No libc Usage
 
@@ -113,7 +124,7 @@ cargo run -p is-libc-used -- ./target/release/ex-x1
 cargo run -p is-libc-used -- -v ./target/release/ex-x1  # verbose
 ```
 
-All apps include libc usage tests that run with `cargo xt test`.
+All apps include libc usage tests that run with `tspec test`.
 
 ## Status
 
@@ -132,7 +143,7 @@ lrwxrwxrwx 1 wink users 41 Jan 15 17:44 -home-wink-data-prgs-rust-rlibc-x -> /ho
 This allows all Claude Code prompts to be saved in git, providing a rich history of conversations.
 
 However, there's a circular reference issue - Claude cannot commit `.claude/` changes because the session file updates as Claude works:
-1. **Linear commits:** User should amend every commit performed by Claude, adding `.claude/*` changes. See [xt/README.md](xt/README.md#claude-code--git) for workflow details.
+1. **Linear commits:** User should amend every commit performed by Claude, adding `.claude/*` changes.
 2. **Merge commits:** Trickier - Claude would need to stash changes, but popping the stash causes merge conflicts in `.claude/`. The current solution is to `/exit` the Claude session and do the merge yourself.
 
 ## Origin

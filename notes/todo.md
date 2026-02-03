@@ -4,7 +4,6 @@ Working document for tracking progress. Items reference discussions in chores fi
 
 ## Todo
 
-- Execute chore-4: delete xt/, update docs to use tspec [7]
 - ts add command (append to lists)
 - ts remove command (remove from lists)
 - lto high-level option [2]
@@ -13,7 +12,7 @@ Working document for tracking progress. Items reference discussions in chores fi
 
 ## Done
 
-- Decided: use tspec from repo/crates.io instead of embedded xt/ [7]
+- Executed chore-4: deleted xt/, updated all docs to use tspec [7]
 - tspec clean command (in tspec project)
 - tspec works for any cargo package (POP support in tspec) [6]
 

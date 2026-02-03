@@ -29,7 +29,6 @@ What's pending.
 
 ### Workflow
 
-See [xt/README.md](../xt/README.md#workflow) for:
-- **Progress Tracking** - todo.md usage
-- **Completing Changes** - end-of-session checklist
-- **Claude Code & Git** - handling .claude/ files and merges
+- **Progress Tracking** - See `notes/todo.md` for current Todo/Done status
+- **Completing Changes** - Run `tspec test`, `cargo clippy`, `cargo fmt --check`
+- **Claude Code & Git** - See `/README.md#claude-code-sessions` for handling .claude/ files

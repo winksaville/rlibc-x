@@ -8,13 +8,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-All builds use the xt build system. Run from repository root:
+All builds use [tspec](https://github.com/winksaville/tspec). Install it first:
 
 ```bash
-cargo xt build [-p PKG] [-a] [-r] [-t FILE]  # Build package(s)
-cargo xt run [-p PKG] [-a] [-r] [-t FILE]    # Build and run
-cargo xt test [-p PKG] [-a] [-r]             # Run tests
-cargo xt compare -p PKG [-r]                 # Compare all tspec*.ts.toml sizes
+cargo install --git https://github.com/winksaville/tspec
+# or from local clone:
+cargo install --path ../tspec
+```
+
+Run from repository root:
+
+```bash
+tspec build [-p PKG] [-a] [-r] [-t FILE]  # Build package(s)
+tspec run [-p PKG] [-a] [-r] [-t FILE]    # Build and run
+tspec test [-p PKG] [-a] [-r]             # Run tests
+tspec compare -p PKG [-r]                 # Compare all tspec*.ts.toml sizes
+tspec clean [-p PKG] [-r]                 # Clean build artifacts
 ```
 
 **Options:**
@@ -25,20 +34,20 @@ cargo xt compare -p PKG [-r]                 # Compare all tspec*.ts.toml sizes
 
 **Examples:**
 ```bash
-cargo xt run -p hw-x1                      # Quick test of hello world
-cargo xt build -r                          # Build all packages release
-cargo xt build -p ex-x2 -r -t tspec-opt.ts.toml  # Optimized build (~6 KB vs ~41 KB)
-cargo xt test                              # Run all tests
-cargo xt compare -p ex-x2 -r               # Compare spec sizes
+tspec run -p hw-x1                      # Quick test of hello world
+tspec build -r                          # Build all packages release
+tspec build -p ex-x2 -r -t tspec-opt.ts.toml  # Optimized build (~6 KB vs ~41 KB)
+tspec test                              # Run all tests
+tspec compare -p ex-x2 -r               # Compare spec sizes
 ```
 
 **Interactive tspec management:**
 ```bash
-cargo xt ts list [-p PKG] [-a]                # List tspec files
-cargo xt ts show [-p PKG] [-a] [-t spec]      # Show contents
-cargo xt ts hash [-p PKG] [-a] [-t spec]      # Show content hash
-cargo xt ts new [name] [-p PKG] [-f source]   # Create new spec
-cargo xt ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
+tspec ts list [-p PKG] [-a]                # List tspec files
+tspec ts show [-p PKG] [-a] [-t spec]      # Show contents
+tspec ts hash [-p PKG] [-a] [-t spec]      # Show content hash
+tspec ts new [name] [-p PKG] [-f source]   # Create new spec
+tspec ts set key=value [-p PKG] [-t spec]  # Set value (creates versioned file)
 ```
 
 **Verification tools:**
@@ -78,7 +87,6 @@ apps/               # Example applications
 tools/
   func-analysis/    # ELF function size analyzer (goblin, iced-x86)
   is-libc-used/     # Binary libc detection (object crate)
-xt/                 # Build automation (spec-driven via tspec.ts.toml)
 notes/              # Technical documentation (opt-notes.md, plt-less-linking.md)
 ```
 
@@ -93,9 +101,9 @@ Rust's panic formatting machinery is the primary source of binary bloat, not lib
 
 Tests verify that binaries don't use libc and execute correctly:
 ```bash
-cargo xt test              # All packages
-cargo xt test -p rlibc-x2  # Includes rlibc-x2-tests binaries
-cargo xt test -p ex-x1     # Single package
+tspec test              # All packages
+tspec test -p rlibc-x2  # Includes rlibc-x2-tests binaries
+tspec test -p ex-x1     # Single package
 ```
 
 ## Conventions
@@ -110,7 +118,7 @@ cargo xt test -p ex-x1     # Single package
 
 **Before committing, run verification:**
 ```bash
-cargo xt test -p xt && cargo xt test
+tspec test
 cargo clippy --workspace --all-targets
 cargo fmt --check
 ```
