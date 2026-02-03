@@ -4,6 +4,7 @@ Working document for tracking progress. Items reference discussions in chores fi
 
 ## Todo
 
+- delete xt/, use [tspec](https://github.com/winksaville/tspec) and update docs ...
 - Discuss xt relationship to cargo and standalone operation [3,4,5]
 -- Make xt/README.md more generic
 -- Update /README.md to document all xt commands including ts
