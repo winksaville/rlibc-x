@@ -611,6 +611,19 @@
       "gitBranch": "main",
       "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
       "isSidechain": false
+    },
+    {
+      "sessionId": "c492fa2f-5441-4fbd-a103-0cb7366b57e1",
+      "fullPath": "/home/wink/.claude/projects/-home-wink-data-prgs-rust-rlibc-x/c492fa2f-5441-4fbd-a103-0cb7366b57e1.jsonl",
+      "fileMtime": 1770086528530,
+      "firstPrompt": "reacquaint yourself",
+      "summary": "Extract xt build tool into independent tspec crate",
+      "messageCount": 26,
+      "created": "2026-02-02T16:58:14.411Z",
+      "modified": "2026-02-02T17:42:56.975Z",
+      "gitBranch": "main",
+      "projectPath": "/home/wink/data/prgs/rust/rlibc-x",
+      "isSidechain": false
     }
   ],
   "originalPath": "/home/wink/data/prgs/rust/rlibc-x"

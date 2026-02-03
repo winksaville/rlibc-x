@@ -4,12 +4,7 @@ Working document for tracking progress. Items reference discussions in chores fi
 
 ## Todo
 
-- delete xt/, use [tspec](https://github.com/winksaville/tspec) and update docs ...
-- Discuss xt relationship to cargo and standalone operation [3,4,5]
--- Make xt/README.md more generic
--- Update /README.md to document all xt commands including ts
-- xt clean command (clean, build, run, test covers 98% of usage)
-- xt should work for any cargo package, not just workspaces [6]
+- Execute chore-4: delete xt/, update docs to use tspec [7]
 - ts add command (append to lists)
 - ts remove command (remove from lists)
 - lto high-level option [2]
@@ -18,11 +13,14 @@ Working document for tracking progress. Items reference discussions in chores fi
 
 ## Done
 
+- Decided: use tspec from repo/crates.io instead of embedded xt/ [7]
+- tspec clean command (in tspec project)
+- tspec works for any cargo package (POP support in tspec) [6]
+
 ## References
 
 [1]: chores-20260201.md#20260201-comments-lost-on-serialization
 [2]: chores-20260130.md#potential-high-level-options
-[3]: chores-20260201.md#20260201---xt-relationship-to-cargo
-[4]: chores-20260201.md#20260201---the-double-cargo-problem
 [5]: /README.md#claude-code-sessions
 [6]: chores-20260201.md#20260201---standalone-package-support-pop
+[7]: chore-4.md
