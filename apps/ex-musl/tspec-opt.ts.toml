@@ -2,14 +2,13 @@
 # Equivalent to: cargo xt build ex-x2 -r --tspec tspec-opt.xt.toml
 
 # High-level panic mode (sets both cargo -Z and rustc -C flags)
-panic = "immediate-abort"
+panic = "abort"
 strip = "symbols"
 
 [cargo]
-profile = "release"
-# Use custom target with plt-by-default: false
-target_json = "x86_64-unknown-linux-rlibcx2.json"
+target_triple = "x86_64-unknown-linux-musl"
 target_dir = "{name}-{hash}"
+profile = "release"
 
 [rustc]
 # Rebuild std with panic_abort
@@ -19,6 +18,6 @@ flags = ["-Z unstable-options", "-C link-arg=-Wl,--gc-sections"]
 
 [linker]
 # Linker flags from original build.rs
-args = ["-static", "-nostdlib", "-nodefaultlibs", "-e_start", "-Wl,--undefined=_start", "-Wl,--undefined=__libc_start_main"]
+args = ["-static"]
 # Version script for aggressive dead code elimination
 version_script = { global = ["_start"], local = "*" }

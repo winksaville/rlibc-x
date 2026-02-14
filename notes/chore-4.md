@@ -201,3 +201,19 @@ Rationale:
 - [x] Test documented workflows with tspec
 
 Note: Historical notes (chores-*.md, opt-notes.md, etc.) not updated - they document what was done at the time.
+
+## 2026-02-13: Add tspec-build build.rs to hw-x1 and hw-x2
+
+Previously ex-x1 and ex-x2 were fixed to compile with both `cargo build` and
+`tspec build` by adding a `build.rs` that uses `tspec-build` to emit linker
+flags from `tspec.ts.toml`. Applied the same fix to hw-x1 and hw-x2.
+
+**Changes per package (hw-x1, hw-x2):**
+- Added `[build-dependencies] tspec-build` to Cargo.toml
+- Created `build.rs` calling `tspec_build::emit_linker_flags_from(Some("tspec.ts.toml"))`
+
+**Verified:**
+- `cargo build` — both compile successfully
+- `tspec build` — both compile successfully
+- `tspec compare` — baseline builds work, compare runs correctly
+- Binaries run and produce expected output

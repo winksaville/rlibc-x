@@ -2,11 +2,14 @@
 # Equivalent to: cargo xt build hw-x2 -r --tspec tspec-opt.xt.toml
 
 # High-level panic mode (sets both cargo -Z and rustc -C flags)
-panic = "immediate-abort"
+panic = "abort"
+strip = "symbols"
 
 [cargo]
 # Use custom target with plt-by-default: false
+profile = "release"
 target_json = "x86_64-unknown-linux-rlibcx2.json"
+target_dir = "{name}-{hash}"
 
 [rustc]
 # Rebuild std with panic_abort

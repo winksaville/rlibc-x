@@ -7,6 +7,9 @@ description = "Hello world using rlibc-x1 (no_std + no_main)"
 [dependencies]
 rlibc-x1 = { path = "../../libs/rlibc-x1" }
 
+[build-dependencies]
+tspec-build = { path = "../../../tspec/tspec-build" }
+
 [dev-dependencies]
 is-libc-used = { path = "../../tools/is-libc-used" }
 

@@ -2,3 +2,4 @@
 
 [cargo]
 target_triple = "x86_64-unknown-linux-musl"
+target_dir = "{name}-{hash}"

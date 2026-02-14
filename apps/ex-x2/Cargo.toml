@@ -7,6 +7,9 @@ description = "Minimal exit-only binary using rlibc-x2"
 [dependencies]
 rlibc-x2 = { path = "../../libs/rlibc-x2" }
 
+[build-dependencies]
+tspec-build = { path = "../../../tspec/tspec-build" }
+
 [dev-dependencies]
 is-libc-used = { path = "../../tools/is-libc-used" }
 

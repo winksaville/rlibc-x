@@ -1,5 +1,6 @@
 # hw-x1 spec - uses rlibc-x1 runtime
-# Linker flags from original build.rs
+[cargo]
+target_dir = "{name}-{hash}"
 
 [linker]
 args = ["-static", "-nostartfiles"]
